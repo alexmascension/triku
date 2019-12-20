@@ -1,6 +1,8 @@
 import numpy as np
 import scipy.sparse as spr
 
+from triku.logg import logger
+
 def return_proportion_zeros(mat: [np.ndarray, spr.csr.csr_matrix]):
     """
     Returns a 1D array with the percentages. We have to do it using methods both for sparse arrays
@@ -49,3 +51,22 @@ def return_mean(mat: [np.ndarray, spr.csr.csr_matrix]):
 
     return mean_per_gene
 
+
+def check_count_mat(mat: [np.ndarray, spr.csr.csr_matrix]):
+    """
+    This function outputs a warning if we suspect the matrix is in logarithm value
+    """
+
+    n_factors = 0
+
+    if np.max(mat) < 50:
+        n_factors += 1
+
+    if np.min(mat) < 0:
+        n_factors += 1
+
+    if n_factors > 1:
+        logger.warning("The count matrix looks normalized or log-transformed. "
+                       "Triku is supposed to run with raw count matrices.")
+
+    return n_factors
