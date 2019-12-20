@@ -70,3 +70,6 @@ def check_count_mat(mat: [np.ndarray, spr.csr.csr_matrix]):
                        "Triku is supposed to run with raw count matrices.")
 
     return n_factors
+
+
+

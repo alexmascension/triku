@@ -1,27 +1,9 @@
 import numpy as np
 from scipy.signal import savgol_filter
 
-from triku.utils import return_proportion_zeros, return_mean, check_count_mat
+from triku.utils import return_proportion_zeros, return_mean, check_count_mat, find_starting_point, distance
 from triku.logg import logger
 
-
-def find_starting_point(x, y, delta_y=None, delta_x=None):
-    delta_y = (max(y) - min(y)) / 20 if delta_y is None else delta_y
-    delta_x = int(len(x) / 7) if delta_x is None else delta_x
-
-    for x_stop in range(len(x), int(len(x) / 2), -1):
-        y_box = y[x_stop - delta_x: x_stop]
-        y_diff = max(y_box) - min(y_box)
-        if y_diff < delta_y:
-            return x_stop - delta_x
-
-    return int(len(x) / 2)
-
-
-def distance(m, b, x, y):
-    if np.isinf(m):
-        return 0
-    return y - m * x - b / ((1 + m ** 2) ** 0.5)
 
 
 def find_knee_point(x, y, s=0.0):
@@ -34,7 +16,7 @@ def find_knee_point(x, y, s=0.0):
     is, therefore, the largest of the distances. To obtain a more robust knee point, we will get first an intermediate
     point which has a small slope.
 
-    After that we correct the knee_point selection usign the factor s. s is a factor that decreases the maximum distance
+    After that we correct the knee_point selection using the factor s. s is a factor that decreases the maximum distance
     described before, selecting a point further left or right in the curve. A positive s will select a knee point
     further right (higher mean - fewer points will be selected), and a negative s will select a knee point further left
     (lower mean - more points will be selected).
