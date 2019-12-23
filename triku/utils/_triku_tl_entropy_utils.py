@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def norm_entropy(arr: [np.ndarray]):
     """
     Calculates the normalized entropy of a given array. The array must contain all zeros, if necessary.
