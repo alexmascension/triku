@@ -4,13 +4,15 @@ import numpy as np
 
 from ..pp import remove_outliers
 from ..utils._triku_tl_utils import check_count_mat
-from ..tl._triku_functions import return_triku_gene_idx, return_leiden_partitition
+from ..tl._triku_functions import return_triku_gene_idx
+from ..utils._triku_tl_entropy_utils import return_leiden_partitition, entropy_per_gene
 from ..logg import logger
 
 
 def triku(object_triku: [sc.AnnData, pd.DataFrame], n_bins: int = 80, n_cycles: int = 4, s: float = 0,
           outliers: bool = False, sigma_remove_outliers: float = 5.0, delta_x: int = None, delta_y: int = None,
-          random_state: int = 0, knn: int = None, resolution: float = 1.3, entropy_threshold: float = 0.98):
+          random_state: int = 0, knn: int = None, resolution: float = 1.3, entropy_threshold: float = 0.98,
+          s_entropy: float = -0.01):
     """
     This function calls the triku method using python directly. This function expects an
     annData object or a csv / txt matrix of n_cells x n_genes. The function should then return an array / list
@@ -49,22 +51,27 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_bins: int = 80, n_cycles: 
     '''
 
     leiden_partition = return_leiden_partitition(arr_counts, knn, random_state, resolution)
-    n_clusters = len(leiden_partition)
 
     '''
     Once clusters are obtained, we calculate the proportion of non-zero expressing cells per clusters and per gene.
     With that, we obtain a histogram of proportions that we will use to establish a cut-off proportion, that is, 
     clusters with fewer expressing cells than the proportion (for each gene) will not be considered for entropy 
-    calculation.
+    calculation. This part is calculated inside entropy_per_gene.
+    Finally, we will get the dictionary dict_entropy_genes, with the entropy of each gene, dict_proportions_genes,
+    with the proportions of counts per gene, and dict_percentage_counts_genes, with the proportion of cells with
+    positive expression per gene.
     '''
 
-    list_proportions = []
-    for gene_idx in range(arr_counts.shape[1]):
-        for cluster in range(n_clusters):
-            gene_cluster_cells = arr_counts[leiden_partition[cluster], gene_idx]
-            list_proportions.append((gene_cluster_cells > 0).sum() / len(gene_cluster_cells))
+    dict_entropy_genes, dict_proportions_genes, dict_percentage_counts_genes = entropy_per_gene(arr=arr_counts,
+                                                                  list_genes=list_genes[idx_selected_genes],
+                                                                  cluster_labels=leiden_partition,
+                                                                  s_ent=s_entropy)
 
-    # Find the threshold
-    hist, bin_edges = np.histogram(list_proportions, bins=135)
-    bin_edges = [0.5 * (bin_edges[i] + bin_edges[i + 1]) for i in range(len(bin_edges) - 1)]
+    genes_good_entropy = [gene for gene in dict_entropy_genes.keys() if dict_entropy_genes[gene] < entropy_threshold]
 
+    dict_return = {'positive_genes': genes_good_entropy, 'dict_entropy': dict_entropy_genes}
+
+    return dict_return
+
+
+# todo: añadir loggers bien
