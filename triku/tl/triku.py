@@ -6,6 +6,7 @@ from ..pp import remove_outliers
 from ..utils._triku_tl_utils import check_count_mat
 from ..tl._triku_functions import return_triku_gene_idx
 from ..utils._triku_tl_entropy_utils import return_leiden_partitition, entropy_per_gene
+from ..utils._general_utils import get_arr_counts_genes
 from ..logg import logger
 
 
@@ -62,21 +63,12 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_bins: int = 80, write_annd
 
     Returns
     -------
-    dict_return : dict
-        `triku_selected_gene`: list with selected genes.
+    dict_triku : dict
+        `triku_selected_genes`: list with selected genes.
         `triku_entropy`: entropy for each gene (selected or not).
     """
 
-    if isinstance(object_triku, sc.AnnData):
-        arr_counts = object_triku.X
-        list_genes = object_triku.var_names
-    elif isinstance(object_triku, pd.DataFrame):
-        arr_counts = object_triku.values
-        list_genes = object_triku.columns.values
-    else:
-        msg = "Accepted object types are scanpy annDatas or pandas DataFrames (columns are genes)."
-        logger.error(msg)
-        raise TypeError(msg)
+    arr_counts, arr_genes = get_arr_counts_genes(object_triku)
 
     check_count_mat(arr_counts)
 
@@ -112,20 +104,20 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_bins: int = 80, write_annd
 
     dict_entropy_genes, dict_proportions_genes, dict_percentage_counts_genes = \
         entropy_per_gene(arr=arr_counts,
-                         list_genes=list_genes,
+                         list_genes=arr_genes,
                          cluster_labels=leiden_partition,
                          s_ent=s_entropy)
 
-    positive_genes = list_genes[idx_selected_genes]
+    positive_genes = arr_genes[idx_selected_genes]
     genes_good_entropy = [gene for gene in positive_genes if dict_entropy_genes[gene] <= entropy_threshold]
 
-    dict_return = {'triku_selected_gene': genes_good_entropy, 'triku_entropy': dict_entropy_genes}
+    dict_triku = {'triku_selected_genes': genes_good_entropy, 'triku_entropy': dict_entropy_genes}
 
     if isinstance(object_triku, sc.AnnData) and write_anndata:
         object_triku.var['triku_entropy'] = dict_entropy_genes.values()
-        object_triku.var['triku_selected_gene'] = [True if i in genes_good_entropy else False for i in
+        object_triku.var['triku_selected_genes'] = [True if i in genes_good_entropy else False for i in
                                                    object_triku.var_names]
 
-    return dict_return
+    return dict_triku
 
 # todo: añadir loggers bien
