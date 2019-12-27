@@ -9,14 +9,62 @@ from ..utils._triku_tl_entropy_utils import return_leiden_partitition, entropy_p
 from ..logg import logger
 
 
-def triku(object_triku: [sc.AnnData, pd.DataFrame], n_bins: int = 80, n_cycles: int = 4, s: float = 0,
-          outliers: bool = False, sigma_remove_outliers: float = 5.0, delta_x: int = None, delta_y: int = None,
-          random_state: int = 0, knn: int = None, resolution: float = 1.3, entropy_threshold: float = 0.98,
-          s_entropy: float = -0.01):
+def triku(object_triku: [sc.AnnData, pd.DataFrame], n_bins: int = 80, write_anndata: bool = True,
+          n_cycles: int = 4, s: float = 0, outliers: bool = False, sigma_remove_outliers: float = 5.0,
+          delta_x: int = None, delta_y: int = None, random_state: int = 0, knn: int = None,
+          resolution: float = 1.3, entropy_threshold: float = 0.98, s_entropy: float = -0.01, ):
     """
     This function calls the triku method using python directly. This function expects an
     annData object or a csv / txt matrix of n_cells x n_genes. The function should then return an array / list
     of the selected genes.
+
+    Parameters
+    ----------
+    object_triku : scanpy.AnnData or pandas.DataFrame
+        Object with count matrix. If `pandas.DataFrame`, rows are cells and columns are genes.
+    n_bins : int
+        Number of bins to divide the percentage of zeros. Each bin will contain a similar amount of genes.
+    write_anndata : bool
+        Writes the results of the analysis into object_triku. Creates the column `.var['triku_entropy']` which
+        stores the entropy of each gene, and the column `.var['triku_selected_gene']` that indicates if the gene
+        is selected or not.
+    n_cycles : int
+        For each bin `[a, b]` selects also bins `[a + i(b-a)/N, b + i(b-a)/N]` to select genes. This makes the selection
+        of the genes along the mean VS 0 percentage more gradual. Best effects are obtained with values between 3 and 5.
+    s : float
+        Correction factor for gene selection. Fewer genes are selected with positive values of `s` and
+        more genes are selected with negative values. We recommend values between -0.1 and 0.1.
+    outliers : bool
+        If `False` removes values of counts that are extreme. Values with more standard deviations that
+        a certain value are changed to the mean expression of the gene.
+    sigma_remove_outliers : float
+        Number of standard deviations to assign a value as an outlier.
+    delta_x, delta_y : int
+        Intermediate parameter for gene selection. When selecting the cut point for gene selection for a bin, some
+        curves [rank VS mean] show a plateau that makes the threshold be less accurate. To correct that, the curve is
+        cut at the plateau. delta_x and delta_y are the values of the sliding box to decide the point of the plateau.
+        Smaller values of delta_x and delta_y imply more stringent selection of the plateau. We recommend not to alter
+        this values.
+    random_state : int
+        Seed for clustering used in entropy calculation.
+    knn : int
+        Number of neighbors used in clustering for entropy calculation. By default, it is `sqrt(n_cells)`.
+    resolution : float
+        Leiden resolution used in clustering for entropy calculation.
+    entropy_threshold : float
+        Discard genes with entropy higher than that threshold.
+    s_entropy : float
+        Correction factor, similar to `s`. This factor is applied to calculate a threshold to discard low-expressed
+        genes. For each cluster if the proportion of cells expressing that
+        gene is smaller than that threshold, the cluster is not considered. If none of the clusters passes that
+        threshold the entropy of that gene is set to 1. Positive values of `s_entropy` imply more stringent thresholds,
+        and fewer genes are selected. Recommended values are between -0.05 and 0.05.
+
+    Returns
+    -------
+    dict_return : dict
+        `triku_selected_gene`: list with selected genes.
+        `triku_entropy`: entropy for each gene (selected or not).
     """
 
     if isinstance(object_triku, sc.AnnData):
@@ -62,16 +110,22 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_bins: int = 80, n_cycles: 
     positive expression per gene.
     '''
 
-    dict_entropy_genes, dict_proportions_genes, dict_percentage_counts_genes = entropy_per_gene(arr=arr_counts,
-                                                                  list_genes=list_genes[idx_selected_genes],
-                                                                  cluster_labels=leiden_partition,
-                                                                  s_ent=s_entropy)
+    dict_entropy_genes, dict_proportions_genes, dict_percentage_counts_genes = \
+        entropy_per_gene(arr=arr_counts,
+                         list_genes=list_genes,
+                         cluster_labels=leiden_partition,
+                         s_ent=s_entropy)
 
-    genes_good_entropy = [gene for gene in dict_entropy_genes.keys() if dict_entropy_genes[gene] < entropy_threshold]
+    positive_genes = list_genes[idx_selected_genes]
+    genes_good_entropy = [gene for gene in positive_genes if dict_entropy_genes[gene] <= entropy_threshold]
 
-    dict_return = {'positive_genes': genes_good_entropy, 'dict_entropy': dict_entropy_genes}
+    dict_return = {'triku_selected_gene': genes_good_entropy, 'triku_entropy': dict_entropy_genes}
+
+    if isinstance(object_triku, sc.AnnData) and write_anndata:
+        object_triku.var['triku_entropy'] = dict_entropy_genes.values()
+        object_triku.var['triku_selected_gene'] = [True if i in genes_good_entropy else False for i in
+                                                   object_triku.var_names]
 
     return dict_return
-
 
 # todo: añadir loggers bien
