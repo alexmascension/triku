@@ -1,6 +1,11 @@
 import numpy as np
 from scipy.signal import savgol_filter
 
+from umap.umap_ import fuzzy_simplicial_set
+from sklearn.decomposition import PCA
+import leidenalg
+import igraph as ig
+
 from triku.utils import return_proportion_zeros, return_mean, check_count_mat, find_starting_point, distance
 from triku.logg import logger
 
@@ -41,7 +46,7 @@ def find_knee_point(x, y, s=0.0):
 
 
 def return_idx(prop_0: np.ndarray, mean: np.ndarray, percentile_low: float, percentile_high: float, s: float,
-               delta_x: int, delta_y: int):
+               delta_x: int = None, delta_y: int = None, apply_deltas: bool = True):
     """
     Selection of the knee point in a curve. This function accepts the list of zero proportions, means, the
     cutting points, and the s parameter, and returns the indices from prop_0 whose mean is greater than the
@@ -76,7 +81,11 @@ def return_idx(prop_0: np.ndarray, mean: np.ndarray, percentile_low: float, perc
     the knee point is) to left, and, given a delta_x, creates a box of with delta_x and height y_f - y_0. If y_f - y_0
     is smaller than delta_y, then it returns the left point of the box.
     '''
-    x_stop = find_starting_point(x, y, delta_x=delta_x, delta_y=delta_y)
+    if apply_deltas:
+        x_stop = find_starting_point(x, y, delta_x=delta_x, delta_y=delta_y)
+    else:
+        x_stop = 0
+
     knee_x_idx, status = find_knee_point(x[x_stop:], y[x_stop:], s)
 
     knee_x_idx += x_stop
@@ -128,3 +137,28 @@ def return_triku_gene_idx(arr: np.ndarray, n_bins: int = 80, n_cycles: int = 4, 
     selected_genes_index = sorted(list(dict.fromkeys(selected_genes_index)))
 
     return selected_genes_index
+
+
+def return_leiden_partitition(arr_counts, knn, random_state, resolution):
+    # First, compute the kNN of the matrix. With those kNN we will generate the adjacency matrix and the graph
+    if knn is None:
+        knn = int(len(arr_counts) ** 0.5)
+
+    # To save time, we will do a PCA with 50 components, and get the kNN from there
+    pca = PCA(n_components=50, whiten=True).fit_transform(arr_counts)
+    adj = fuzzy_simplicial_set(pca, n_neighbors=knn, metric='cosine',
+                               random_state=np.random.RandomState(random_state))
+
+    # Create Graph
+    sources, targets = adj.nonzero()
+    weights = adj[sources, targets]
+    g = ig.Graph()
+    g.add_vertices(adj.shape[0])
+    g.add_edges(list(zip(sources, targets)))
+    g.es['weight'] = weights
+
+    partition_kwargs = {'seed': 0, 'weights': np.array(g.es['weight']).astype(np.float64),
+                        'resolution_parameter': resolution}
+    leiden_partition = leidenalg.find_partition(g, leidenalg.RBConfigurationVertexPartition, **partition_kwargs)
+
+    return leiden_partition

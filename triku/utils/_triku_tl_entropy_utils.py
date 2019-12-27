@@ -21,8 +21,6 @@ def entropy_proportion_threshold(arr: np.ndarray, dict_cluster_idx: dict, s_ent:
     added to a list. In the end, the distribution of proportions is calculated, and a threshold is returned. This
     threshold means that clusters with fewer cells expressing gene than the proportion will not be accounted to
     calculate the entropy of the gene.
-
-
     """
 
     list_proportions = []
