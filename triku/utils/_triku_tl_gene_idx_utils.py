@@ -16,4 +16,4 @@ def find_starting_point(x, y, delta_y=None, delta_x=None):
 def distance(m, b, x, y):
     if np.isinf(m):
         return 0
-    return y - m * x - b / ((1 + m ** 2) ** 0.5)
+    return (y - m * x - b) / ((1 + m ** 2) ** 0.5)
