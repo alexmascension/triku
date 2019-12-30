@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 
 import bokeh as bk
+from bokeh.plotting import figure
+from bokeh.io import show, save
 from bokeh.models import ColumnDataSource, LinearColorMapper
 
 import matplotlib.pyplot as plt
@@ -85,7 +87,7 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame], dict_triku: dict = None, b
     # Do the plotting
     if backend == 'bokeh':
         # Create the figure with the tools
-        p = bk.figure(tools='reset,box_zoom', tooltips=[('Gene', "@genes"), ('% Zeros', "@zero_per"),
+        p = figure(tools='reset,box_zoom', tooltips=[('Gene', "@genes"), ('% Zeros', "@zero_per"),
                                                         ('% Entropy', "@entropy")])
 
         p.xaxis.axis_label = x_label
@@ -108,9 +110,9 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame], dict_triku: dict = None, b
                   size='size', line_alpha=line_alpha, line_color=line_color)
 
         if show:
-            bk.show(p)
+            show(p)
         if save_path != '':
-            bk.save(p, save_path)
+            save(p, save_path)
         if return_fig:
             return p
 

@@ -1,5 +1,6 @@
 import scanpy as sc
 import pandas as pd
+import scipy.sparse as spr
 
 from ..logg import logger
 
@@ -17,6 +18,9 @@ def get_arr_counts_genes(object_triku):
         msg = "Accepted object types are scanpy annDatas or pandas DataFrames (columns are genes)."
         logger.error(msg)
         raise TypeError(msg)
+
+    if spr.isspmatrix(arr_counts):
+        arr_counts = arr_counts.todense()
 
     return arr_counts, arr_genes
 

@@ -73,12 +73,6 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_bins: int = 80, write_annd
 
     arr_counts, arr_genes = get_arr_counts_genes(object_triku)
 
-    if spr.isspmatrix(arr_counts):
-        arr_counts = arr_counts.todense()
-        is_csr = True
-    else:
-        is_csr = False
-
     check_count_mat(arr_counts)
 
     if not outliers:
