@@ -56,6 +56,7 @@ def check_count_mat(mat: [np.ndarray, spr.csr.csr_matrix]):
     """
     This function outputs a warning if we suspect the matrix is in logarithm value
     """
+    logger.info("Checking that matrix is not in log form.")
 
     n_factors = 0
 

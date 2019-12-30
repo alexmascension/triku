@@ -5,6 +5,7 @@ from ..logg import logger
 
 
 def get_arr_counts_genes(object_triku):
+    logger.info('Obtaining count matrix and gene list.')
     # Check type of object and return the matrix as corresponded
     if isinstance(object_triku, sc.AnnData):
         arr_counts = object_triku.X

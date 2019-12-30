@@ -66,7 +66,6 @@ def return_idx(prop_0: np.ndarray, mean: np.ndarray, percentile_low: float, perc
     '''
     if len(y) > 21:
         y = savgol_filter(y, 2 * int(len(x) / 15) + 1, 3)
-
     '''
     In some cases the curve does a small step, or falls and rises at the beginning, and these two cases destabilize
     finding the knee point. To solve that problem we will "remove" those points from the curve, and then find the knee
@@ -81,7 +80,7 @@ def return_idx(prop_0: np.ndarray, mean: np.ndarray, percentile_low: float, perc
     else:
         x_stop = 0
 
-    knee_x_idx, status = find_knee_point(x[x_stop:], y[x_stop:], s)
+    knee_x_idx = find_knee_point(x[x_stop:], y[x_stop:], s)
 
     knee_x_idx += x_stop
     knee_mean = np.sort(array_mean)[knee_x_idx]
@@ -108,6 +107,7 @@ def return_triku_gene_idx(arr: np.ndarray, n_bins: int = 80, n_cycles: int = 4, 
     we will remove them a posteriori applying an entropy threshold.
     """
 
+    logger.info("Binning the dataset")
     # Divide the dataset into bins. Each bin should have a similar number of genes to analyze. Thus, ranges with
     # fewer number of genes will be larger, and ranges with further number of genes will be smaller.
     prop_0_bins = [np.percentile(prop_0, 100 * i / n_bins) for i in range(n_bins)]
@@ -128,6 +128,7 @@ def return_triku_gene_idx(arr: np.ndarray, n_bins: int = 80, n_cycles: int = 4, 
                                        delta_x=delta_x, delta_y=delta_y)
             selected_genes_index += selector_idxs
 
+    logger.info("Getting selected genes")
     # Remove duplicated entries
     selected_genes_index = sorted(list(dict.fromkeys(selected_genes_index)))
 

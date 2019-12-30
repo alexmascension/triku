@@ -1,36 +1,36 @@
 import numpy as np
-
+import scipy.sparse as spr
 
 from umap.umap_ import fuzzy_simplicial_set
 from sklearn.decomposition import PCA
 import leidenalg
-import igraph as ig
 from leidenalg.VertexPartition import RBConfigurationVertexPartition
+from scanpy.utils import get_igraph_from_adjacency
 
 from ..tl._triku_functions import find_knee_point, savgol_filter
-
+from ..logg import logger
 
 def return_leiden_partitition(arr_counts, knn, random_state, resolution):
+    logger.info("Calculating leiden for entropy.")
     # First, compute the kNN of the matrix. With those kNN we will generate the adjacency matrix and the graph
     if knn is None:
-        knn = int(len(arr_counts) ** 0.5)
+        knn = int(arr_counts.shape[0] ** 0.5)
 
     # To save time, we will do a PCA with 50 components, and get the kNN from there
-    pca = PCA(n_components=50, whiten=True).fit_transform(arr_counts)
+    if spr.isspmatrix(arr_counts):
+        pca = PCA(n_components=25, whiten=True).fit_transform(arr_counts.todense())
+    else:
+        pca = PCA(n_components=25, whiten=True).fit_transform(arr_counts)
+
     adj = fuzzy_simplicial_set(pca, n_neighbors=knn, metric='cosine',
                                random_state=np.random.RandomState(random_state))
 
     # Create Graph
-    sources, targets = adj.nonzero()
-    weights = adj[sources, targets]
-    g = ig.Graph()
-    g.add_vertices(adj.shape[0])
-    g.add_edges(list(zip(sources, targets)))
-    g.es['weight'] = weights
+    g = get_igraph_from_adjacency(adjacency=adj)
+    weights = np.array(g.es['weight']).astype(np.float64)
 
-    partition_kwargs = {'seed': 0, 'weights': np.array(g.es['weight']).astype(np.float64),
-                        'resolution_parameter': resolution}
-    leiden_partition = leidenalg.find_partition(g, leidenalg.RBConfigurationVertexPartition, **partition_kwargs)
+    leiden_partition = leidenalg.find_partition(g, leidenalg.RBConfigurationVertexPartition, resolution_parameter=resolution,
+                                    weights=weights, seed=random_state)
 
     return leiden_partition
 
@@ -82,6 +82,7 @@ def entropy_per_gene(arr: np.array, list_genes: list, cluster_labels: [np.ndarra
     cluster is calculated, and this expression is used to calculate the entropy value. This entropy value is
     divided by the maximum entropy value. A dictionary with the entropy per gene is returned.
     """
+    logger.info("Calculating entropy per gene")
     if isinstance(cluster_labels, np.ndarray):
         dict_cluster_idx = {i: np.argwhere(cluster_labels == i).flatten() for i in list(dict.fromkeys(cluster_labels))}
     elif isinstance(cluster_labels, RBConfigurationVertexPartition):
@@ -89,7 +90,7 @@ def entropy_per_gene(arr: np.array, list_genes: list, cluster_labels: [np.ndarra
     else:
         raise TypeError("cluster_labels must be of types numpy.ndarray or RBConfigurationVertexPartition.")
 
-    n_clusters = len(dict.fromkeys(cluster_labels))
+    n_clusters = len(dict_cluster_idx)
     max_entropy = np.log2(n_clusters)
 
     threshold = entropy_proportion_threshold(arr, dict_cluster_idx, s_ent)
@@ -97,7 +98,8 @@ def entropy_per_gene(arr: np.array, list_genes: list, cluster_labels: [np.ndarra
     dict_entropy_genes, dict_proportions_genes, dict_percentage_counts_genes = {}, {}, {}
 
     # todo: can this be vectorized? If it takes too long, at least parallelize it
-    for gene_idx in range(arr.shape[1]):
+    from tqdm import tqdm
+    for gene_idx in tqdm(range(arr.shape[1])):
         list_proportions, list_percentage_counts = [], []
         for cluster in dict_cluster_idx.keys():
             list_proportions.append(np.sum(arr[dict_cluster_idx[cluster], gene_idx]) /

@@ -1,6 +1,7 @@
 import scanpy as sc
 import pandas as pd
 import numpy as np
+import scipy.sparse as spr
 
 from ..pp import remove_outliers
 from ..utils._triku_tl_utils import check_count_mat
@@ -9,9 +10,11 @@ from ..utils._triku_tl_entropy_utils import return_leiden_partitition, entropy_p
 from ..utils._general_utils import get_arr_counts_genes
 from ..logg import logger
 
+import warnings
+warnings.filterwarnings('ignore') # To ignore Numba warnings
 
 def triku(object_triku: [sc.AnnData, pd.DataFrame], n_bins: int = 80, write_anndata: bool = True,
-          n_cycles: int = 4, s: float = 0, outliers: bool = False, sigma_remove_outliers: float = 5.0,
+          n_cycles: int = 4, s: float = 0, outliers: bool = False, sigma_remove_outliers: float = 6.0,
           delta_x: int = None, delta_y: int = None, random_state: int = 0, knn: int = None,
           resolution: float = 1.3, entropy_threshold: float = 0.98, s_entropy: float = -0.01, ):
     """
@@ -70,11 +73,17 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_bins: int = 80, write_annd
 
     arr_counts, arr_genes = get_arr_counts_genes(object_triku)
 
+    if spr.isspmatrix(arr_counts):
+        arr_counts = arr_counts.todense()
+        is_csr = True
+    else:
+        is_csr = False
+
     check_count_mat(arr_counts)
 
     if not outliers:
         logger.info('Removing outliers.')
-        remove_outliers(arr_counts, sigma_remove_outliers)
+        arr_counts = remove_outliers(arr_counts, sigma_remove_outliers, do_copy=True)
 
     idx_selected_genes = return_triku_gene_idx(arr=arr_counts, n_bins=n_bins, n_cycles=n_cycles, s=s,
                                                delta_x=delta_x, delta_y=delta_y)
