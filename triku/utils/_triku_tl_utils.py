@@ -60,19 +60,20 @@ def check_count_mat(mat: [np.ndarray, spr.csr.csr_matrix]):
     """
     This function outputs a warning if we suspect the matrix is in logarithm value
     """
-    logger.info("Checking that matrix is not in log form.")
+    logger.info("Checking integrity of matrix.")
 
     n_factors = 0
 
-    if np.max(mat) < 50:
-        n_factors += 1
-
     if np.min(mat) < 0:
-        n_factors += 1
+        logger.warning("The count matrix contains negative values. Triku is supposed to run with raw count matrices.")
 
-    if n_factors > 1:
+    if np.percentile(mat, 99) < 35:
         logger.warning("The count matrix looks normalized or log-transformed. "
                        "Triku is supposed to run with raw count matrices.")
+
+    if mat.shape[1] > 25000:
+        logger.warning("The count matrix contains more than 25000 genes. We recommend filtering some genes, up to "
+                       "15000 - 18000 genes. You can do that in scanpy with the function 'sc.pp.filter_genes()'.")
 
     return n_factors
 

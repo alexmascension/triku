@@ -123,4 +123,3 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_bins: int = 80, write_annd
 
     return dict_triku
 
-# todo: añadir loggers bien

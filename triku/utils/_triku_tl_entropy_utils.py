@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.sparse as spr
+from tqdm import tqdm
 
 from umap.umap_ import fuzzy_simplicial_set
 from sklearn.decomposition import PCA
@@ -11,24 +12,28 @@ from ..tl._triku_functions import find_knee_point, savgol_filter
 from ..logg import logger
 
 def return_leiden_partitition(arr_counts, knn, random_state, resolution):
-    logger.info("Calculating leiden for entropy.")
+    logger.info("Calculating leiden for entropy...")
     # First, compute the kNN of the matrix. With those kNN we will generate the adjacency matrix and the graph
     if knn is None:
         knn = int(arr_counts.shape[0] ** 0.5)
 
+    logger.info("... reducing dimensions on PCA.")
     # To save time, we will do a PCA with 50 components, and get the kNN from there
     if spr.isspmatrix(arr_counts):
-        pca = PCA(n_components=25, whiten=True).fit_transform(arr_counts.todense())
+        pca = PCA(n_components=25, whiten=True, svd_solver='argpack').fit_transform(arr_counts.todense())
     else:
-        pca = PCA(n_components=25, whiten=True).fit_transform(arr_counts)
+        pca = PCA(n_components=25, whiten=True, svd_solver='argpack').fit_transform(arr_counts)
 
+    logger.info("... obtaining the adjacency matrix.")
     adj = fuzzy_simplicial_set(pca, n_neighbors=knn, metric='cosine',
                                random_state=np.random.RandomState(random_state))
 
+    logger.info("... creating graph.")
     # Create Graph
     g = get_igraph_from_adjacency(adjacency=adj)
     weights = np.array(g.es['weight']).astype(np.float64)
 
+    logger.info("... running leiden.")
     leiden_partition = leidenalg.find_partition(g, leidenalg.RBConfigurationVertexPartition, resolution_parameter=resolution,
                                     weights=weights, seed=random_state)
 
@@ -97,8 +102,6 @@ def entropy_per_gene(arr: np.array, list_genes: list, cluster_labels: [np.ndarra
 
     dict_entropy_genes, dict_proportions_genes, dict_percentage_counts_genes = {}, {}, {}
 
-    # todo: can this be vectorized? If it takes too long, at least parallelize it
-    from tqdm import tqdm
     for gene_idx in tqdm(range(arr.shape[1])):
         list_proportions, list_percentage_counts = [], []
         for cluster in dict_cluster_idx.keys():
