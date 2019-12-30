@@ -2,9 +2,8 @@ import scanpy as sc
 import pandas as pd
 import numpy as np
 
-import bokeh as bk
 from bokeh.plotting import figure
-from bokeh.io import show, save
+import bokeh.io as io
 from bokeh.models import ColumnDataSource, LinearColorMapper
 
 import matplotlib.pyplot as plt
@@ -13,6 +12,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from ..logg import logger
 from ..utils import return_proportion_zeros, return_mean, check_count_mat
 from ..utils._general_utils import get_arr_counts_genes, get_dict_triku
+
 
 
 def return_carto_cmap(cmap_str):
@@ -47,7 +47,7 @@ def return_carto_cmap(cmap_str):
     if cmap_str in dict_cmaps.keys():
         return dict_cmaps[cmap_str]
     elif cmap_str[:3] == 'inv' and cmap_str[3:] in dict_cmaps.keys():
-        return dict_cmaps[cmap_str][::-1]
+        return dict_cmaps[cmap_str[3:]][::-1]
     else:
         logger.warning(
             '{} colormap name not found. Ignore this if you are using a matplotlib colormap.'.format(cmap_str))
@@ -56,7 +56,7 @@ def return_carto_cmap(cmap_str):
 
 def entropy(object_triku: [sc.AnnData, pd.DataFrame], dict_triku: dict = None, backend: str = 'bokeh',
             size_small: float = 3, size_large: float = 6, alpha_small: float = 3, alpha_large: float = 6,
-            cmap_entropy: [list, str] = None, return_fig: bool = False, show: bool = True, save_path: str = '',
+            cmap_entropy: [list, str] = 'invSunsetDark', return_fig: bool = False, show: bool = True, save_path: str = '',
             line_color: str = '#000000', line_alpha: float = 0.1, ax: plt.axes = None, figsize: tuple = (10, 5),
             x_label: str = '', y_label: str = ''):
     """
@@ -87,18 +87,20 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame], dict_triku: dict = None, b
     # Do the plotting
     if backend == 'bokeh':
         # Create the figure with the tools
-        p = figure(tools='reset,box_zoom', tooltips=[('Gene', "@genes"), ('% Zeros', "@zero_per"),
+        fig = figure(tools='reset,box_zoom', tooltips=[('Gene', "@genes"), ('% Zeros', "@zero_per"),
                                                         ('% Entropy', "@entropy")])
 
-        p.xaxis.axis_label = x_label
-        p.yaxis.axis_label = y_label
+        fig.xaxis.axis_label = x_label
+        fig.yaxis.axis_label = y_label
 
         # Create a ColorMapper object to do a continuous mapping between the colormap and the data
         color_mapper = LinearColorMapper(palette=cmap_entropy, low=min(dict_triku['triku_entropy'].values()),
                                          high=max(dict_triku['triku_entropy'].values()))
 
         triku_genes_idx = np.argwhere(arr_genes.isin(dict_triku['triku_selected_genes'])).flatten()
+
         arr_sizes, arr_alphas = np.full(len(mean), size_small), np.full(len(mean), alpha_small)
+
         arr_sizes[triku_genes_idx], arr_alphas[triku_genes_idx] = size_large, alpha_large
 
         cds = ColumnDataSource({'x': np.log10(mean), 'y': prop_0, 'genes': arr_genes,
@@ -106,19 +108,19 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame], dict_triku: dict = None, b
                                 'alpha': arr_alphas, 'size': arr_sizes,
                                 'zero_per': 100 * prop_0})
 
-        p.scatter('x', 'y', source=cds, fill_alpha='entropy', color={'field': 'entropy', 'transform': color_mapper},
+        fig.scatter('x', 'y', source=cds, fill_alpha='entropy', color={'field': 'entropy', 'transform': color_mapper},
                   size='size', line_alpha=line_alpha, line_color=line_color)
 
         if show:
-            show(p)
+            io.show(fig)
         if save_path != '':
-            save(p, save_path)
+            io.save(fig, save_path)
         if return_fig:
-            return p
+            return fig
 
     elif backend == 'matplotlib':
         fig = plt.figure(figsize=figsize)
-        ax1 = fig.add_sublot(111)
+        ax1 = fig.add_subplot(111)
 
         cmax = LinearSegmentedColormap.from_list('trikucmap', cmap_entropy)
 
@@ -127,15 +129,16 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame], dict_triku: dict = None, b
 
         arr_entropy = np.array(list((dict_triku['triku_entropy'].values())))
 
-        ax.scatter(np.log10(mean[inverse_triku_genes_idx]), prop_0[inverse_triku_genes_idx],
+        print(np.log10(mean[inverse_triku_genes_idx]), prop_0[inverse_triku_genes_idx])
+        ax1.scatter(np.log10(mean[inverse_triku_genes_idx]), prop_0[inverse_triku_genes_idx],
                    c=arr_entropy[inverse_triku_genes_idx], cmap=cmax, s=size_small, alpha=alpha_small,
                    edgecolors=line_color, linewidths=0.05 * size_small)
-        ax.scatter(np.log10(mean[triku_genes_idx]), prop_0[triku_genes_idx],
+        ax1.scatter(np.log10(mean[triku_genes_idx]), prop_0[triku_genes_idx],
                    c=arr_entropy[triku_genes_idx], cmap=cmax, s=size_large, alpha=alpha_large, edgecolors=line_color,
                    linewidths=0.05 * size_small)
 
-        ax.set_xlabel(x_label)
-        ax.set_ylabel(y_label)
+        ax1.set_xlabel(x_label)
+        ax1.set_ylabel(y_label)
 
         plt.tight_layout()
 
@@ -148,3 +151,4 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame], dict_triku: dict = None, b
                 return fig
             else:
                 return ax1
+

@@ -20,12 +20,14 @@ def return_proportion_zeros(mat: [np.ndarray, spr.csr.csr_matrix]):
     """
 
     n_cells = mat.shape[0]
-    non_zero_counts = (mat != 0).sum(0)
+    zero_counts = (mat == 0).sum(0)
 
-    if isinstance(non_zero_counts, np.matrix):
-        non_zero_counts = np.asarray(non_zero_counts)
+    if isinstance(zero_counts, np.matrix):
+        zero_counts = np.asarray(zero_counts)
+        if len(zero_counts) == 1:
+            zero_counts = zero_counts.flatten()
 
-    return non_zero_counts / n_cells
+    return zero_counts / n_cells
 
 
 def return_mean(mat: [np.ndarray, spr.csr.csr_matrix]):
@@ -48,6 +50,8 @@ def return_mean(mat: [np.ndarray, spr.csr.csr_matrix]):
 
     if isinstance(mean_per_gene, np.matrix):
         mean_per_gene = np.asarray(mean_per_gene)
+        if len(mean_per_gene) == 1:
+            mean_per_gene = mean_per_gene.flatten()
 
     return mean_per_gene
 
