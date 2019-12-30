@@ -31,6 +31,7 @@ setup(
     # https://stackoverflow.com/questions/7522250/how-to-include-package-data-with-setuptools-distribute
     # package_data={'': '*.txt'},
     # include_package_data=True,
+    scripts=['scripts/triku'],
     entry_points=dict(
         console_scripts=[],
     ),

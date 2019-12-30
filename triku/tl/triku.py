@@ -7,16 +7,19 @@ from ..pp import remove_outliers
 from ..utils._triku_tl_utils import check_count_mat
 from ..tl._triku_functions import return_triku_gene_idx
 from ..utils._triku_tl_entropy_utils import return_leiden_partitition, entropy_per_gene
-from ..utils._general_utils import get_arr_counts_genes
+from ..utils._general_utils import get_arr_counts_genes, save_triku
 from ..logg import logger
 
 import warnings
-warnings.filterwarnings('ignore') # To ignore Numba warnings
 
-def triku(object_triku: [sc.AnnData, pd.DataFrame], n_bins: int = 80, write_anndata: bool = True,
+warnings.filterwarnings('ignore')  # To ignore Numba warnings
+
+
+def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write_anndata: bool = True,
           n_cycles: int = 4, s: float = 0, outliers: bool = False, sigma_remove_outliers: float = 6.0,
           delta_x: int = None, delta_y: int = None, random_state: int = 0, knn: int = None,
-          resolution: float = 1.3, entropy_threshold: float = 0.98, s_entropy: float = -0.01, ):
+          resolution: float = 1.3, entropy_threshold: float = 0.98, s_entropy: float = -0.01,
+          save_dir='', save_name=''):
     """
     This function calls the triku method using python directly. This function expects an
     annData object or a csv / txt matrix of n_cells x n_genes. The function should then return an array / list
@@ -26,6 +29,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_bins: int = 80, write_annd
     ----------
     object_triku : scanpy.AnnData or pandas.DataFrame
         Object with count matrix. If `pandas.DataFrame`, rows are cells and columns are genes.
+        If str, path to the annData file or pandas DataFrame.
     n_bins : int
         Number of bins to divide the percentage of zeros. Each bin will contain a similar amount of genes.
     write_anndata : bool
@@ -43,12 +47,14 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_bins: int = 80, write_annd
         a certain value are changed to the mean expression of the gene.
     sigma_remove_outliers : float
         Number of standard deviations to assign a value as an outlier.
-    delta_x, delta_y : int
+    delta_x : int
         Intermediate parameter for gene selection. When selecting the cut point for gene selection for a bin, some
         curves [rank VS mean] show a plateau that makes the threshold be less accurate. To correct that, the curve is
         cut at the plateau. delta_x and delta_y are the values of the sliding box to decide the point of the plateau.
         Smaller values of delta_x and delta_y imply more stringent selection of the plateau. We recommend not to alter
         this values.
+    delta_y : int
+        See delta_x
     random_state : int
         Seed for clustering used in entropy calculation.
     knn : int
@@ -119,7 +125,8 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_bins: int = 80, write_annd
     if isinstance(object_triku, sc.AnnData) and write_anndata:
         object_triku.var['triku_entropy'] = dict_entropy_genes.values()
         object_triku.var['triku_selected_genes'] = [True if i in genes_good_entropy else False for i in
-                                                   object_triku.var_names]
+                                                    object_triku.var_names]
+
+    save_triku(dict_triku, save_dir, save_name, object_triku)
 
     return dict_triku
-

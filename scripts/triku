@@ -1,0 +1,11 @@
+import triku
+from funcargparse import FuncArgParser
+
+parser = FuncArgParser()
+parser.setup_args(triku.tl.triku)
+parser.update_arg('object_triku', help="Path to the annData object or the count matrix.")
+parser.create_arguments()
+
+if __name__ == '__main__':
+    parser.parse2func()
+
