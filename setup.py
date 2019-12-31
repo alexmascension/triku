@@ -5,7 +5,6 @@ from pathlib import Path
 
 from setuptools import setup, find_packages
 
-
 try:
     from triku import __author__, __email__, __version__
 except ImportError:  # Deps not yet installed
@@ -31,9 +30,8 @@ setup(
     # https://stackoverflow.com/questions/7522250/how-to-include-package-data-with-setuptools-distribute
     # package_data={'': '*.txt'},
     # include_package_data=True,
-    scripts=['scripts/triku'],
     entry_points=dict(
-        console_scripts=[],
+        console_scripts=['triku=triku.cli_triku:main'],
     ),
     zip_safe=False,
     classifiers=[
