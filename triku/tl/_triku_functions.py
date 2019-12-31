@@ -99,7 +99,6 @@ def return_triku_gene_idx(arr: np.ndarray, n_bins: int = 80, n_cycles: int = 4, 
     """
 
     # Prepare the matrix, get the mean and the proportion of zeros, and resolve other attributes
-    check_count_mat(arr)
     mean, prop_0 = return_mean(arr), return_proportion_zeros(arr)
 
     """

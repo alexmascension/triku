@@ -2,14 +2,12 @@ from triku.pl import entropy
 from funcargparse import FuncArgParser
 
 def main():
-    parser = FuncArgParser()
-    parser.setup_args(entropy)
-    parser.update_arg('object_triku', help="Path to the annData object or the count matrix.")
-    parser.update_arg('dict_triku', help="Path to the dictionary files '_entropy.txt' and '_selected_genes.txt' files."
-                                         "Add the path and the name. For instance: my_data/example_entropy.txt -> "
-                                         "mydata/example.")
-    parser.create_arguments()
-    parser.parse2func()
+    parser_entropy = FuncArgParser()
+    parser_entropy.setup_args(entropy)
+    parser_entropy.update_arg('object_triku', help="Path to the annData object or the count matrix.")
+    parser_entropy.update_arg('show', default=False)
+    parser_entropy.create_arguments()
+    parser_entropy.parse2func()
 
 if __name__ == '__main__':
     main()

@@ -20,9 +20,9 @@ def return_leiden_partitition(arr_counts, knn, random_state, resolution):
     logger.info("... reducing dimensions on PCA.")
     # To save time, we will do a PCA with 50 components, and get the kNN from there
     if spr.isspmatrix(arr_counts):
-        pca = PCA(n_components=25, whiten=True, svd_solver='argpack').fit_transform(arr_counts.todense())
+        pca = PCA(n_components=25, whiten=True, svd_solver='auto').fit_transform(arr_counts.todense())
     else:
-        pca = PCA(n_components=25, whiten=True, svd_solver='argpack').fit_transform(arr_counts)
+        pca = PCA(n_components=25, whiten=True, svd_solver='auto').fit_transform(arr_counts)
 
     logger.info("... obtaining the adjacency matrix.")
     adj = fuzzy_simplicial_set(pca, n_neighbors=knn, metric='cosine',

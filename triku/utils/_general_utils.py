@@ -51,19 +51,21 @@ def get_arr_counts_genes(object_triku):
     return arr_counts, arr_genes
 
 
-def get_dict_triku(dict_triku, object_triku):
+def get_dict_triku(dict_triku, dict_triku_path, object_triku):
     msg_not_dict = "We could not initialize 'dict_triku'. Make sure that (1) if object_triku is an annData object, " \
                    ".var['triku_selected_genes'] and .var['triku_entropy'] exist or (2) set 'dict_triku' with the" \
                    "proper dictionary."
 
-    if isinstance(dict_triku, str):
-        if not os.path.exists(dict_triku + '_entropy.txt') or not os.path.exists(dict_triku + '_selected_genes.txt'):
-            msg_path = "The objects {}, {} don't exist. Check the path."
+    if dict_triku_path != '':
+        if not os.path.exists(dict_triku_path + '_entropy.txt') or not os.path.exists(dict_triku_path +
+                                                                                      '_selected_genes.txt'):
+            msg_path = "The objects {}, {} don't exist. Check the path.".format(dict_triku_path + '_entropy.txt',
+                                                                                dict_triku_path + '_selected_genes.txt')
             logger.error(msg_path)
             raise FileNotFoundError(msg_path)
 
-        selected_genes = pd.read_csv(dict_triku + '_selected_genes.txt', sep='\t', header=None)[0].values.tolist()
-        df_entropy = pd.read_csv(dict_triku + '_entropy.txt', sep='\t', header=None)
+        selected_genes = pd.read_csv(dict_triku_path + '_selected_genes.txt', sep='\t', header=None)[0].values.tolist()
+        df_entropy = pd.read_csv(dict_triku_path + '_entropy.txt', sep='\t', header=None)
         dict_triku = {
             'triku_entropy': dict(zip(df_entropy[0].values, df_entropy[1].values)),
             'triku_selected_genes': selected_genes}
@@ -86,17 +88,15 @@ def get_dict_triku(dict_triku, object_triku):
     return dict_triku
 
 
-def save_triku(dict_triku, save_dir, save_name, object_triku):
-    if len(save_dir) > 0 or len(save_name) > 0 or isinstance(object_triku, str):
+def save_triku(dict_triku, save_name, object_triku):
+    if len(save_name) > 0 or isinstance(object_triku, str):
         if len(save_name) == 0:
             save_name = 'triku_{N}'.format(N=np.random.randint(10, 1000000000))
-        if save_dir[-1] == '/': save_dir = save_dir[:-1]
 
-        logger.info('Saving results in {}/{}'.format(save_dir, save_name))
-
-        df_entropy = pd.DataFrame(dict_triku['triku_entropy'])
+        logger.info('Saving results in {}'.format(save_name))
+        df_entropy = pd.DataFrame({'gene': list(dict_triku['triku_entropy'].keys()), 'ent': list(dict_triku['triku_entropy'].values())})
         df_selected_genes = pd.DataFrame(dict_triku['triku_selected_genes'])
 
-        df_entropy.to_csv('{}/{}_entropy.txt'.format(save_dir, save_name), header=None, index=None, sep='\t')
-        df_selected_genes.to_csv('{}/{}_selected_genes.txt'.format(save_dir, save_name), header=None, index=None,
+        df_entropy.to_csv('{}_entropy.txt'.format(save_name), header=None, index=None, sep='\t')
+        df_selected_genes.to_csv('{}_selected_genes.txt'.format(save_name), header=None, index=None,
                                  sep='\t')

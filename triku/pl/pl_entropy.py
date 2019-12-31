@@ -54,22 +54,70 @@ def return_carto_cmap(cmap_str):
         return []
 
 
-def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: [dict, str] = None, backend: str = 'bokeh',
-            size_small: float = 3, size_large: float = 6, alpha_small: float = 3, alpha_large: float = 6,
-            cmap_entropy: [list, str] = 'invSunsetDark', return_fig: bool = False, show: bool = True, save_path: str = '',
-            line_color: str = '#000000', line_alpha: float = 0.1, ax: plt.axes = None, figsize: tuple = (10, 5),
-            x_label: str = '', y_label: str = ''):
+def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = None, dict_triku_path: str = '',
+            backend: str = 'bokeh', size_small: float = 3, size_large: float = 6, alpha_small: float = 3, alpha_large: float = 6,
+            cmap_entropy: [list, str] = 'invSunsetDark', return_fig: bool = False, show: bool = True,
+            save_path: str = '', line_color: str = '#000000', line_alpha: float = 0.1, ax: plt.axes = None,
+            figsize: tuple = (10, 5), x_label: str = '', y_label: str = ''):
     """
     Plots the mean expression VS percentage of 0, adding information about the entropy and the
     genes selected by `tl.triku()`. If the object is an annData, information from the plot can be extracted directly
     from the annData. Else, it has to be added to `dict_triku`.
-    """
+    The type of plot is a scatter plot where not selected genes appear smaller and more transparent, while
+    selected genes appear larger and less transparent. Each dot's color is represented by the entropy of the gene.
 
+    Parameters
+    ----------
+    object_triku : scanpy.AnnData or pandas.DataFrame or str
+        Object with count matrix. If `pandas.DataFrame`, rows are cells and columns are genes.
+        If str, path to the annData file or pandas DataFrame.
+    dict_triku : dict
+        `dict_triku` object from `tl.triku`.
+    dict_triku_path : str
+        Path to the dict_triku objects if called from the CLI. For instance, if /filesdir/experiment_2_entropy.txt and
+        /filesdir/experiment_2_selected_genes.txt are generated, then dict_triku_path is /filesdir/experiment_2.
+    backend : str
+        Option to plot ['bokeh', 'matplotlib']. Uses bokeh, which outputs a html, or matplotlib, which outputs an
+        image.
+    size_small : float
+        Dot size for not selected genes.
+    size_large : float
+        Dot size for selected genes.
+    alpha_small : float
+        Dot alpha for not selected genes.
+    alpha_large : float
+        Dot alpha for selected genes.
+    cmap_entropy : [list, str]
+        List of colors, or colormap name, to represent entropy values.
+    return_fig : bool
+        If `True`, returns the figure (bokeh or matplotlib).
+    show : bool
+        Shows the plot on screen.
+    save_path : str
+        Saves the figure to the path.
+    line_color : str
+        Color of dot line.
+    line_alpha : float
+        Alpha of dot line
+    ax : matplolix.Axis
+        Axis the plot will be saved to (matplotlib)
+    figsize : tuple(int, int)
+        Size of figure (matplotlib)
+    x_label : str
+        Label of x axis.
+    y_label : str
+        Label of y axis.
+
+    Returns
+    -------
+    fig :
+        Figure.
+    """
     # Check type of object and return the matrix as corresponded
     arr_counts, arr_genes = get_arr_counts_genes(object_triku)
 
     # Initialize dict triku based on the object type
-    dict_triku = get_dict_triku(dict_triku, object_triku)
+    dict_triku = get_dict_triku(dict_triku, dict_triku_path, object_triku)
 
     if backend not in ['bokeh', 'matplotlib']:
         logger.error('backend must be "bokeh" or "matplotlib".')
@@ -86,6 +134,7 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: [dict, st
 
     # Do the plotting
     if backend == 'bokeh':
+        logger.info("Doing plot with backend 'bokeh")
         # Create the figure with the tools
         fig = figure(tools='reset,box_zoom', tooltips=[('Gene', "@genes"), ('% Zeros', "@zero_per"),
                                                         ('% Entropy', "@entropy")])
@@ -114,13 +163,16 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: [dict, st
         if show:
             io.show(fig)
         if save_path != '':
+            logger.info("Saving figure in {}.".format(save_path))
             io.save(fig, save_path)
         if return_fig:
             return fig
 
     elif backend == 'matplotlib':
+        logger.info("Doing plot with backend 'matplotlib")
         fig = plt.figure(figsize=figsize)
-        ax1 = fig.add_subplot(111)
+        if ax is None:
+            ax = fig.add_subplot(111)
 
         cmax = LinearSegmentedColormap.from_list('trikucmap', cmap_entropy)
 
@@ -130,25 +182,23 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: [dict, st
         arr_entropy = np.array(list((dict_triku['triku_entropy'].values())))
 
         print(np.log10(mean[inverse_triku_genes_idx]), prop_0[inverse_triku_genes_idx])
-        ax1.scatter(np.log10(mean[inverse_triku_genes_idx]), prop_0[inverse_triku_genes_idx],
+        ax.scatter(np.log10(mean[inverse_triku_genes_idx]), prop_0[inverse_triku_genes_idx],
                    c=arr_entropy[inverse_triku_genes_idx], cmap=cmax, s=size_small, alpha=alpha_small,
                    edgecolors=line_color, linewidths=0.05 * size_small)
-        ax1.scatter(np.log10(mean[triku_genes_idx]), prop_0[triku_genes_idx],
+        ax.scatter(np.log10(mean[triku_genes_idx]), prop_0[triku_genes_idx],
                    c=arr_entropy[triku_genes_idx], cmap=cmax, s=size_large, alpha=alpha_large, edgecolors=line_color,
                    linewidths=0.05 * size_small)
 
-        ax1.set_xlabel(x_label)
-        ax1.set_ylabel(y_label)
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
 
         plt.tight_layout()
 
         if show:
             plt.show()
         if save_path != '':
+            logger.info("Saving figure in {}.".format(save_path))
             fig.savefig(save_path)
         if return_fig:
-            if ax is None:
-                return fig
-            else:
-                return ax1
+            return fig
 

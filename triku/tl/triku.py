@@ -19,7 +19,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
           n_cycles: int = 4, s: float = 0, outliers: bool = False, sigma_remove_outliers: float = 6.0,
           delta_x: int = None, delta_y: int = None, random_state: int = 0, knn: int = None,
           resolution: float = 1.3, entropy_threshold: float = 0.98, s_entropy: float = -0.01,
-          save_dir='', save_name=''):
+          save_name=''):
     """
     This function calls the triku method using python directly. This function expects an
     annData object or a csv / txt matrix of n_cells x n_genes. The function should then return an array / list
@@ -27,7 +27,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
 
     Parameters
     ----------
-    object_triku : scanpy.AnnData or pandas.DataFrame
+    object_triku : scanpy.AnnData or pandas.DataFrame or str
         Object with count matrix. If `pandas.DataFrame`, rows are cells and columns are genes.
         If str, path to the annData file or pandas DataFrame.
     n_bins : int
@@ -69,14 +69,14 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
         gene is smaller than that threshold, the cluster is not considered. If none of the clusters passes that
         threshold the entropy of that gene is set to 1. Positive values of `s_entropy` imply more stringent thresholds,
         and fewer genes are selected. Recommended values are between -0.05 and 0.05.
-
+    save_name : prefix of file to be saved. For instance /media/user/mytriku/example will generate files
+                /media/user/mytriku/example_entropy.txt and /media/user/mytriku/example_selected_genes.txt
     Returns
     -------
     dict_triku : dict
         `triku_selected_genes`: list with selected genes.
         `triku_entropy`: entropy for each gene (selected or not).
     """
-
     arr_counts, arr_genes = get_arr_counts_genes(object_triku)
 
     check_count_mat(arr_counts)
@@ -122,11 +122,12 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
 
     dict_triku = {'triku_selected_genes': genes_good_entropy, 'triku_entropy': dict_entropy_genes}
 
+
     if isinstance(object_triku, sc.AnnData) and write_anndata:
         object_triku.var['triku_entropy'] = dict_entropy_genes.values()
         object_triku.var['triku_selected_genes'] = [True if i in genes_good_entropy else False for i in
                                                     object_triku.var_names]
 
-    save_triku(dict_triku, save_dir, save_name, object_triku)
+    save_triku(dict_triku, save_name, object_triku)
 
     return dict_triku
