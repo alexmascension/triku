@@ -4,7 +4,7 @@ import numpy as np
 import scipy.sparse as spr
 
 from ..pp import remove_outliers
-from ..utils._triku_tl_utils import check_count_mat
+from ..utils._triku_tl_utils import check_count_mat, check_null_genes
 from ..tl._triku_functions import return_triku_gene_idx
 from ..utils._triku_tl_entropy_utils import return_leiden_partitition, entropy_per_gene
 from ..utils._general_utils import get_arr_counts_genes, save_triku
@@ -78,6 +78,8 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
         `triku_entropy`: entropy for each gene (selected or not).
     """
     arr_counts, arr_genes = get_arr_counts_genes(object_triku)
+
+    arr_counts, arr_genes = check_null_genes(arr_counts, arr_genes)
 
     check_count_mat(arr_counts)
 

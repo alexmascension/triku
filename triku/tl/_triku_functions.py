@@ -58,7 +58,7 @@ def return_idx(prop_0: np.ndarray, mean: np.ndarray, percentile_low: float, perc
     x = np.arange(len(array_mean)) / len(array_mean)
     y = (np.sort(np.log10(array_mean)) - min(np.log10(array_mean))) / \
         (np.max(np.log10(array_mean)) - np.min(np.log10(array_mean)))
-
+    print('arr', np.min(array_mean), np.max(array_mean))
     '''
     Apply a Savitzky-Golay filter to remove noisiness on the curve. This filter will be applicable to arrays
     longer than 21 elements. This number is more or less arbitrary, but we have seen that for curves with fewer
@@ -118,6 +118,7 @@ def return_triku_gene_idx(arr: np.ndarray, n_bins: int = 80, n_cycles: int = 4, 
     selected_genes_index = []
 
     for N in range(n_bins - 1):
+        print(N)
         len_bin = prop_0_bins[N + 1] - prop_0_bins[N]
 
         for cycle in range(n_cycles):

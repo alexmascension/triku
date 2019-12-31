@@ -22,6 +22,7 @@ def get_arr_counts_genes(object_triku):
             except:
                 adata = sc.read_h5ad(object_triku)
             arr_counts, arr_genes = adata.X, adata.var_names
+            a=0
         elif object_triku.endswith('loom'):
             loom = sc.read_loom(object_triku)
             arr_counts, arr_genes = loom.X, loom.var_names
@@ -48,6 +49,10 @@ def get_arr_counts_genes(object_triku):
     if spr.isspmatrix(arr_counts):
         arr_counts = arr_counts.todense()
 
+    if isinstance(arr_counts, np.matrix):
+        arr_counts = np.asarray(arr_counts)
+
+    a = 0
     return arr_counts, arr_genes
 
 
