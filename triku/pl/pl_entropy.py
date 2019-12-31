@@ -54,7 +54,7 @@ def return_carto_cmap(cmap_str):
         return []
 
 
-def entropy(object_triku: [sc.AnnData, pd.DataFrame], dict_triku: dict = None, backend: str = 'bokeh',
+def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: [dict, str] = None, backend: str = 'bokeh',
             size_small: float = 3, size_large: float = 6, alpha_small: float = 3, alpha_large: float = 6,
             cmap_entropy: [list, str] = 'invSunsetDark', return_fig: bool = False, show: bool = True, save_path: str = '',
             line_color: str = '#000000', line_alpha: float = 0.1, ax: plt.axes = None, figsize: tuple = (10, 5),

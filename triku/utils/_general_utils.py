@@ -1,16 +1,14 @@
 import scanpy as sc
 import pandas as pd
 import scipy.sparse as spr
-
+import numpy as np
+import os
 from ..logg import logger
 
 
 def get_arr_counts_genes(object_triku):
     logger.info('Obtaining count matrix and gene list.')
     # Check type of object and return the matrix as corresponded
-
-
-
 
     if isinstance(object_triku, sc.AnnData):
         arr_counts, arr_genes = object_triku.X, object_triku.var_names
@@ -58,11 +56,24 @@ def get_dict_triku(dict_triku, object_triku):
                    ".var['triku_selected_genes'] and .var['triku_entropy'] exist or (2) set 'dict_triku' with the" \
                    "proper dictionary."
 
+    if isinstance(dict_triku, str):
+        if not os.path.exists(dict_triku + '_entropy.txt') or not os.path.exists(dict_triku + '_selected_genes.txt'):
+            msg_path = "The objects {}, {} don't exist. Check the path."
+            logger.error(msg_path)
+            raise FileNotFoundError(msg_path)
+
+        selected_genes = pd.read_csv(dict_triku + '_selected_genes.txt', sep='\t', header=None)[0].values.tolist()
+        df_entropy = pd.read_csv(dict_triku + '_entropy.txt', sep='\t', header=None)
+        dict_triku = {
+            'triku_entropy': dict(zip(df_entropy[0].values, df_entropy[1].values)),
+            'triku_selected_genes': selected_genes}
+
     if dict_triku is None:
         if isinstance(object_triku, sc.AnnData):
             if 'triku_entropy' in object_triku.var and 'triku_selected_genes' in object_triku.var:
                 dict_triku = {
-                    'triku_entropy': dict(zip(object_triku.var_names, object_triku.var['triku_entropy'].values)),
+                    'triku_entropy': dict(zip(object_triku.var_names,
+                                              object_triku.var['triku_entropy'].values)),
                     'triku_selected_genes': object_triku.var[object_triku.var['triku_selected_genes'] ==
                                                              True].index.tolist()}
             else:

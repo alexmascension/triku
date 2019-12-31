@@ -31,7 +31,7 @@ setup(
     # package_data={'': '*.txt'},
     # include_package_data=True,
     entry_points=dict(
-        console_scripts=['triku=triku.cli.cli_triku:main'],
+        console_scripts=['triku=triku.cli.cli_triku:main', 'triku-plotentropy=triku.cli.cli_plot_entropy:main'],
     ),
     zip_safe=False,
     classifiers=[
