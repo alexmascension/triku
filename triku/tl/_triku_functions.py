@@ -64,7 +64,7 @@ def return_idx(prop_0: np.ndarray, mean: np.ndarray, percentile_low: float, perc
     longer than 21 elements. This number is more or less arbitrary, but we have seen that for curves with fewer
     points it does introduce some artifacts.
     '''
-    if len(y) > 21:
+    if len(x) > 36:  # 3 * 15 + 1
         y = savgol_filter(y, 2 * int(len(x) / 15) + 1, 3)
     '''
     In some cases the curve does a small step, or falls and rises at the beginning, and these two cases destabilize
