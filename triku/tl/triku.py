@@ -7,7 +7,7 @@ from ..pp import remove_outliers
 from ..utils._triku_tl_utils import check_count_mat, check_null_genes
 from ..tl._triku_functions import return_triku_gene_idx
 from ..utils._triku_tl_entropy_utils import return_leiden_partitition, entropy_per_gene
-from ..utils._general_utils import get_arr_counts_genes, save_triku
+from ..utils._general_utils import get_arr_counts_genes, save_triku, set_level_logger
 from ..logg import logger
 
 import warnings
@@ -19,7 +19,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
           n_cycles: int = 4, s: float = 0, seed:int = 0, outliers: bool = False, sigma_remove_outliers: float = 4.0,
           delta_x: int = None, delta_y: int = None, random_state: int = 0, knn: int = None,
           resolution: float = 1.3, entropy_threshold: float = 0.95, s_entropy: float = 0,
-          save_name=''):
+          save_name='', verbose='info'):
     """
     This function calls the triku method using python directly. This function expects an
     annData object or a csv / txt matrix of n_cells x n_genes. The function should then return an array / list
@@ -74,12 +74,16 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
         and more genes are selected. Recommended values are between -0.05 and 0.05.
     save_name : prefix of file to be saved. For instance /media/user/mytriku/example will generate files
                 /media/user/mytriku/example_entropy.txt and /media/user/mytriku/example_selected_genes.txt
+    verbose : str ['debug', 'info', 'warning', 'error', 'critical']
+        Logger verbosity output.
     Returns
     -------
     dict_triku : dict
         `triku_selected_genes`: list with selected genes.
         `triku_entropy`: entropy for each gene (selected or not).
     """
+    set_level_logger(verbose)
+
     arr_counts, arr_genes = get_arr_counts_genes(object_triku)
     arr_counts, arr_genes = check_null_genes(arr_counts, arr_genes)
 

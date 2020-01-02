@@ -3,7 +3,10 @@ import pandas as pd
 import scipy.sparse as spr
 import numpy as np
 import os
+import logging
+
 from ..logg import logger
+
 
 
 def get_arr_counts_genes(object_triku):
@@ -122,3 +125,10 @@ def make_genes_unique(arr):
                 counter += 1
 
     return arr
+
+
+def set_level_logger(level):
+    dict_levels = {'debug': logging.DEBUG, 'info': logging.INFO, 'warning': logging.WARNING,
+                   'error': logging.ERROR, 'critical': logging.CRITICAL}
+
+    logger.setLevel(dict_levels[level])

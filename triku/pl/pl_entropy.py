@@ -11,7 +11,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 from ..logg import logger
 from ..utils import return_proportion_zeros, return_mean
-from ..utils._general_utils import get_arr_counts_genes, get_dict_triku
+from ..utils._general_utils import get_arr_counts_genes, get_dict_triku, set_level_logger
 from ..utils._triku_tl_utils import check_count_mat
 
 
@@ -59,7 +59,7 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = No
             alpha_large: float = 6,
             cmap_entropy: [list, str] = 'invSunsetDark', return_fig: bool = False, show: bool = True,
             save_path: str = '', line_color: str = '#000000', line_alpha: float = 0.1, ax: plt.axes = None,
-            figsize: tuple = (10, 5), x_label: str = '', y_label: str = ''):
+            figsize: tuple = (10, 5), x_label: str = '', y_label: str = '', verbose: str = 'info'):
     """
     Plots the mean expression VS percentage of 0, adding information about the entropy and the
     genes selected by `tl.triku()`. If the object is an annData, information from the plot can be extracted directly
@@ -108,12 +108,16 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = No
         Label of x axis.
     y_label : str
         Label of y axis.
+    verbose : str ['debug', 'info', 'warning', 'error', 'critical']
+        Logger verbosity output.
 
     Returns
     -------
     fig :
         Figure.
     """
+    set_level_logger(verbose)
+
     # Check type of object and return the matrix as corresponded
     arr_counts, arr_genes = get_arr_counts_genes(object_triku)
 
