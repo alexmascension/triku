@@ -8,7 +8,7 @@ import leidenalg
 from leidenalg.VertexPartition import RBConfigurationVertexPartition
 from scanpy.utils import get_igraph_from_adjacency
 
-from ..tl._triku_functions import find_knee_point, savgol_filter
+from ..tl._triku_functions import find_knee_point
 from ..logg import logger
 
 def return_leiden_partitition(arr_counts, knn, random_state, resolution):
@@ -99,6 +99,7 @@ def entropy_per_gene(arr: np.array, list_genes: list, cluster_labels: [np.ndarra
     max_entropy = np.log2(n_clusters)
 
     threshold = entropy_proportion_threshold(arr, dict_cluster_idx, s_ent)
+    logger.info('Threshold for minimum expresing cells per cluster set at {}.'.format(threshold))
 
     dict_entropy_genes, dict_proportions_genes, dict_percentage_counts_genes = {}, {}, {}
 

@@ -11,9 +11,9 @@ def get_arr_counts_genes(object_triku):
     # Check type of object and return the matrix as corresponded
 
     if isinstance(object_triku, sc.AnnData):
-        arr_counts, arr_genes = object_triku.X, object_triku.var_names
+        arr_counts, arr_genes = object_triku.X, object_triku.var_names.values
     elif isinstance(object_triku, pd.DataFrame):
-        arr_counts, arr_genes = object_triku.values, object_triku.columns.values
+        arr_counts, arr_genes = object_triku.values, object_triku.columns.values.values
 
     elif isinstance(object_triku, str):
         if object_triku.endswith('h5') or object_triku.endswith('h5ad'):
@@ -21,17 +21,16 @@ def get_arr_counts_genes(object_triku):
                 adata = sc.read_10x_h5(object_triku)
             except:
                 adata = sc.read_h5ad(object_triku)
-            arr_counts, arr_genes = adata.X, adata.var_names
-            a=0
+            arr_counts, arr_genes = adata.X, adata.var_names.values
         elif object_triku.endswith('loom'):
             loom = sc.read_loom(object_triku)
-            arr_counts, arr_genes = loom.X, loom.var_names
+            arr_counts, arr_genes = loom.X, loom.var_names.values
         elif object_triku.endswith('mtx'):
             try:
                 mtx = sc.read_10x_mtx(object_triku)
             except:
                 mtx = sc.read_mtx(object_triku)
-            arr_counts, arr_genes = mtx.X, mtx.var_names
+            arr_counts, arr_genes = mtx.X, mtx.var_names.values
         elif object_triku.endswith('txt') or object_triku.endswith('csv') or object_triku.endswith('tsv'):
             df = pd.read_csv(object_triku, sep=None)
             arr_counts, arr_genes = df.values, df.columns.values
@@ -39,7 +38,6 @@ def get_arr_counts_genes(object_triku):
             msg = "Accepted file formats are h5 / h5ad / loom / mtx for adata files, and txt / csv / tsv for matrices."
             logger.error(msg)
             raise TypeError(msg)
-
 
     else:
         msg = "Accepted object types are scanpy annDatas or pandas DataFrames (columns are genes)."
@@ -52,7 +50,8 @@ def get_arr_counts_genes(object_triku):
     if isinstance(arr_counts, np.matrix):
         arr_counts = np.asarray(arr_counts)
 
-    a = 0
+    arr_genes = make_genes_unique(arr_genes)
+
     return arr_counts, arr_genes
 
 
@@ -105,3 +104,21 @@ def save_triku(dict_triku, save_name, object_triku):
         df_entropy.to_csv('{}_entropy.txt'.format(save_name), header=None, index=None, sep='\t')
         df_selected_genes.to_csv('{}_selected_genes.txt'.format(save_name), header=None, index=None,
                                  sep='\t')
+
+
+def make_genes_unique(arr):
+    labels, counts = np.unique(arr, return_counts=True)
+    non_unique_labels = labels[counts > 1]
+
+    if len(non_unique_labels) > 0:
+        logger.info("We found {} duplicated genes: {}.\nWe will rename them to make them unique.".format(
+            len(non_unique_labels), non_unique_labels))
+
+        for label in non_unique_labels:
+            label_idxs = np.argwhere(arr == label).flatten()
+            counter = 1
+            for idx in label_idxs[1:]:
+                arr[idx] = arr[idx] + '-{}'.format(counter)
+                counter += 1
+
+    return arr
