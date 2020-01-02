@@ -119,7 +119,7 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = No
     set_level_logger(verbose)
 
     # Check type of object and return the matrix as corresponded
-    arr_counts, arr_genes = get_arr_counts_genes(object_triku)
+    arr_counts, arr_genes, adata = get_arr_counts_genes(object_triku)
 
     # Initialize dict triku based on the object type
     dict_triku = get_dict_triku(dict_triku, dict_triku_path, object_triku)

@@ -30,6 +30,8 @@ def find_knee_point(x, y, s=0.0):
     if len(list_d) < 3:
         return 0
 
+    s = -s  # We change that so that s now follows intuitively. Greater s implies more genes and vice-versa.
+
     if s >= 0:
         correction_factor = min(s, 0.9)
         knee_x_idx = np.argwhere(list_d <= (1 - correction_factor) * min(list_d)).flatten()[-1]

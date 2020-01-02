@@ -12,9 +12,11 @@ from ..logg import logger
 def get_arr_counts_genes(object_triku):
     logger.info('Obtaining count matrix and gene list.')
     # Check type of object and return the matrix as corresponded
+    adata = None
 
     if isinstance(object_triku, sc.AnnData):
         arr_counts, arr_genes = object_triku.X, object_triku.var_names.values
+        adata = object_triku
     elif isinstance(object_triku, pd.DataFrame):
         arr_counts, arr_genes = object_triku.values, object_triku.columns.values.values
 
@@ -26,14 +28,14 @@ def get_arr_counts_genes(object_triku):
                 adata = sc.read_h5ad(object_triku)
             arr_counts, arr_genes = adata.X, adata.var_names.values
         elif object_triku.endswith('loom'):
-            loom = sc.read_loom(object_triku)
-            arr_counts, arr_genes = loom.X, loom.var_names.values
+            adata = sc.read_loom(object_triku)
+            arr_counts, arr_genes = adata.X, adata.var_names.values
         elif object_triku.endswith('mtx'):
             try:
-                mtx = sc.read_10x_mtx(object_triku)
+                adata = sc.read_10x_mtx(object_triku)
             except:
-                mtx = sc.read_mtx(object_triku)
-            arr_counts, arr_genes = mtx.X, mtx.var_names.values
+                adata = sc.read_mtx(object_triku)
+            arr_counts, arr_genes = adata.X, adata.var_names.values
         elif object_triku.endswith('txt') or object_triku.endswith('csv') or object_triku.endswith('tsv'):
             df = pd.read_csv(object_triku, sep=None)
             arr_counts, arr_genes = df.values, df.columns.values
@@ -55,7 +57,7 @@ def get_arr_counts_genes(object_triku):
 
     arr_genes = make_genes_unique(arr_genes)
 
-    return arr_counts, arr_genes
+    return arr_counts, arr_genes, adata
 
 
 def get_dict_triku(dict_triku, dict_triku_path, object_triku):
@@ -105,8 +107,11 @@ def save_triku(dict_triku, save_name, object_triku):
         df_selected_genes = pd.DataFrame(dict_triku['triku_selected_genes'])
 
         df_entropy.to_csv('{}_entropy.txt'.format(save_name), header=None, index=None, sep='\t')
-        df_selected_genes.to_csv('{}_selected_genes.txt'.format(save_name), header=None, index=None,
-                                 sep='\t')
+        df_selected_genes.to_csv('{}_selected_genes.txt'.format(save_name), header=None, index=None, sep='\t')
+
+        if 'triku_leiden' in dict_triku.keys():
+            df_selected_genes = pd.DataFrame(dict_triku['triku_leiden'])
+            df_selected_genes.to_csv('{}_triku_leiden.txt'.format(save_name), header=None, index=None, sep='\t')
 
 
 def make_genes_unique(arr):

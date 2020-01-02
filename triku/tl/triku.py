@@ -18,8 +18,8 @@ warnings.filterwarnings('ignore')  # To ignore Numba warnings
 def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write_anndata: bool = True,
           n_cycles: int = 4, s: float = 0, seed:int = 0, outliers: bool = False, sigma_remove_outliers: float = 4.0,
           delta_x: int = None, delta_y: int = None, random_state: int = 0, knn: int = None,
-          resolution: float = 1.3, entropy_threshold: float = 0.95, s_entropy: float = 0,
-          save_name='', verbose='info'):
+          resolution: float = 1.3, leiden_from_adata : bool = True, entropy_threshold: float = 0.95,
+          s_entropy: float = 0, save_name='', verbose='info'):
     """
     This function calls the triku method using python directly. This function expects an
     annData object or a csv / txt matrix of n_cells x n_genes. The function should then return an array / list
@@ -63,6 +63,8 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
         Number of neighbors used in clustering for entropy calculation. By default, it is `sqrt(n_cells)`.
     resolution : float
         Leiden resolution used in clustering for entropy calculation.
+    leiden_from_adata : bool
+        If True, and 'leiden' is found in adata.obs, use this solution.
     entropy_threshold : float
         Discard genes with entropy higher than that threshold.
     s_entropy : float
@@ -84,7 +86,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
     """
     set_level_logger(verbose)
 
-    arr_counts, arr_genes = get_arr_counts_genes(object_triku)
+    arr_counts, arr_genes, adata = get_arr_counts_genes(object_triku)
     arr_counts, arr_genes = check_null_genes(arr_counts, arr_genes)
 
     check_count_mat(arr_counts)
@@ -107,7 +109,8 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
     we have seen that works good for what we are looking for.
     '''
 
-    leiden_partition = return_leiden_partitition(arr_counts, knn, random_state, resolution)
+    leiden_partition, new_partition = return_leiden_partitition(arr_counts, knn, random_state, resolution,
+                                                                leiden_from_adata, adata)
 
     '''
     Once clusters are obtained, we calculate the proportion of non-zero expressing cells per clusters and per gene.
@@ -128,13 +131,17 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
     positive_genes = arr_genes[idx_selected_genes]
     genes_good_entropy = [gene for gene in positive_genes if dict_entropy_genes[gene] <= entropy_threshold]
 
-    dict_triku = {'triku_selected_genes': genes_good_entropy, 'triku_entropy': dict_entropy_genes}
+    logger.info("We have found a total of {} triku genes!".format(len(positive_genes)))
 
+    dict_triku = {'triku_selected_genes': genes_good_entropy, 'triku_entropy': dict_entropy_genes}
+    if new_partition:
+        dict_triku['triku_leiden'] = leiden_partition.membership
 
     if isinstance(object_triku, sc.AnnData) and write_anndata:
-        object_triku.var['triku_entropy'] = dict_entropy_genes.values()
+        object_triku.var['triku_entropy'] = dict_entropy_genes.values() # Todo: Esto igual falla
         object_triku.var['triku_selected_genes'] = [True if i in genes_good_entropy else False for i in
                                                     object_triku.var_names]
+        object_triku.obs['triku_leiden'] = leiden_partition.membership
 
     save_triku(dict_triku, save_name, object_triku)
 
