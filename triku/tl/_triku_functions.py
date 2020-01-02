@@ -40,25 +40,30 @@ def find_knee_point(x, y, s=0.0):
     return knee_x_idx
 
 
-def return_idx(prop_0: np.ndarray, mean: np.ndarray, percentile_low: float, percentile_high: float, s: float,
+def return_idx(prop_0: np.ndarray, mean: np.ndarray, percentile_low_idx: int, percentile_high_idx: int, s: float,
                delta_x: int = None, delta_y: int = None, apply_deltas: bool = True):
     """
     Selection of the knee point in a curve. This function accepts the list of zero proportions, means, the
     cutting points, and the s parameter, and returns the indices from prop_0 whose mean is greater than the
     one at the knee point. How the curve is obtained and how s acts, is explained in `find_knee_point`.
     """
+    percentile_low, percentile_high = np.sort(prop_0)[percentile_low_idx], np.sort(prop_0)[percentile_high_idx],
 
     selector = (prop_0 >= percentile_low) & (prop_0 <= percentile_high)
     array_mean = mean[selector]
 
     # Calculate the curve of number of genes by mean. This curve is scaled from 0 to 1 in both axes.
-    if len(array_mean) == 0:
+    if np.min(array_mean) == np.max(array_mean):
+        logger.warning("Mean difference for this bin is zero (n_0 = {}, n_f = {}, mean = {}). "
+                       "This might not be a problem, but sometimes it is associated to poor data quality".format(
+            percentile_low_idx, percentile_high_idx, np.min(array_mean)))
         return []
 
     x = np.arange(len(array_mean)) / len(array_mean)
     y = (np.sort(np.log10(array_mean)) - min(np.log10(array_mean))) / \
         (np.max(np.log10(array_mean)) - np.min(np.log10(array_mean)))
-    print('arr', np.min(array_mean), np.max(array_mean))
+
+
     '''
     Apply a Savitzky-Golay filter to remove noisiness on the curve. This filter will be applicable to arrays
     longer than 21 elements. This number is more or less arbitrary, but we have seen that for curves with fewer
@@ -92,7 +97,7 @@ def return_idx(prop_0: np.ndarray, mean: np.ndarray, percentile_low: float, perc
 
 
 def return_triku_gene_idx(arr: np.ndarray, n_bins: int = 80, n_cycles: int = 4, s: float = 0, delta_x: int = None,
-                          delta_y: int = None):
+                          delta_y: int = None, seed=0):
     """
     Returns the indices of the array corresponding to the selected genes, with high variability.
     Parameters are explained in the main triku function.
@@ -101,15 +106,27 @@ def return_triku_gene_idx(arr: np.ndarray, n_bins: int = 80, n_cycles: int = 4, 
     # Prepare the matrix, get the mean and the proportion of zeros, and resolve other attributes
     mean, prop_0 = return_mean(arr), return_proportion_zeros(arr)
 
+    # First we introduce a slight amount of noise into the proportions. This makes the binning more robust to
+    # datasets that do not have smooth percentages. In those cases, the percentiles on the upper bound can fail,
+    # and although it does not throw an error, it makes binning more unequal.
+    np.random.seed(seed)
+    prop_0 += np.random.uniform(low=0, high=(np.max(prop_0) - np.min(prop_0)) / (100 * n_bins), size=len(prop_0))
+
     """
     In previous versions we removed top and bottom percentage genes because they seemed not to be relevant. Now 
     we will remove them a posteriori applying an entropy threshold.
     """
 
     logger.info("Binning the dataset")
-    # Divide the dataset into bins. Each bin should have a similar number of genes to analyze. Thus, ranges with
+    # Divide the dataset into bins. THE PREVIOUS METHOD inclueded the len_bin as prop_0_bins[N + 1] - prop_0_bins[N].
+    # This is wrong because distribution of points are skewed towards points with high prop_0 / low mean, and the bins
+    # for the low prop_0 / high mean are much larger, making the selection process skewed. To remove this we have to
+    # make the length of the bin exactly the number of elements in the bin (which now is equal (+-1) due to random
+    # noise added).
+
+    # Each bin should have a similar number of genes to analyze. Thus, ranges with
     # fewer number of genes will be larger, and ranges with further number of genes will be smaller.
-    prop_0_bins = [np.percentile(prop_0, 100 * i / n_bins) for i in range(n_bins)]
+    prop_0_bins_idx = [int(i) for i in np.linspace(0, len(prop_0), n_bins + 1)]
 
     # For each bin, we will take the genes that pass the threshold. This threshold is calculated as the knee point
     # of the rank of mean VS mean. To make the threshold across the whole prop_0 range, we will shift the range of
@@ -117,15 +134,15 @@ def return_triku_gene_idx(arr: np.ndarray, n_bins: int = 80, n_cycles: int = 4, 
     # the whole interval, and not make the gene selection stepper.
     selected_genes_index = []
 
+
     for N in range(n_bins - 1):
-        print(N)
-        len_bin = prop_0_bins[N + 1] - prop_0_bins[N]
+        len_bin = prop_0_bins_idx[N + 1] - prop_0_bins_idx[N]
 
         for cycle in range(n_cycles):
-            start_prop = prop_0_bins[N] + cycle * len_bin / n_cycles
-            end_prop = prop_0_bins[N + 1] + cycle * len_bin / n_cycles
-            selector_idxs = return_idx(prop_0, mean=mean, percentile_low=start_prop, percentile_high=end_prop, s=s,
-                                       delta_x=delta_x, delta_y=delta_y)
+            start_prop_idx = prop_0_bins_idx[N] + int(cycle * len_bin / n_cycles)
+            end_prop_idx = prop_0_bins_idx[N + 1] + int(cycle * len_bin / n_cycles)
+            selector_idxs = return_idx(prop_0, mean=mean, s=s, delta_x=delta_x, delta_y=delta_y,
+                                       percentile_low_idx=start_prop_idx, percentile_high_idx=end_prop_idx, )
             selected_genes_index += selector_idxs
 
     logger.info("Getting selected genes")

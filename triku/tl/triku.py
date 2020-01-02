@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')  # To ignore Numba warnings
 
 
 def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write_anndata: bool = True,
-          n_cycles: int = 4, s: float = 0, outliers: bool = False, sigma_remove_outliers: float = 6.0,
+          n_cycles: int = 4, s: float = 0, seed:int = 0, outliers: bool = False, sigma_remove_outliers: float = 6.0,
           delta_x: int = None, delta_y: int = None, random_state: int = 0, knn: int = None,
           resolution: float = 1.3, entropy_threshold: float = 0.98, s_entropy: float = -0.01,
           save_name=''):
@@ -42,6 +42,8 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
     s : float
         Correction factor for gene selection. Fewer genes are selected with positive values of `s` and
         more genes are selected with negative values. We recommend values between -0.1 and 0.1.
+    seed : int
+        Seed for random proceses
     outliers : bool
         If `False` removes values of counts that are extreme. Values with more standard deviations that
         a certain value are changed to the mean expression of the gene.
@@ -88,7 +90,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
         arr_counts = remove_outliers(arr_counts, sigma_remove_outliers, do_copy=True)
 
     idx_selected_genes = return_triku_gene_idx(arr=arr_counts, n_bins=n_bins, n_cycles=n_cycles, s=s,
-                                               delta_x=delta_x, delta_y=delta_y)
+                                               delta_x=delta_x, delta_y=delta_y, seed=seed)
 
     '''
     The next step is to remove genes with high entropy. This high entropy can be considered as 1 or > 0.9X. In order
