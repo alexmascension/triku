@@ -25,10 +25,14 @@ def return_leiden_partitition(arr_counts, knn, random_state, resolution, leiden_
     # Zero, return leiden solution from annData if it exists
     if leiden_from_adata and isinstance(adata, sc.AnnData):
         if 'leiden' in adata.obs:
-            logger.info("We have found a clustering solution in the AnnData object. If you don't want to use "
-                        "this solution, call tl.triku(..., leiden_from_adata=False).")
             leiden_partition = adata.obs['leiden'].values
-            return leiden_partition.astype(type(leiden_partition[0])), False
+
+            logger.info("We have found a clustering solution in the AnnData object with resolution {} and {} clusters. "
+                        "If you don't want to use this solution, call tl.triku(..., leiden_from_adata=False).".format(
+                adata.uns['leiden']['params']['resolution'], len(set(leiden_partition))
+            ))
+
+            return leiden_partition.astype(type(leiden_partition[0]))
 
     # First, compute the kNN of the matrix. With those kNN we will generate the adjacency matrix and the graph
     if knn is None:
@@ -54,7 +58,7 @@ def return_leiden_partitition(arr_counts, knn, random_state, resolution, leiden_
     leiden_partition = leidenalg.find_partition(g, leidenalg.RBConfigurationVertexPartition, resolution_parameter=resolution,
                                     weights=weights, seed=random_state)
 
-    return leiden_partition, True
+    return leiden_partition.membership
 
 
 def entropy_proportion_threshold(arr_counts, leiden_partition, s):

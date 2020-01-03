@@ -109,7 +109,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
     we have seen that works good for what we are looking for.
     '''
 
-    leiden_partition, new_partition = return_leiden_partitition(arr_counts, knn, random_state, resolution,
+    leiden_partition = return_leiden_partitition(arr_counts, knn, random_state, resolution,
                                                                 leiden_from_adata, adata)
 
     '''
@@ -133,15 +133,14 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
 
     logger.info("We have found a total of {} triku genes!".format(len(positive_genes)))
 
-    dict_triku = {'triku_selected_genes': genes_good_entropy, 'triku_entropy': dict_entropy_genes}
-    if new_partition:
-        dict_triku['triku_leiden'] = leiden_partition.membership
+    dict_triku = {'triku_selected_genes': genes_good_entropy, 'triku_entropy': dict_entropy_genes,
+                  'triku_leiden': leiden_partition}
 
     if isinstance(object_triku, sc.AnnData) and write_anndata:
-        object_triku.var['triku_entropy'] = dict_entropy_genes.values() # Todo: Esto igual falla
+        object_triku.var['triku_entropy'] = dict_entropy_genes.values()
         object_triku.var['triku_selected_genes'] = [True if i in genes_good_entropy else False for i in
                                                     object_triku.var_names]
-        object_triku.obs['triku_leiden'] = leiden_partition.membership
+        object_triku.obs['triku_leiden'] = leiden_partition
 
     save_triku(dict_triku, save_name, object_triku)
 
