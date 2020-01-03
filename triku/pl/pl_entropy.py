@@ -146,8 +146,8 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = No
     if backend == 'bokeh':
         logger.info("Doing plot with backend 'bokeh")
         # Create the figure with the tools
-        fig = figure(tools='reset,box_zoom', tooltips=[('Gene', "@genes"), ('% Zeros', "@zero_per"),
-                                                       ('% Entropy', "@entropy")])
+        fig = figure(tools='reset,box_zoom', tooltips=[('Gene', "@genes"), ("Mean", "@x"), ('% Zeros', "@zero_per"),
+                                                       ('% Entropy', "@entropy"), ("Selected gene", "@selected")])
 
         fig.xaxis.axis_label = x_label
         fig.yaxis.axis_label = y_label
@@ -165,7 +165,8 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = No
         cds = ColumnDataSource({'x': np.log10(mean), 'y': prop_0, 'genes': arr_genes,
                                 'entropy': list(dict_triku['triku_entropy'].values()),
                                 'alpha': arr_alphas, 'size': arr_sizes,
-                                'zero_per': 100 * prop_0})
+                                'zero_per': 100 * prop_0, 'selected':
+                                    [True if i in dict_triku['triku_selected_genes'] else False for i in arr_genes]})
 
         fig.scatter('x', 'y', source=cds, fill_alpha='entropy', color={'field': 'entropy', 'transform': color_mapper},
                     size='size', line_alpha=line_alpha, line_color=line_color)
