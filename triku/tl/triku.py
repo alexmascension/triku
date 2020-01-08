@@ -109,7 +109,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
     we have seen that works good for what we are looking for.
     '''
 
-    leiden_partition, umap_embedding = return_leiden_partitition(arr_counts, knn, random_state, resolution,
+    leiden_partition = return_leiden_partitition(arr_counts, knn, random_state, resolution,
                                                                  leiden_from_adata, adata)
 
     '''
