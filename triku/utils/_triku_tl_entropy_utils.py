@@ -46,14 +46,7 @@ def return_leiden_partitition(arr_counts, knn, random_state, resolution, leiden_
 
             leiden_partition = leiden_partition.astype(type(leiden_partition[0]))
 
-            if 'X_umap' not in adata.obsm:
-                logger.info("""We have not found a umap embedding on your adata. We will calculate it using
-                                scanpy.tl.umap(adata) with default values.""")
-                sc.tl.umap(adata)
-
-            embedding = adata.obsm['X_umap'].values
-
-            return leiden_partition, embedding
+            return leiden_partition
 
         else:
             logger.info("""We have not found a leiden solution in the anndata object. You can get it running 
@@ -83,12 +76,7 @@ def return_leiden_partitition(arr_counts, knn, random_state, resolution, leiden_
                                                 resolution_parameter=resolution, weights=weights, seed=random_state)
     leiden_partition = np.array(leiden_partition.membership)
 
-    logger.info('... calculating UMAP embedding')
-    # We calculate the embedding because, sometimes, UMAP from the adata embedding does not fit these clusters properly,
-    # but calculating the UMAP with the pca calculated here does.
-    embedding = UMAP(min_dist=0.3, metric='cosine', n_neighbors=knn).fit_transform(pca, )
-
-    return leiden_partition, embedding
+    return leiden_partition
 
 
 def entropy_proportion_threshold(arr_counts, leiden_partition, s):
