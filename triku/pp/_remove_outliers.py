@@ -2,6 +2,7 @@ import numpy as np
 import scipy.sparse as spr
 
 
+# TODO ESTO TARDA DEMASIADO. PROFILING / VER DONDE TARDA
 def remove_outliers(arr: np.ndarray, sigma: float = 5.0, do_copy: bool = False,):
     if do_copy:
         arr = arr.copy()

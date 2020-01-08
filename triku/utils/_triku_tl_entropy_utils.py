@@ -4,7 +4,8 @@ import scipy.sparse as spr
 from tqdm import tqdm
 import scanpy as sc
 
-from umap.umap_ import fuzzy_simplicial_set
+from umap.umap_ import fuzzy_simplicial_set, nearest_neighbors
+from umap import UMAP
 from sklearn.decomposition import PCA
 import leidenalg
 from leidenalg.VertexPartition import RBConfigurationVertexPartition
@@ -12,6 +13,17 @@ from scanpy.utils import get_igraph_from_adjacency
 
 from ..tl._triku_functions import find_knee_point
 from ..logg import logger
+
+
+def return_PCA(arr_counts):
+    logger.info("... reducing dimensions on PCA.")
+    # To save time, we will do a PCA with 50 components, and get the kNN from there
+    if spr.isspmatrix(arr_counts):
+        pca = PCA(n_components=25, whiten=True, svd_solver='auto').fit_transform(arr_counts.todense())
+    else:
+        pca = PCA(n_components=25, whiten=True, svd_solver='auto').fit_transform(arr_counts)
+
+    return pca
 
 
 def return_leiden_partitition(arr_counts, knn, random_state, resolution, leiden_from_adata, adata):
@@ -32,22 +44,34 @@ def return_leiden_partitition(arr_counts, knn, random_state, resolution, leiden_
                 adata.uns['leiden']['params']['resolution'], len(set(leiden_partition))
             ))
 
-            return leiden_partition.astype(type(leiden_partition[0]))
+            leiden_partition = leiden_partition.astype(type(leiden_partition[0]))
+
+            if 'X_umap' not in adata.obsm:
+                logger.info("""We have not found a umap embedding on your adata. We will calculate it using
+                                scanpy.tl.umap(adata) with default values.""")
+                sc.tl.umap(adata)
+
+            embedding = adata.obsm['X_umap'].values
+
+            return leiden_partition, embedding
+
+        else:
+            logger.info("""We have not found a leiden solution in the anndata object. You can get it running 
+                        scanpy.tl.leiden(adata).""")
 
     # First, compute the kNN of the matrix. With those kNN we will generate the adjacency matrix and the graph
     if knn is None:
         knn = int(arr_counts.shape[0] ** 0.5)
 
-    logger.info("... reducing dimensions on PCA.")
-    # To save time, we will do a PCA with 50 components, and get the kNN from there
-    if spr.isspmatrix(arr_counts):
-        pca = PCA(n_components=25, whiten=True, svd_solver='auto').fit_transform(arr_counts.todense())
-    else:
-        pca = PCA(n_components=25, whiten=True, svd_solver='auto').fit_transform(arr_counts)
+    pca = return_PCA(arr_counts)
+
+    logger.info("... obtaining the kNN.")
+    knn_indices, knn_dists, forest = nearest_neighbors(pca, n_neighbors=knn, metric='cosine',
+                               random_state=np.random.RandomState(random_state), angular=False, metric_kwds={})
 
     logger.info("... obtaining the adjacency matrix.")
-    adj = fuzzy_simplicial_set(pca, n_neighbors=knn, metric='cosine',
-                               random_state=np.random.RandomState(random_state))
+    adj = fuzzy_simplicial_set(pca, knn, None, None, knn_indices=knn_indices, knn_dists=knn_dists, set_op_mix_ratio=1,
+                               local_connectivity=1,)
 
     logger.info("... creating graph.")
     # Create Graph
@@ -55,10 +79,16 @@ def return_leiden_partitition(arr_counts, knn, random_state, resolution, leiden_
     weights = np.array(g.es['weight']).astype(np.float64)
 
     logger.info("... running leiden.")
-    leiden_partition = leidenalg.find_partition(g, leidenalg.RBConfigurationVertexPartition, resolution_parameter=resolution,
-                                    weights=weights, seed=random_state)
+    leiden_partition = leidenalg.find_partition(g, leidenalg.RBConfigurationVertexPartition,
+                                                resolution_parameter=resolution, weights=weights, seed=random_state)
+    leiden_partition = np.array(leiden_partition.membership)
 
-    return leiden_partition.membership
+    logger.info('... calculating UMAP embedding')
+    # We calculate the embedding because, sometimes, UMAP from the adata embedding does not fit these clusters properly,
+    # but calculating the UMAP with the pca calculated here does.
+    embedding = UMAP(min_dist=0.3, metric='cosine', n_neighbors=knn).fit_transform(pca, )
+
+    return leiden_partition, embedding
 
 
 def entropy_proportion_threshold(arr_counts, leiden_partition, s):
@@ -139,7 +169,8 @@ def entropy_per_gene(arr: np.array, list_genes: list, cluster_labels: [np.ndarra
         if len(list_percentage_counts) == 0:
             entropy = 1
         else:
-            list_proportions = list_proportions[list_proportions > 0] / np.sum(list_proportions)
+            list_proportions = list_proportions[list_proportions > 0]
+            list_proportions = list_proportions / np.sum(list_proportions)
             entropy = - np.sum(list_proportions * np.log2(list_proportions)) / max_entropy
 
         gene = list_genes[gene_idx]

@@ -113,6 +113,9 @@ def save_triku(dict_triku, save_name, object_triku):
             df_selected_genes = pd.DataFrame(dict_triku['triku_leiden'])
             df_selected_genes.to_csv('{}_triku_leiden.txt'.format(save_name), header=None, index=None, sep='\t')
 
+        if 'triku_umap' in dict_triku.keys():
+            df_umap = pd.DataFrame(dict_triku['triku_umap'])
+            df_umap.to_csv('{}_triku_umap.txt'.format(save_name), header=None, index=None, sep='\t')
 
 def make_genes_unique(arr):
     labels, counts = np.unique(arr, return_counts=True)

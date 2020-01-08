@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')  # To ignore Numba warnings
 
 
 def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write_anndata: bool = True,
-          n_cycles: int = 4, s: float = 0, seed:int = 0, outliers: bool = False, sigma_remove_outliers: float = 4.0,
+          n_cycles: int = 4, s: float = 0, seed: int = 0, outliers: bool = False, sigma_remove_outliers: float = 4.0,
           delta_x: int = None, delta_y: int = None, random_state: int = 0, knn: int = None,
           resolution: float = 1.3, leiden_from_adata : bool = True, entropy_threshold: float = 0.95,
           s_entropy: float = 0, save_name='', verbose='info'):
@@ -109,8 +109,8 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
     we have seen that works good for what we are looking for.
     '''
 
-    leiden_partition = return_leiden_partitition(arr_counts, knn, random_state, resolution,
-                                                                leiden_from_adata, adata)
+    leiden_partition, umap_embedding = return_leiden_partitition(arr_counts, knn, random_state, resolution,
+                                                                 leiden_from_adata, adata)
 
     '''
     Once clusters are obtained, we calculate the proportion of non-zero expressing cells per clusters and per gene.
@@ -134,13 +134,14 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
     logger.info("We have found a total of {} triku genes!".format(len(positive_genes)))
 
     dict_triku = {'triku_selected_genes': genes_good_entropy, 'triku_entropy': dict_entropy_genes,
-                  'triku_leiden': leiden_partition}
+                  'triku_leiden': leiden_partition, 'triku_umap': umap_embedding}
 
     if isinstance(object_triku, sc.AnnData) and write_anndata:
         object_triku.var['triku_entropy'] = dict_entropy_genes.values()
         object_triku.var['triku_selected_genes'] = [True if i in genes_good_entropy else False for i in
                                                     object_triku.var_names]
         object_triku.obs['triku_leiden'] = leiden_partition
+        object_triku.obsm['triku_umap'] = leiden_partition
 
     save_triku(dict_triku, save_name, object_triku)
 
