@@ -74,10 +74,13 @@ def get_dict_triku(dict_triku, dict_triku_path, object_triku):
             raise FileNotFoundError(msg_path)
 
         selected_genes = pd.read_csv(dict_triku_path + '_selected_genes.txt', sep='\t', header=None)[0].values.tolist()
+        discarded_entropy_genes = pd.read_csv(dict_triku_path + '_discarded_entropy_genes.txt',
+                                                    sep='\t', header=None)[0].values.tolist()
         df_entropy = pd.read_csv(dict_triku_path + '_entropy.txt', sep='\t', header=None)
         dict_triku = {
             'triku_entropy': dict(zip(df_entropy[0].values, df_entropy[1].values)),
-            'triku_selected_genes': selected_genes}
+            'triku_selected_genes': selected_genes,
+            'triku_discarded_entropy_genes': discarded_entropy_genes}
 
     if dict_triku is None:
         if isinstance(object_triku, sc.AnnData):
@@ -86,7 +89,9 @@ def get_dict_triku(dict_triku, dict_triku_path, object_triku):
                     'triku_entropy': dict(zip(object_triku.var_names,
                                               object_triku.var['triku_entropy'].values)),
                     'triku_selected_genes': object_triku.var[object_triku.var['triku_selected_genes'] ==
-                                                             True].index.tolist()}
+                                                             True].index.tolist(),
+                    'triku_discarded_entropy_genes': object_triku.var[object_triku.var['triku_discarded_entropy_genes'] ==
+                                                         True].index.tolist()}
             else:
                 logger.error(msg_not_dict)
                 TypeError(msg_not_dict)
@@ -105,9 +110,11 @@ def save_triku(dict_triku, save_name, object_triku):
         logger.info('Saving results in {}'.format(save_name))
         df_entropy = pd.DataFrame({'gene': list(dict_triku['triku_entropy'].keys()), 'ent': list(dict_triku['triku_entropy'].values())})
         df_selected_genes = pd.DataFrame(dict_triku['triku_selected_genes'])
+        df_discarded_entropy_genes = pd.DataFrame(dict_triku['triku_discarded_entropy_genes'])
 
         df_entropy.to_csv('{}_entropy.txt'.format(save_name), header=None, index=None, sep='\t')
         df_selected_genes.to_csv('{}_selected_genes.txt'.format(save_name), header=None, index=None, sep='\t')
+        df_discarded_entropy_genes.to_csv('{}_discarded_entropy_genes.txt'.format(save_name), header=None, index=None, sep='\t')
 
         if 'triku_leiden' in dict_triku.keys():
             df_selected_genes = pd.DataFrame(dict_triku['triku_leiden'])

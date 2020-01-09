@@ -5,6 +5,7 @@ import numpy as np
 from bokeh.plotting import figure
 import bokeh.io as io
 from bokeh.models import ColumnDataSource, LinearColorMapper
+from bokeh.transform import factor_cmap, factor_mark
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
@@ -56,7 +57,7 @@ def return_carto_cmap(cmap_str):
 
 def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = None, dict_triku_path: str = '',
             backend: str = 'bokeh', size_small: float = 3, size_large: float = 6, alpha_small: float = 3,
-            alpha_large: float = 6,
+            alpha_large: float = 6, plot_discarded_entropy=False,
             cmap_entropy: [list, str] = 'invSunsetDark', return_fig: bool = False, show: bool = True,
             save_path: str = '', line_color: str = '#000000', line_alpha: float = 0.1, ax: plt.axes = None,
             figsize: tuple = (10, 5), x_label: str = '', y_label: str = '', verbose: str = 'info'):
@@ -88,6 +89,9 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = No
         Dot alpha for not selected genes.
     alpha_large : float
         Dot alpha for selected genes.
+    plot_discarded_entropy : bool,
+        Plots genes discarded due to high entropy as triangles in the plot. Those triangles are 75% in size compared to
+        selected genes.
     cmap_entropy : [list, str]
         List of colors, or colormap name, to represent entropy values.
     return_fig : bool
@@ -146,7 +150,7 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = No
     if backend == 'bokeh':
         logger.info("Doing plot with backend 'bokeh")
         # Create the figure with the tools
-        fig = figure(tools='reset,box_zoom', tooltips=[('Gene', "@genes"), ("Mean", "@x"), ('% Zeros', "@zero_per"),
+        fig = figure(tools='pan,reset,box_zoom', tooltips=[('Gene', "@genes"), ("Mean", "@x"), ('% Zeros', "@zero_per"),
                                                        ('% Entropy', "@entropy"), ("Selected gene", "@selected")])
 
         fig.xaxis.axis_label = x_label
@@ -156,20 +160,29 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = No
         color_mapper = LinearColorMapper(palette=cmap_entropy, low=min(dict_triku['triku_entropy'].values()),
                                          high=max(dict_triku['triku_entropy'].values()))
 
-        triku_genes_mask = np.isin(arr_genes, dict_triku['triku_selected_genes'])
+        triku_selected_genes_mask = np.isin(arr_genes, dict_triku['triku_selected_genes'])
+        triku_discarded_entropy_genes_mask = np.isin(arr_genes, dict_triku['triku_discarded_entropy_genes'])
 
-        arr_sizes, arr_alphas = np.full(len(mean), size_small), np.full(len(mean), alpha_small)
 
-        arr_sizes[triku_genes_mask], arr_alphas[triku_genes_mask] = size_large, alpha_large
+        arr_sizes, arr_alphas, arr_markers = np.full(len(mean), size_small), np.full(len(mean), alpha_small), np.full(len(mean), '0')
+
+        arr_sizes[triku_selected_genes_mask], arr_alphas[triku_selected_genes_mask] = size_large, alpha_large
+
+        if plot_discarded_entropy:
+            arr_sizes[triku_discarded_entropy_genes_mask] = 0.85 * size_large
+            arr_alphas[triku_discarded_entropy_genes_mask] = alpha_large
+            arr_markers[triku_discarded_entropy_genes_mask] = '1'
 
         cds = ColumnDataSource({'x': np.log10(mean), 'y': prop_0, 'genes': arr_genes,
                                 'entropy': list(dict_triku['triku_entropy'].values()),
                                 'alpha': arr_alphas, 'size': arr_sizes,
                                 'zero_per': 100 * prop_0, 'selected':
-                                    [True if i in dict_triku['triku_selected_genes'] else False for i in arr_genes]})
+                                    [True if i in dict_triku['triku_selected_genes'] else False for i in arr_genes],
+                                'marker': arr_markers})
 
         fig.scatter('x', 'y', source=cds, fill_alpha='entropy', color={'field': 'entropy', 'transform': color_mapper},
-                    size='size', line_alpha=line_alpha, line_color=line_color)
+                    size='size', line_alpha=line_alpha, line_color=line_color,
+                    marker=factor_mark('marker', ['circle', 'triangle'], ['0', '1']))
 
         if show:
             io.show(fig)

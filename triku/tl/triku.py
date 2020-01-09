@@ -130,15 +130,21 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
 
     positive_genes = arr_genes[idx_selected_genes]
     genes_good_entropy = [gene for gene in positive_genes if dict_entropy_genes[gene] <= entropy_threshold]
+    genes_bad_entropy = [gene for gene in positive_genes if dict_entropy_genes[gene] > entropy_threshold]
 
-    logger.info("We have found a total of {} triku genes!".format(len(positive_genes)))
+    logger.info('''From {total} genes, {highper} were selected dut to high percentage of 0. From those, 
+                {goodent} were selected and {badent} discarded due to high entropy.'''.format(
+                total=arr_counts.shape[1], highper=len(positive_genes),
+                goodent=len(genes_good_entropy), badent=len(genes_bad_entropy)))
 
     dict_triku = {'triku_selected_genes': genes_good_entropy, 'triku_entropy': dict_entropy_genes,
-                  'triku_leiden': leiden_partition}
+                  'triku_leiden': leiden_partition, 'triku_discarded_entropy_genes': genes_bad_entropy}
 
     if isinstance(object_triku, sc.AnnData) and write_anndata:
         object_triku.var['triku_entropy'] = dict_entropy_genes.values()
         object_triku.var['triku_selected_genes'] = [True if i in genes_good_entropy else False for i in
+                                                    object_triku.var_names]
+        object_triku.var['triku_discarded_entropy_genes'] = [True if i in genes_bad_entropy else False for i in
                                                     object_triku.var_names]
         object_triku.obs['triku_leiden'] = leiden_partition
 
