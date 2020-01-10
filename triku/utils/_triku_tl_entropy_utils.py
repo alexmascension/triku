@@ -54,7 +54,7 @@ def return_leiden_partitition(arr_counts, knn, random_state, resolution, leiden_
 
     # First, compute the kNN of the matrix. With those kNN we will generate the adjacency matrix and the graph
     if knn is None:
-        knn = int(arr_counts.shape[0] ** 0.5)
+        knn = int(0.5 * arr_counts.shape[0] ** 0.5)
 
     pca = return_PCA(arr_counts)
 

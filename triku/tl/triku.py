@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')  # To ignore Numba warnings
 
 
 def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write_anndata: bool = True,
-          n_cycles: int = 4, s: float = 0, seed: int = 0, outliers: bool = False, sigma_remove_outliers: float = 4.0,
+          n_cycles: int = 4, s: float = 0, seed: int = 0, sigma_remove_outliers: float = 4.0,
           delta_x: int = None, delta_y: int = None, random_state: int = 0, knn: int = None,
           resolution: float = 1.3, leiden_from_adata : bool = True, entropy_threshold: float = 0.95,
           s_entropy: float = 0, save_name='', verbose='info'):
@@ -43,10 +43,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
         Correction factor for gene selection. Fewer genes are selected with positive values of `s` and
         more genes are selected with negative values. We recommend values between -0.1 and 0.1.
     seed : int
-        Seed for random proceses
-    outliers : bool
-        If `False` removes values of counts that are extreme. Values with more standard deviations that
-        a certain value are changed to the mean expression of the gene.
+        Seed for random procese
     sigma_remove_outliers : float
         Number of standard deviations to assign a value as an outlier.
     delta_x : int
@@ -91,9 +88,12 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
 
     check_count_mat(arr_counts)
 
-    if not outliers:
-        logger.info('Removing outliers.')
-        arr_counts = remove_outliers(arr_counts, sigma_remove_outliers, do_copy=True)
+
+    logger.info('Removing outliers.') # TODO: REMOVE IN DEFINITIVE VERSION
+    # We are not doing them because (1) It takes too long and the results are not really noticeable because of the
+    # entropy threshold afterwards (if they exist and appear in sparse datasets, they are also removed)
+    # (2) When doing the plot, some points are moved (because their mean is inferior now) and it is misleading.
+    # arr_counts = remove_outliers(arr_counts, sigma_remove_outliers, do_copy=True)
 
     idx_selected_genes = return_triku_gene_idx(arr=arr_counts, n_bins=n_bins, n_cycles=n_cycles, s=s,
                                                delta_x=delta_x, delta_y=delta_y, seed=seed)
@@ -109,8 +109,10 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
     we have seen that works good for what we are looking for.
     '''
 
+    leiden_partition = []
     leiden_partition = return_leiden_partitition(arr_counts, knn, random_state, resolution,
                                                                  leiden_from_adata, adata)
+
 
     '''
     Once clusters are obtained, we calculate the proportion of non-zero expressing cells per clusters and per gene.
@@ -129,10 +131,13 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write
                          s_ent=s_entropy)
 
     positive_genes = arr_genes[idx_selected_genes]
+
     genes_good_entropy = [gene for gene in positive_genes if dict_entropy_genes[gene] <= entropy_threshold]
     genes_bad_entropy = [gene for gene in positive_genes if dict_entropy_genes[gene] > entropy_threshold]
+    # genes_good_entropy, genes_bad_entropy = positive_genes,  []
+    # dict_entropy_genes = {i: (0.3 if i in positive_genes else 0.9) for i in arr_genes}
 
-    logger.info('''From {total} genes, {highper} were selected dut to high percentage of 0. From those, 
+    logger.info('''From {total} genes, {highper} were selected dut to high percentage of 0. From those,
                 {goodent} were selected and {badent} discarded due to high entropy.'''.format(
                 total=arr_counts.shape[1], highper=len(positive_genes),
                 goodent=len(genes_good_entropy), badent=len(genes_bad_entropy)))

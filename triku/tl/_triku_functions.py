@@ -120,7 +120,7 @@ def return_triku_gene_idx(arr: np.ndarray, n_bins: int = 80, n_cycles: int = 4, 
     """
 
     logger.info("Binning the dataset")
-    # Divide the dataset into bins. THE PREVIOUS METHOD inclueded the len_bin as prop_0_bins[N + 1] - prop_0_bins[N].
+    # Divide the dataset into bins. THE PREVIOUS METHOD included the len_bin as prop_0_bins[N + 1] - prop_0_bins[N].
     # This is wrong because distribution of points are skewed towards points with high prop_0 / low mean, and the bins
     # for the low prop_0 / high mean are much larger, making the selection process skewed. To remove this we have to
     # make the length of the bin exactly the number of elements in the bin (which now is equal (+-1) due to random
@@ -135,7 +135,6 @@ def return_triku_gene_idx(arr: np.ndarray, n_bins: int = 80, n_cycles: int = 4, 
     # 0_prop by a small amount. This amount will be equivalent to len_bin / n_cycles. Thus, we will better cover
     # the whole interval, and not make the gene selection stepper.
     selected_genes_index = []
-
 
     for N in range(n_bins - 1):
         len_bin = prop_0_bins_idx[N + 1] - prop_0_bins_idx[N]

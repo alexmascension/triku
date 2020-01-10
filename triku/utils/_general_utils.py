@@ -74,8 +74,11 @@ def get_dict_triku(dict_triku, dict_triku_path, object_triku):
             raise FileNotFoundError(msg_path)
 
         selected_genes = pd.read_csv(dict_triku_path + '_selected_genes.txt', sep='\t', header=None)[0].values.tolist()
-        discarded_entropy_genes = pd.read_csv(dict_triku_path + '_discarded_entropy_genes.txt',
-                                                    sep='\t', header=None)[0].values.tolist()
+        try:
+            discarded_entropy_genes = pd.read_csv(dict_triku_path + '_discarded_entropy_genes.txt',
+                                                        sep='\t', header=None)[0].values.tolist()
+        except pd.errors.EmptyDataError:
+            discarded_entropy_genes = []
         df_entropy = pd.read_csv(dict_triku_path + '_entropy.txt', sep='\t', header=None)
         dict_triku = {
             'triku_entropy': dict(zip(df_entropy[0].values, df_entropy[1].values)),
