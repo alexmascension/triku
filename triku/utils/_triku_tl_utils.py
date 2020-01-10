@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.sparse as spr
+import bottleneck as bn
 
 from triku.logg import logger
 
@@ -46,7 +47,7 @@ def return_mean(mat: [np.ndarray, spr.csr.csr_matrix]):
         Array with mean expression per gene.
     """
 
-    mean_per_gene = np.mean(mat, axis=0)
+    mean_per_gene = bn.nanmean(mat, axis=0)
 
     if isinstance(mean_per_gene, np.matrix):
         mean_per_gene = np.asarray(mean_per_gene)
@@ -54,6 +55,34 @@ def return_mean(mat: [np.ndarray, spr.csr.csr_matrix]):
             mean_per_gene = mean_per_gene.flatten()
 
     return mean_per_gene
+
+
+def return_std(mat: [np.ndarray, spr.csr.csr_matrix]):
+    """
+    Returns a 1D array with the mean of the array. We have to do it using methods both for sparse arrays
+    and dense arrays, which limits the options to do it.
+
+    Parameters
+    ----------
+    mat : [np.ndarray, scipy.sparse.csr_matrix, other sparse matrices]
+        Array of cells x genes.
+
+    Returns
+    -------
+    prop_zeros: np.1darray
+        Array with mean expression per gene.
+    """
+
+    mean_per_gene = bn.nanstd(mat, axis=0)
+
+    if isinstance(mean_per_gene, np.matrix):
+        mean_per_gene = np.asarray(mean_per_gene)
+        if len(mean_per_gene) == 1:
+            mean_per_gene = mean_per_gene.flatten()
+
+    return mean_per_gene
+
+
 
 
 def check_count_mat(mat: [np.ndarray, spr.csr.csr_matrix]):

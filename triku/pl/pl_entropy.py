@@ -11,9 +11,8 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
 from ..logg import logger
-from ..utils import return_proportion_zeros, return_mean
 from ..utils._general_utils import get_arr_counts_genes, get_dict_triku, set_level_logger
-from ..utils._triku_tl_utils import check_count_mat
+from ..utils._triku_tl_utils import check_count_mat, return_proportion_zeros, return_mean, return_std
 
 
 def return_carto_cmap(cmap_str):
@@ -56,7 +55,7 @@ def return_carto_cmap(cmap_str):
 
 
 def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = None, dict_triku_path: str = '',
-            backend: str = 'bokeh', size_small: float = 3, size_large: float = 6, alpha_small: float = 3,
+            backend: str = 'bokeh', y_var = 'percentage', size_small: float = 3, size_large: float = 6, alpha_small: float = 3,
             alpha_large: float = 6, plot_discarded_entropy=False,
             cmap_entropy: [list, str] = 'invSunsetDark', return_fig: bool = False, show: bool = True,
             save_path: str = '', line_color: str = '#000000', line_alpha: float = 0.1, ax: plt.axes = None,
@@ -81,6 +80,9 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = No
     backend : str
         Option to plot ['bokeh', 'matplotlib']. Uses bokeh, which outputs a html, or matplotlib, which outputs an
         image.
+    y_var : str ['percentage', 'std', 'CV']
+        Variable to plot on the y axis. Viable options are `percentage` (percentage of zeros), `std` and `CV`
+        coefficient of variation.
     size_small : float
         Dot size for not selected genes.
     size_large : float
@@ -137,9 +139,24 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = No
         logger.error('backend must be "bokeh" or "matplotlib".')
         TypeError('backend must be "bokeh" or "matplotlib".')
 
-    # Calculate the mean and proportion of zeros
+    # Calculate the mean
     check_count_mat(arr_counts)
-    mean, prop_0 = return_mean(arr_counts), return_proportion_zeros(arr_counts)
+    mean = return_mean(arr_counts)
+
+    # Calculate y variable
+    if y_var == 'percentage':
+        y = return_proportion_zeros(arr_counts)
+        hover_y = ('Proportion of zeros', "@y")
+    elif y_var == 'std':
+        y = np.log10(return_std(arr_counts))
+        hover_y = ('std (log)', "@y")
+    elif y_var in ['cv', 'CV']:
+        y = np.log10(return_std(arr_counts) / return_mean(arr_counts))
+        hover_y = ('CV (log)', "@y")
+    else:
+        raise TypeError("'y_var'  must be 'percentage', 'std', or 'CV'.")
+
+
 
     # The the cmap from CartoColors if it exists
     if isinstance(cmap_entropy, str):
@@ -148,9 +165,9 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = No
 
     # Do the plotting
     if backend == 'bokeh':
-        logger.info("Doing plot with backend 'bokeh")
+        logger.info("Doing plot with backend 'bokeh'")
         # Create the figure with the tools
-        fig = figure(tools='pan,reset,box_zoom', tooltips=[('Gene', "@genes"), ("Mean", "@x"), ('% Zeros', "@zero_per"),
+        fig = figure(tools='pan,reset,box_zoom', tooltips=[('Gene', "@genes"), ("Mean", "@x"), hover_y,
                                                        ('% Entropy', "@entropy"), ("Selected gene", "@selected")])
 
         fig.xaxis.axis_label = x_label
@@ -173,10 +190,10 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = No
             arr_alphas[triku_discarded_entropy_genes_mask] = alpha_large
             arr_markers[triku_discarded_entropy_genes_mask] = '1'
 
-        cds = ColumnDataSource({'x': np.log10(mean), 'y': prop_0, 'genes': arr_genes,
+        cds = ColumnDataSource({'x': np.log10(mean), 'y': y, 'genes': arr_genes,
                                 'entropy': list(dict_triku['triku_entropy'].values()),
                                 'alpha': arr_alphas, 'size': arr_sizes,
-                                'zero_per': 100 * prop_0, 'selected':
+                                'selected':
                                     [True if i in dict_triku['triku_selected_genes'] else False for i in arr_genes],
                                 'marker': arr_markers})
 
@@ -193,7 +210,7 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = No
             return fig
 
     elif backend == 'matplotlib':
-        logger.info("Doing plot with backend 'matplotlib")
+        logger.info("Doing plot with backend 'matplotlib'")
         fig = plt.figure(figsize=figsize)
         if ax is None:
             ax = fig.add_subplot(111)
@@ -204,10 +221,10 @@ def entropy(object_triku: [sc.AnnData, pd.DataFrame, str], dict_triku: dict = No
 
         arr_entropy = np.array(list((dict_triku['triku_entropy'].values())))
 
-        ax.scatter(np.log10(mean[~triku_genes_mask]), prop_0[~triku_genes_mask],
+        ax.scatter(np.log10(mean[~triku_genes_mask]), y[~triku_genes_mask],
                    c=arr_entropy[~triku_genes_mask], cmap=cmax, s=size_small, alpha=alpha_small,
                    edgecolors=line_color, linewidths=0.05 * size_small)
-        ax.scatter(np.log10(mean[triku_genes_mask]), prop_0[triku_genes_mask],
+        ax.scatter(np.log10(mean[triku_genes_mask]), y[triku_genes_mask],
                    c=arr_entropy[triku_genes_mask], cmap=cmax, s=size_large, alpha=alpha_large, edgecolors=line_color,
                    linewidths=0.05 * size_small)
 
