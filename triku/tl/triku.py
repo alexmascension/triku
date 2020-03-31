@@ -18,7 +18,7 @@ warnings.filterwarnings('ignore')  # To ignore Numba warnings
 def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write_anndata: bool = True,
           n_cycles: int = 4, s: float = 0, seed: int = 0, sigma_remove_outliers: float = 4.0,
           delta_x: int = None, delta_y: int = None, random_state: int = 0, knn: int = None,
-          resolution: float = 1.3, leiden_from_adata : bool = True, entropy_threshold: float = 0.95,
+          resolution: float = 2, leiden_from_adata : bool = True, entropy_threshold: float = 0.95,
           s_entropy: float = 0, save_name='', verbose='info'):
     """
     This function calls the triku method using python directly. This function expects an
