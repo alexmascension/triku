@@ -3,6 +3,10 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as spr
 
+from ..genutils import get_cpu_count
+from ._triku_functions import return_knn_indices
+# old calls#
+#todo: revise and remove
 from ..pp import remove_outliers
 from ..utils._triku_tl_utils import check_count_mat, check_null_genes
 from ..tl._triku_functions import return_triku_gene_idx
@@ -15,144 +19,182 @@ import warnings
 warnings.filterwarnings('ignore')  # To ignore Numba warnings
 
 
-def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_bins: int = 80, write_anndata: bool = True,
-          n_cycles: int = 4, s: float = 0, seed: int = 0, sigma_remove_outliers: float = 4.0,
-          delta_x: int = None, delta_y: int = None, random_state: int = 0, knn: int = None,
-          resolution: float = 2, leiden_from_adata : bool = True, entropy_threshold: float = 0.95,
-          s_entropy: float = 0, save_name='', verbose='info'):
+def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features=None, return_features=None, use_adata_knn=None,
+          knn=None, s=-0.01, apply_background_correction=True, n_comps=50, metric='cosine', random_state=0,
+          n_procs=None, verbose='info'):
     """
     This function calls the triku method using python directly. This function expects an
-    annData object or a csv / txt matrix of n_cells x n_genes. The function should then return an array / list
+    annData object or a csv / txt matrix of n_cells x n_genes. The function then returns an array / list
     of the selected genes.
 
     Parameters
     ----------
-    object_triku : scanpy.AnnData or pandas.DataFrame or str
+    object_triku : scanpy.AnnData or pandas.DataFrame
         Object with count matrix. If `pandas.DataFrame`, rows are cells and columns are genes.
-        If str, path to the annData file or pandas DataFrame.
-    n_bins : int
-        Number of bins to divide the percentage of zeros. Each bin will contain a similar amount of genes.
-    write_anndata : bool
-        Writes the results of the analysis into object_triku. Creates the column `.var['triku_entropy']` which
-        stores the entropy of each gene, and the column `.var['triku_selected_gene']` that indicates if the gene
-        is selected or not.
-    n_cycles : int
-        For each bin `[a, b]` selects also bins `[a + i(b-a)/N, b + i(b-a)/N]` to select genes. This makes the selection
-        of the genes along the mean VS 0 percentage more gradual. Best effects are obtained with values between 3 and 5.
+    n_features : int, None
+        Number of features to select. If None, the number is chosen automatically.
+    return_features : bool, None
+        If True, returns the selected features as a list. It is always true if object_triku is of type pd.DataFrame
+    use_adata_knn :  bool, None
+        If object_triku is a scanpy.AnnData object, and sc.pp.neighbors was run, select neighbors and knn from
+        adata.uns['neighbors']['connectivities'] and  adata.uns['neighbors']['params']['n_neighbors'].
+    knn: int, None
+        If use_adata_knn is False, number of neighbors to choose for feature selection. By default
+        the half the square root of the number of cells is chosen.
     s : float
-        Correction factor for gene selection. Fewer genes are selected with positive values of `s` and
-        more genes are selected with negative values. We recommend values between -0.1 and 0.1.
-    seed : int
-        Seed for random procese
-    sigma_remove_outliers : float
-        Number of standard deviations to assign a value as an outlier.
-    delta_x : int
-        Intermediate parameter for gene selection. When selecting the cut point for gene selection for a bin, some
-        curves [rank VS mean] show a plateau that makes the threshold be less accurate. To correct that, the curve is
-        cut at the plateau. delta_x and delta_y are the values of the sliding box to decide the point of the plateau.
-        Smaller values of delta_x and delta_y imply more stringent selection of the plateau. We recommend not to alter
-        this values.
-    delta_y : int
-        See delta_x
+        Correction factor for automatic feature selection. Negative values imply a selction of more genes, and
+        positive values imply a selection of fewer genes. We recommend values between -0.1 and 0.1.
+    apply_background_correction : bool
+        Substract the Wasserstein distance from a randomised adata to compensate the inflation of Wasserstein distance
+        of highly expressed genes. If the dataset is too big, this step can be ommited, since those features usually
+        don't get selected.
+    n_comps : int
+        Number of PCA components for knn selection.
+    metric : str
+        Metric for knn selection.
     random_state : int
-        Seed for clustering used in entropy calculation.
-    knn : int
-        Number of neighbors used in clustering for entropy calculation. By default, it is `sqrt(n_cells)`.
-    resolution : float
-        Leiden resolution used in clustering for entropy calculation.
-    leiden_from_adata : bool
-        If True, and 'leiden' is found in adata.obs, use this solution.
-    entropy_threshold : float
-        Discard genes with entropy higher than that threshold.
-    s_entropy : float
-        Correction factor, similar to `s`. This factor is applied to calculate a threshold to discard low-expressed
-        genes. For each cluster if the proportion of cells expressing that
-        gene is smaller than that threshold, the cluster is not considered. If none of the clusters passes that
-        threshold the entropy of that gene is set to 1. Positive values of `s_entropy` imply more stringent thresholds,
-        and fewer genes are selected. Negative values of `s_entropy` imply less stringent thresholds,
-        and more genes are selected. Recommended values are between -0.05 and 0.05.
-    save_name : prefix of file to be saved. For instance /media/user/mytriku/example will generate files
-                /media/user/mytriku/example_entropy.txt and /media/user/mytriku/example_selected_genes.txt
+        Seed for random processes
+    n_procs : int, None
+        Number of processes for parallel processing.
     verbose : str ['debug', 'info', 'warning', 'error', 'critical']
         Logger verbosity output.
     Returns
     -------
-    dict_triku : dict
-        `triku_selected_genes`: list with selected genes.
-        `triku_entropy`: entropy for each gene (selected or not).
+    list_features : list
+        list of selected features
     """
+
+    # Basic checks of variables
     set_level_logger(verbose)
 
-    arr_counts, arr_genes, adata = get_arr_counts_genes(object_triku)
-    arr_counts, arr_genes = check_null_genes(arr_counts, arr_genes)
+    if isinstance(object_triku, pd.DataFrame):
+        use_adata_knn = False
 
+    if n_procs is None:
+        n_procs = max(1, get_cpu_count() - 1)
+    elif n_procs > get_cpu_count():
+        logger.warning('The selected number of cpus ({}) is higher than the available number ({}). The number'
+                       'of used cores will be set to {}.'.format(n_procs, get_cpu_count(), max(1, get_cpu_count() - 1)))
+        n_procs = max(1, get_cpu_count() - 1)
+
+
+    # Get the array of counts (np.array) and the array of genes. Additionally, return the a
+    arr_counts, arr_genes = get_arr_counts_genes(object_triku)
+    check_null_genes(arr_counts, arr_genes)
     check_count_mat(arr_counts)
 
+    """
+    First step is to get the kNN for the expression matrix.
+    This is not that time intensive, but for reproducibility, we by default accept the kNN calculated by
+    scanpy (sc.pp.neighbors()), and obtain the info from there. 
+    Otherwise, we calculate the kNNs. 
+    The expected output from this step is a matrix of cells x (kNN + 1), where each column includes the neighbor index
+    of the cell number 
+    """
 
-    logger.info('Removing outliers.') # TODO: REMOVE IN DEFINITIVE VERSION
-    # We are not doing them because (1) It takes too long and the results are not really noticeable because of the
-    # entropy threshold afterwards (if they exist and appear in sparse datasets, they are also removed)
-    # (2) When doing the plot, some points are moved (because their mean is inferior now) and it is misleading.
-    # arr_counts = remove_outliers(arr_counts, sigma_remove_outliers, do_copy=True)
+    knn_array = None
 
-    idx_selected_genes = return_triku_gene_idx(arr=arr_counts, n_bins=n_bins, n_cycles=n_cycles, s=s,
-                                               delta_x=delta_x, delta_y=delta_y, seed=seed)
+    if isinstance(object_triku, sc.AnnData):
+        if (use_adata_knn is None) | (use_adata_knn == True):
+            if 'neighbors' in object_triku.uns:
+                knn = object_triku.uns['neighbors']['params']['n_neighbors']
+                logger.info('We found "neighbors" in the anndata, with knn={}'.format(knn))
 
-    '''
-    The next step is to remove genes with high entropy. This high entropy can be considered as 1 or > 0.9X. In order
-    to do that we first need to do a clustering on the dataset. Although the clustering biases the genes that will be
-    removed, this part is quite robust, because the genes that we expect to remove have a low expression, and they do 
-    not arrive to the minimum required expression. In that case, unless the clustering is really specific, those genes
-    should always be removed.
-    In order not to remove genes with local expression patterns, we will perform clustering with a high number of 
-    clusters. We will choose a resolution for leiden of ~ 1.2, which produces a considerable number of clusters, and
-    we have seen that works good for what we are looking for.
-    '''
+                # Connectivities array contains a pairwise relationship between cells. We want to select, for
+                # each cell, the knn "nearest" cells. We can easily do that with argsort. In the end we obtain a
+                # cells x knn array with the top knn cells.
+                knn_array = np.asarray(adata.uns['neighbors']['connectivities'].todense()
+                                       ).argsort()[:, -knn::][::, ::-1]
 
-    leiden_partition = []
-    leiden_partition = return_leiden_partitition(arr_counts, knn, random_state, resolution,
-                                                                 leiden_from_adata, adata)
+                # Last step is to add a arange of 0 to n_cells in the first column.
+                knn_array = np.concatenate((np.arange(knn_array.shape[0]).reshape(knn_array.shape[0], 1),
+                                            knn_array), axis=1)
+
+    if knn_array is None:
+        if knn is None:
+            knn = int(0.5 * (arr_counts.shape[0]) ** 0.5)
+            logger.info('The number of neighbours by default will be {}'.format(knn))
+
+        knn_array = return_knn_indices(arr_counts, knn=knn, return_random=False, random_state=random_state,
+                                       metric=metric)
 
 
-    '''
-    Once clusters are obtained, we calculate the proportion of non-zero expressing cells per clusters and per gene.
-    With that, we obtain a histogram of proportions that we will use to establish a cut-off proportion, that is, 
-    clusters with fewer expressing cells than the proportion (for each gene) will not be considered for entropy 
-    calculation. This part is calculated inside entropy_per_gene.
-    Finally, we will get the dictionary dict_entropy_genes, with the entropy of each gene, dict_proportions_genes,
-    with the proportions of counts per gene, and dict_percentage_counts_genes, with the proportion of cells with
-    positive expression per gene.
-    '''
 
-    dict_entropy_genes, dict_proportions_genes, dict_percentage_counts_genes = \
-        entropy_per_gene(arr=arr_counts,
-                         list_genes=arr_genes,
-                         cluster_labels=leiden_partition,
-                         s_ent=s_entropy)
+    # @njit
+    def numbaaa(X_gene, NN_cells_with_positive_expression):
+        return_list = []
+        for cell in range(len(NN_cells_with_positive_expression)):
+            return_list.append(X_gene[NN_cells_with_positive_expression[cell, :]].sum())
 
-    positive_genes = arr_genes[idx_selected_genes]
+        return np.array(return_list)
 
-    genes_good_entropy = [gene for gene in positive_genes if dict_entropy_genes[gene] <= entropy_threshold]
-    genes_bad_entropy = [gene for gene in positive_genes if dict_entropy_genes[gene] > entropy_threshold]
-    # genes_good_entropy, genes_bad_entropy = positive_genes,  []
-    # dict_entropy_genes = {i: (0.3 if i in positive_genes else 0.9) for i in arr_genes}
+    @ray.remote
+    def return_expression_info_per_gene(gene_idx, adata_X, knn_indices, zero_counts, fill_zeros):
+        # Select the expression column for that gene
+        try:
+            arr_expr_gene = np.asarray(adata_X[:, gene_idx].todense()).flatten()
+        except:
+            arr_expr_gene = np.asarray(adata_X[:, gene_idx]).flatten()
 
-    logger.info('''From {total} genes, {highper} were selected dut to high percentage of 0. From those,
-                {goodent} were selected and {badent} discarded due to high entropy.'''.format(
-                total=arr_counts.shape[1], highper=len(positive_genes),
-                goodent=len(genes_good_entropy), badent=len(genes_bad_entropy)))
+        # Select, from that column, the cells (rows) that have positive expression
+        if zero_counts:
+            selected_cells = np.arange(len(adata_X))
+        else:
+            selected_cells = np.argwhere(arr_expr_gene > 0).flatten()
 
-    dict_triku = {'triku_selected_genes': genes_good_entropy, 'triku_entropy': dict_entropy_genes,
-                  'triku_leiden': leiden_partition, 'triku_discarded_entropy_genes': genes_bad_entropy}
+        # Get the NN matrix for the cells with positive expression. This matrix is of n_cells x kNN
+        NN_cells = knn_indices[selected_cells, :]
 
-    if isinstance(object_triku, sc.AnnData) and write_anndata:
-        object_triku.var['triku_entropy'] = dict_entropy_genes.values()
-        object_triku.var['triku_selected_genes'] = [True if i in genes_good_entropy else False for i in
-                                                    object_triku.var_names]
-        object_triku.var['triku_discarded_entropy_genes'] = [True if i in genes_bad_entropy else False for i in
-                                                    object_triku.var_names]
-        object_triku.obs['triku_leiden'] = leiden_partition
+        # Apply a mask to select, from each cell, the neighbors that have positive expression
+        # Here, we include the cell from which the kNN are extracted
+        mask_neighbors_expressing = np.isin(NN_cells, selected_cells)[:, :]
 
-    save_triku(dict_triku, save_name, object_triku)
+        # Get the expression from the neighbors
+        expression_in_neighbors = numbaaa(arr_expr_gene, NN_cells)
 
-    return dict_triku
+        if fill_zeros:
+            expression_in_cells = np.zeros(adata_X.shape[0])
+            expression_in_cells[selected_cells] = expression_in_neighbors
+            return expression_in_cells
+        else:
+            return expression_in_neighbors
+
+    def return_expression_info(list_genes, adata, knn_indices, category_name=0, zero_counts=False,
+                               fill_zeros=False):
+        # This function returns a dictionary of genes: expression in kNN for gene,
+        # and also a dictionary of gene: category, where category is a number added by the user. This
+        # will come in handy for plotting certain figures with different categories.
+        dict_percentage_expressing_cells_kNN, dict_expression_per_kNN, dict_categories = {}, {}, {}
+
+        list_idx_genes = [np.argwhere(adata.var_names == gene).flatten()[0] for gene in list_genes]
+
+        ray.shutdown()
+        ray.init()
+
+        adata_X_obj = ray.put(adata.X)
+        knn_indices_obj = ray.put(knn_indices)
+
+        obj_ids_list = [return_expression_info_per_gene.remote(
+            gene_idx=list_idx_genes[i],
+            adata_X=adata_X_obj,
+            knn_indices=knn_indices_obj,
+            zero_counts=zero_counts,
+            fill_zeros=fill_zeros) for i in range(len(list_idx_genes))]
+
+        obj_ids = ray.get(obj_ids_list)
+
+        ray.shutdown()
+
+        for i in range(len(obj_ids)):
+            dict_expression_per_kNN[list_genes[i]] = obj_ids[i]
+            dict_categories[list_genes[i]] = category_name
+
+        return dict_expression_per_kNN, dict_categories
+
+    expression_counts_knn_norm, categories = return_expression_info(list_genes, adata,
+                                                                    knn_indices_knn_norm,
+                                                                    category_name=0, zero_counts=False)
+
+    expression_counts_knn_norm_with_zeros, categories = return_expression_info(list_genes, adata,
+                                                                               knn_indices_knn_norm,
+                                                                               category_name=0, zero_counts=True)

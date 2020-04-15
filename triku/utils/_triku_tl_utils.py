@@ -96,11 +96,12 @@ def check_count_mat(mat: [np.ndarray, spr.csr.csr_matrix]):
     if np.min(mat) < 0:
         logger.warning("The count matrix contains negative values. Triku is supposed to run with raw count matrices.")
 
+    # TODO: check if feature selection works on log-transformed data.
     if np.percentile(mat[mat > 0], 99.9) < 17:
         logger.warning("The count matrix looks normalized or log-transformed (percentile 99.9: {}). "
                        "Triku is supposed to run with raw count matrices.".format(np.percentile(mat[mat > 0], 99.9)))
 
-    if mat.shape[1] > 25000:
+    if mat.shape[1] > 20000:
         logger.warning("The count matrix contains more than 25000 genes. We recommend filtering some genes, up to "
                        "15000 - 18000 genes. You can do that in scanpy with the function 'sc.pp.filter_genes()'.")
 
@@ -116,7 +117,6 @@ def check_null_genes(arr_counts: np.ndarray, arr_genes: np.ndarray):
     idx = np.argwhere(arr_counts.sum(0) != 0).flatten()
 
     if len(idx) < arr_counts.shape[1]:
-        logger.warning('There are {} genes ({} %) with no counts. These will be removed from the analysis.'.format(
+        logger.error('There are {} genes ({} %) with no counts. Remove those genes first. You can use sc.pp.filter_genes(min_cells=5).'.format(
             arr_counts.shape[1] - len(idx), int(100 * (arr_counts.shape[1] - len(idx)) / arr_counts.shape[1])))
 
-    return arr_counts[:, idx], arr_genes[idx]

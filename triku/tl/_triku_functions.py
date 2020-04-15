@@ -1,9 +1,34 @@
 import numpy as np
+
+# Especial imports
+from sklearn.decomposition import PCA
+from umap.umap_ import fuzzy_simplicial_set, nearest_neighbors
+
+
+
 from scipy.signal import savgol_filter
 
 from triku.utils import return_proportion_zeros, return_mean, check_count_mat, find_starting_point, distance
 from triku.logg import logger
 
+
+def return_knn_indices(array, knn, return_random, random_state, metric):
+    pca = PCA(n_components=50, whiten=True, svd_solver='auto').fit_transform(array)
+
+    if return_random:
+        knn_indices = np.zeros((array.shape[0], knn))
+        ran = np.arange(0, array.shape[0])
+        for i in ran:
+            knn_indices[i, 1:] = np.random.choice(ran, knn - 1, replace=False)
+
+        knn_indices[:, 0] = np.arange(array.shape[0])
+
+    else:
+        knn_indices, knn_dists, forest = nearest_neighbors(pca, n_neighbors=knn, metric=metric,
+                                                           random_state=np.random.RandomState(random_state),
+                                                           angular=False, metric_kwds={})
+
+    return knn_indices.astype(int)
 
 
 def find_knee_point(x, y, s=0.0):
