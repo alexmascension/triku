@@ -133,8 +133,54 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features=None, return_feat
         arr_knn_expression_random = return_knn_expression(arr_counts_random, knn_array_random)
 
 
+
     """
     Next step is to 
     """
 
 
+
+
+
+
+
+def return_per_zeros(mu, phi):
+    # This formula is the expected proportion of zeros based on the mean (not log-transformed) and
+    # the variance. In realitym phi here should be 1/var, but it is easier to fit the inverse directly.
+    return (phi/(mu + phi))**phi
+
+
+def create_random_count_matrix(matrix=None, n_cells=1000, n_genes=1000, n_min_reads=None, n_max_reads=None,
+                               method='binomial', phi=0.35):
+    """
+    The matrix should have Cells x Genes format.
+    """
+
+    if matrix is not None:
+        n_reads_per_gene = matrix.sum(0).astype(int)
+        n_zeros = (matrix == 0).sum(0)
+        n_cells, n_genes = matrix.shape
+    else:
+        if n_max_reads is None: n_min_reads = int(n_cells * 0.2)
+        if n_max_reads is None: n_max_reads = n_cells * 7
+        n_reads_per_gene = np.linspace(n_min_reads, n_max_reads, n_genes, dtype=int)
+#         percentage_zeros = return_per_zeros(n_reads_per_gene/n_cells, phi)
+#         n_zeros = (percentage_zeros * n_cells).astype(int)
+
+    matrix_random = np.zeros((n_cells, n_genes))
+
+    for gene in tqdm(range(n_genes)):
+        if method == 'binomial':
+            rnd_idx = np.random.choice(np.arange(n_cells), n_reads_per_gene[gene])
+            bincount = np.bincount(rnd_idx)
+            matrix_random[:len(bincount), gene] = bincount
+
+        else:
+            raise TypeError('No method in list.')
+
+        # elif method in ["negative binomial", 'nb']:
+        #     if n_reads_per_gene[gene] + n_zeros > n_cells:
+        #         idx_nonzero = np.random.choice(np.arange(n_cells), n_cells - n_zeros, replace=False)
+        #         matrix_random[idx_nonzero, gene] += 1
+
+    return matrix_random
