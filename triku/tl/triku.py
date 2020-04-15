@@ -4,7 +4,7 @@ import numpy as np
 import scipy.sparse as spr
 
 from ..genutils import get_cpu_count
-from ._triku_functions import return_knn_indices
+from ._triku_functions import return_knn_indices, return_knn_expression
 # old calls#
 #todo: revise and remove
 from ..pp import remove_outliers
@@ -103,7 +103,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features=None, return_feat
                 # Connectivities array contains a pairwise relationship between cells. We want to select, for
                 # each cell, the knn "nearest" cells. We can easily do that with argsort. In the end we obtain a
                 # cells x knn array with the top knn cells.
-                knn_array = np.asarray(adata.uns['neighbors']['connectivities'].todense()
+                knn_array = np.asarray(object_triku.uns['neighbors']['connectivities'].todense()
                                        ).argsort()[:, -knn::][::, ::-1]
 
                 # Last step is to add a arange of 0 to n_cells in the first column.
@@ -119,82 +119,22 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features=None, return_feat
                                        metric=metric)
 
 
+    # Calculate the expression in the kNN (+ own cell) for all genes
+    arr_knn_expression = return_knn_expression(arr_counts, knn_array)
 
-    # @njit
-    def numbaaa(X_gene, NN_cells_with_positive_expression):
-        return_list = []
-        for cell in range(len(NN_cells_with_positive_expression)):
-            return_list.append(X_gene[NN_cells_with_positive_expression[cell, :]].sum())
 
-        return np.array(return_list)
+    # The same steps must be applied to a randomized expression count matrix if we must
+    arr_counts_random, knn_array_random, arr_knn_expression_random = None, None, None
 
-    @ray.remote
-    def return_expression_info_per_gene(gene_idx, adata_X, knn_indices, zero_counts, fill_zeros):
-        # Select the expression column for that gene
-        try:
-            arr_expr_gene = np.asarray(adata_X[:, gene_idx].todense()).flatten()
-        except:
-            arr_expr_gene = np.asarray(adata_X[:, gene_idx]).flatten()
+    if apply_background_correction:
+        arr_counts_random = randomize_counts(arr_counts)
+        knn_array_random = return_knn_indices(arr_counts, knn=knn, return_random=False, random_state=random_state,
+                                       metric=metric)
+        arr_knn_expression_random = return_knn_expression(arr_counts_random, knn_array_random)
 
-        # Select, from that column, the cells (rows) that have positive expression
-        if zero_counts:
-            selected_cells = np.arange(len(adata_X))
-        else:
-            selected_cells = np.argwhere(arr_expr_gene > 0).flatten()
 
-        # Get the NN matrix for the cells with positive expression. This matrix is of n_cells x kNN
-        NN_cells = knn_indices[selected_cells, :]
+    """
+    Next step is to 
+    """
 
-        # Apply a mask to select, from each cell, the neighbors that have positive expression
-        # Here, we include the cell from which the kNN are extracted
-        mask_neighbors_expressing = np.isin(NN_cells, selected_cells)[:, :]
 
-        # Get the expression from the neighbors
-        expression_in_neighbors = numbaaa(arr_expr_gene, NN_cells)
-
-        if fill_zeros:
-            expression_in_cells = np.zeros(adata_X.shape[0])
-            expression_in_cells[selected_cells] = expression_in_neighbors
-            return expression_in_cells
-        else:
-            return expression_in_neighbors
-
-    def return_expression_info(list_genes, adata, knn_indices, category_name=0, zero_counts=False,
-                               fill_zeros=False):
-        # This function returns a dictionary of genes: expression in kNN for gene,
-        # and also a dictionary of gene: category, where category is a number added by the user. This
-        # will come in handy for plotting certain figures with different categories.
-        dict_percentage_expressing_cells_kNN, dict_expression_per_kNN, dict_categories = {}, {}, {}
-
-        list_idx_genes = [np.argwhere(adata.var_names == gene).flatten()[0] for gene in list_genes]
-
-        ray.shutdown()
-        ray.init()
-
-        adata_X_obj = ray.put(adata.X)
-        knn_indices_obj = ray.put(knn_indices)
-
-        obj_ids_list = [return_expression_info_per_gene.remote(
-            gene_idx=list_idx_genes[i],
-            adata_X=adata_X_obj,
-            knn_indices=knn_indices_obj,
-            zero_counts=zero_counts,
-            fill_zeros=fill_zeros) for i in range(len(list_idx_genes))]
-
-        obj_ids = ray.get(obj_ids_list)
-
-        ray.shutdown()
-
-        for i in range(len(obj_ids)):
-            dict_expression_per_kNN[list_genes[i]] = obj_ids[i]
-            dict_categories[list_genes[i]] = category_name
-
-        return dict_expression_per_kNN, dict_categories
-
-    expression_counts_knn_norm, categories = return_expression_info(list_genes, adata,
-                                                                    knn_indices_knn_norm,
-                                                                    category_name=0, zero_counts=False)
-
-    expression_counts_knn_norm_with_zeros, categories = return_expression_info(list_genes, adata,
-                                                                               knn_indices_knn_norm,
-                                                                               category_name=0, zero_counts=True)

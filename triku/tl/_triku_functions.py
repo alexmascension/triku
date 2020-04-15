@@ -12,7 +12,7 @@ from triku.utils import return_proportion_zeros, return_mean, check_count_mat, f
 from triku.logg import logger
 
 
-def return_knn_indices(array, knn, return_random, random_state, metric):
+def return_knn_indices(array: np.ndarray, knn: int, return_random: bool, random_state: int, metric: str):
     pca = PCA(n_components=50, whiten=True, svd_solver='auto').fit_transform(array)
 
     if return_random:
@@ -29,6 +29,36 @@ def return_knn_indices(array, knn, return_random, random_state, metric):
                                                            angular=False, metric_kwds={})
 
     return knn_indices.astype(int)
+
+
+
+
+
+def return_knn_expression(arr_expression: np.ndarray, knn_indices: np.ndarray):
+    '''
+    This function returns a dictionary of genes: expression in kNN for gene. To calculate the expression per gene
+    we are going to apply the following procedure.
+
+    First we create a 2D mask of neighbors. The mask is a translation of the knn_indices into a 2D sparse array,
+    where the index i,j is 1 if cell j is neigbour of cell i and 0 elsewhere.
+
+    That is, if we have n_g as number of genes, and n_c as number of cells, the matrix product would be:
+
+        Mask          Expr         Result
+    (n_c x n_c) · (n_c x n_g) = (n_c x n_g)
+
+    Then, the Result matrix would have in each cell, the summed expression of that gene in the knn (and also the
+    own cell).
+    '''
+    import scipy.sparse as spr
+
+    sparse_mask = spr.lil_matrix((arr_expression.shape[0], arr_expression.shape[0]))
+    # [:, 0] is [0,0,0,0,..., 0, 1, ..., 1, ... ] and [:, 1] are the indices of the rest of cells.
+    sparse_mask[np.repeat(np.arange(knn_indices.shape[0]), knn_indices.shape[1]), knn_indices.flatten()] = 1
+
+    return sparse_mask.dot(arr_expression)
+
+
 
 
 def find_knee_point(x, y, s=0.0):
