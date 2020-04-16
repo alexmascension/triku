@@ -1,24 +1,31 @@
 import numpy as np
-
-# Especial imports
-from sklearn.decomposition import PCA
-from umap.umap_ import fuzzy_simplicial_set, nearest_neighbors
-
-
-
+import scipy.stats as sts
+import scipy.sparse as spr
 from scipy.signal import savgol_filter
 
+from sklearn.decomposition import PCA
+from umap.umap_ import nearest_neighbors
+
+import ray
+
 from triku.utils import return_proportion_zeros, return_mean, check_count_mat, find_starting_point, distance
-from triku.logg import logger
+from triku.logg import triku_logger
 
 
 def return_knn_indices(array: np.ndarray, knn: int, return_random: bool, random_state: int, metric: str):
+    """
+    Given a expression array and a number of kNN, returns a n_cells x kNN + 1 matrix where each row, col is a
+    neighbour of cell X.
+
+    return_random attribute is used to assign random neighbours.
+    """
+
     pca = PCA(n_components=50, whiten=True, svd_solver='auto').fit_transform(array)
 
     if return_random:
         knn_indices = np.zeros((array.shape[0], knn))
-        ran = np.arange(0, array.shape[0])
-        for i in ran:
+        ran = np.arange(0, array.shape[0]) # TODO: remove for loop and instead use np.random.randint(array.shape[0], array.size) and reshape
+        for i in ran:  # TODO: revise if kNN matrix yields kNN + 1 or kNN neighbours
             knn_indices[i, 1:] = np.random.choice(ran, knn - 1, replace=False)
 
         knn_indices[:, 0] = np.arange(array.shape[0])
@@ -31,11 +38,8 @@ def return_knn_indices(array: np.ndarray, knn: int, return_random: bool, random_
     return knn_indices.astype(int)
 
 
-
-
-
 def return_knn_expression(arr_expression: np.ndarray, knn_indices: np.ndarray):
-    '''
+    """
     This function returns a dictionary of genes: expression in kNN for gene. To calculate the expression per gene
     we are going to apply the following procedure.
 
@@ -49,8 +53,7 @@ def return_knn_expression(arr_expression: np.ndarray, knn_indices: np.ndarray):
 
     Then, the Result matrix would have in each cell, the summed expression of that gene in the knn (and also the
     own cell).
-    '''
-    import scipy.sparse as spr
+    """
 
     sparse_mask = spr.lil_matrix((arr_expression.shape[0], arr_expression.shape[0]))
     # [:, 0] is [0,0,0,0,..., 0, 1, ..., 1, ... ] and [:, 1] are the indices of the rest of cells.
@@ -58,6 +61,135 @@ def return_knn_expression(arr_expression: np.ndarray, knn_indices: np.ndarray):
 
     return sparse_mask.dot(arr_expression)
 
+
+def create_random_count_matrix(matrix: np.array = None):
+    """
+    Given a matrix with cells x genes, returns a randomized cells x genes matrix. This matrix has, for each genes,
+    the counts of the gene from the original matrix dispersed across the cells. E.g., if gene X has 1000 across
+    all cells counts, those counts are distributed randomly.
+    """
+
+    n_reads_per_gene = matrix.sum(0).astype(int)
+    print(n_reads_per_gene)
+    n_cells, n_genes = matrix.shape
+    matrix_random = np.zeros((n_genes, n_cells))
+
+    # The limiting part generally is the random number generation.
+    # Random.choice is rather slow, so to save some time we use random.random, then multiply by the
+    # number of cells, and change to int.
+    random_counts = np.random.randint(n_cells, size=np.sum(n_reads_per_gene))
+
+    # Also, assigning values to a matrix is done by rows because it is 2 to 3 times faster than in rows.
+    # Numpy rows are row-based so it will always be more efficient to do a row-wise assignment.
+    idx_counts = 0
+    for gene in range(n_genes):
+        counts_gene = random_counts[idx_counts: idx_counts + n_reads_per_gene[gene]]
+        bincount = np.bincount(counts_gene, minlength=n_cells)
+        matrix_random[gene, :] = bincount
+        idx_counts += n_reads_per_gene[gene]
+
+    matrix_random = matrix_random.T
+    return matrix_random
+
+
+# TODO: apply for log-transformed data? The convolution works assuming that X data are integers.
+def apply_convolution_read_counts(probs: np.ndarray, knn: int):
+    """
+    Convolution of functions. The function applies a convolution using np.convolve
+    of a probability distribution knn times. The result is an array of N elements (N arises as the convolution
+    of a n-length array knn times) where the element i has the probability of i being observed.
+
+    Parameters
+    ----------
+    probs : np.array
+        Object with count matrix. If `pandas.DataFrame`, rows are cells and columns are genes.
+    knn : int
+        Number of kNN
+    """
+    # We are calculating the convolution of cells with positive expression. Thus, in the first distribution
+    # we have to remove the cells with 0 reads, and rescale the probabilities.
+    arr_0 = probs.copy()
+    arr_0[0] = 0  # TODO: this will fail in log-transformed data
+    arr_0 /= arr_0.sum()
+
+    # We will use arr_bvase as the array with the read distribution
+    arr_base = probs.copy()
+
+    arr_convolve = np.convolve(arr_0, arr_base, )
+
+    for knni in range(2, knn):
+        arr_convolve = np.convolve(arr_convolve, arr_base, )
+
+    # TODO: check the probability sum is 1 and, if so, remove
+    arr_prob = arr_convolve / arr_convolve.sum()
+
+    # TODO: if log transformed, this is untrue. Should not be arange.
+    return np.arange(len(arr_prob)), arr_prob
+
+
+def compute_conv_idx(counts_gene, knn):
+    """
+    Given a GENE x CELL matrix, and an index to select from, calculates the convolution of reads for that gene index.
+    The function returns the
+    """
+    x_counts, y_counts = np.unique(counts_gene, return_counts=True)
+    y_probs = y_counts / y_counts.sum()  # Important to transform count to probabilities
+    # to keep the convolution constant.
+
+    x_conv, y_conv = apply_convolution_read_counts(y_probs, knn=knn)
+
+    return x_conv, y_conv, y_probs
+
+
+def calculate_emd(knn_counts, x_conv, y_conv):
+    """
+    Returns "normalized" earth movers distance (EMD). The function calculates the x positions and probabilities
+    of the "real" dataset using the knn_counts, and the x positions and probabilities of the convolution as attributes.
+
+    To normalize the distance, it is divided by the standard deviation of the convolution. Since the convolution
+    is already given as a distribution, mean and variance have to be calculated "by hand".
+    """
+    dist_range = np.arange(max(knn_counts) + 1)
+    # np.bincount transforms [3, 3, 4, 1, 2, 9] into [0, 1, 1, 2, 1, 0, 0, 0, 0, 1]
+    real_vals = np.bincount(knn_counts.astype(int)) / len(knn_counts)
+
+    emd = sts.wasserstein_distance(dist_range, x_conv, real_vals, y_conv)
+
+    mean = (x_conv * y_conv).sum()
+    std = np.sqrt(np.sum(y_conv * (x_conv - mean) ** 2))
+
+    return emd / std
+
+
+@ray.remote
+def compute_convolution_and_emd(array_counts, array_knn_counts, idx, knn,):
+    counts_gene = array_counts[idx, :].ravel()  # idx is chosen by rows, because it is more effective!
+    knn_counts = array_knn_counts[idx, :].ravel()
+
+    x_conv, y_conv, y_probs = compute_conv_idx(counts_gene, knn)
+    emd = calculate_emd(knn_counts, x_conv, y_conv)
+
+    return x_conv, y_conv, emd
+
+# TODO comentar
+def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndarray, n_procs: int, knn: int):
+
+    # TODO: possible memory leak! assert if transposition is applied after return and, if so, revert at the end of func
+    array_counts = array_counts.copy().T  # to make genes be rows, the indexing is faster!
+    array_knn_counts = array_knn_counts.copy().T
+
+    ray.init(num_cpus=n_procs, ignore_reinit_error=True)
+
+    array_counts_id = ray.put(array_counts)
+    array_knn_counts_id = ray.put(array_knn_counts)
+
+    ray_obj_ids = [compute_convolution_and_emd.remote(array_counts_id, array_knn_counts_id, idx_gene, knn)
+                   for idx_gene in range(array_counts.shape[0])]
+    ray_objs = ray.get(ray_obj_ids)
+
+    list_x_conv, list_y_conv, list_emd = [x[0] for x in ray_objs], [x[1] for x in ray_objs], [x[2] for x in ray_objs]
+
+    return list_x_conv, list_y_conv, np.array(list_emd)
 
 
 
@@ -97,6 +229,13 @@ def find_knee_point(x, y, s=0.0):
     return knee_x_idx
 
 
+
+
+
+
+
+
+
 def return_idx(prop_0: np.ndarray, mean: np.ndarray, percentile_low_idx: int, percentile_high_idx: int, s: float,
                delta_x: int = None, delta_y: int = None, apply_deltas: bool = True):
     """
@@ -111,7 +250,7 @@ def return_idx(prop_0: np.ndarray, mean: np.ndarray, percentile_low_idx: int, pe
 
     # Calculate the curve of number of genes by mean. This curve is scaled from 0 to 1 in both axes.
     if np.min(array_mean) == np.max(array_mean):
-        logger.warning("Mean difference for this bin is zero (n_0 = {}, n_f = {}, mean = {}). "
+        triku_logger.warning("Mean difference for this bin is zero (n_0 = {}, n_f = {}, mean = {}). "
                        "This might not be a problem, but sometimes it is associated to poor data quality".format(
             percentile_low_idx, percentile_high_idx, np.min(array_mean)))
         return []
@@ -119,7 +258,6 @@ def return_idx(prop_0: np.ndarray, mean: np.ndarray, percentile_low_idx: int, pe
     x = np.arange(len(array_mean)) / len(array_mean)
     y = (np.sort(np.log10(array_mean)) - min(np.log10(array_mean))) / \
         (np.max(np.log10(array_mean)) - np.min(np.log10(array_mean)))
-
 
     '''
     Apply a Savitzky-Golay filter to remove noisiness on the curve. This filter will be applicable to arrays
@@ -174,7 +312,7 @@ def return_triku_gene_idx(arr: np.ndarray, n_bins: int = 80, n_cycles: int = 4, 
     we will remove them a posteriori applying an entropy threshold.
     """
 
-    logger.info("Binning the dataset")
+    triku_logger.info("Binning the dataset")
     # Divide the dataset into bins. THE PREVIOUS METHOD included the len_bin as prop_0_bins[N + 1] - prop_0_bins[N].
     # This is wrong because distribution of points are skewed towards points with high prop_0 / low mean, and the bins
     # for the low prop_0 / high mean are much larger, making the selection process skewed. To remove this we have to
@@ -201,10 +339,8 @@ def return_triku_gene_idx(arr: np.ndarray, n_bins: int = 80, n_cycles: int = 4, 
                                        percentile_low_idx=start_prop_idx, percentile_high_idx=end_prop_idx, )
             selected_genes_index += selector_idxs
 
-    logger.info("Getting selected genes")
+    triku_logger.info("Getting selected genes")
     # Remove duplicated entries
     selected_genes_index = sorted(list(dict.fromkeys(selected_genes_index)))
 
     return selected_genes_index
-
-
