@@ -7,7 +7,7 @@ from umap.umap_ import nearest_neighbors
 
 import ray
 
-from triku.logg import triku_logger
+from triku.logg import triku_logger, TRIKU_LEVEL
 
 
 def return_knn_indices(array: np.ndarray, knn: int, return_random: bool, random_state: int, metric: str,
@@ -22,19 +22,19 @@ def return_knn_indices(array: np.ndarray, knn: int, return_random: bool, random_
     pca = PCA(n_components=n_comps, whiten=True, svd_solver='auto').fit_transform(array)
 
     if return_random:
-        triku_logger.triku('Applying knn indices randomly')
+        triku_logger.log(TRIKU_LEVEL, 'Applying knn indices randomly')
         # With this approach it is possible that two knns are the same for a cell. But well, not really that important.
         knn_indices = np.random.randint(array.shape[0], array.shape[0] * knn).reshape(array.shape[0], knn)
         knn_indices[:, 0] = np.arange(array.shape[0])
 
     else:
-        triku_logger.triku('Calculating knn indices')
+        triku_logger.log(TRIKU_LEVEL, 'Calculating knn indices')
         knn_indices, knn_dists, forest = nearest_neighbors(pca, n_neighbors=knn, metric=metric,
                                                            random_state=np.random.RandomState(random_state),
                                                            angular=False, metric_kwds={})
 
-    triku_logger.triku('knn indices stats (shape | mean | std)', knn_indices.shape, np.mean(knn_indices),
-                       np.std(knn_indices))
+    triku_logger.log(TRIKU_LEVEL, 'knn indices stats (shape | mean | std): {} | {} | {}'.format(knn_indices.shape, np.mean(knn_indices),
+                       np.std(knn_indices)))
     return knn_indices.astype(int)
 
 
@@ -55,15 +55,15 @@ def return_knn_expression(arr_expression: np.ndarray, knn_indices: np.ndarray) -
     own cell).
     """
 
-    triku_logger.triku('Calculating knn expression')
+    triku_logger.log(TRIKU_LEVEL, 'Calculating knn expression')
 
     sparse_mask = spr.lil_matrix((arr_expression.shape[0], arr_expression.shape[0]))
     # [:, 0] is [0,0,0,0,..., 0, 1, ..., 1, ... ] and [:, 1] are the indices of the rest of cells.
     sparse_mask[np.repeat(np.arange(knn_indices.shape[0]), knn_indices.shape[1]), knn_indices.flatten()] = 1
-    triku_logger.triku('sparse_mask: ', sparse_mask)
+    triku_logger.log(TRIKU_LEVEL, 'sparse_mask: {}'.format(sparse_mask))
 
     knn_expression = sparse_mask.dot(arr_expression)
-    triku_logger.triku('knn_expression: ', knn_expression)
+    triku_logger.log(TRIKU_LEVEL, 'knn_expression: {}'.format(knn_expression))
 
     return knn_expression
 
@@ -194,7 +194,7 @@ def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndar
     (x, and probabilities), and the distances.
     """
 
-    triku_logger.triku('Parallel emd calculation')
+    triku_logger.log(TRIKU_LEVEL, 'Parallel emd calculation')
     ray.shutdown()
     ray.init(num_cpus=n_procs, ignore_reinit_error=True)
 
@@ -204,9 +204,9 @@ def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndar
     ray_obj_ids = [compute_convolution_and_emd.remote(array_counts_id, array_knn_counts_id, idx_gene, knn)
                    for idx_gene in range(array_counts.shape[0])]
 
-    triku_logger.triku('Parallel computation of distances.')
+    triku_logger.log(TRIKU_LEVEL, 'Parallel computation of distances.')
     ray_objs = ray.get(ray_obj_ids)
-    triku_logger.triku('Done.')
+    triku_logger.log(TRIKU_LEVEL, 'Done.')
 
     list_x_conv, list_y_conv, list_emd = [x[0] for x in ray_objs], [x[1] for x in ray_objs], [x[2] for x in ray_objs]
     # list_x_conv and list_y_conv are lists of lists. Each element are the x coordinates and probabilities of the

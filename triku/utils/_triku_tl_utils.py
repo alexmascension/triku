@@ -2,7 +2,7 @@ import numpy as np
 import scipy.sparse as spr
 import bottleneck as bn
 
-from triku.logg import triku_logger
+from triku.logg import triku_logger, TRIKU_LEVEL
 
 
 def return_proportion_zeros(mat: [np.ndarray, spr.csr.csr_matrix]):
@@ -29,8 +29,8 @@ def return_proportion_zeros(mat: [np.ndarray, spr.csr.csr_matrix]):
         if len(zero_counts) == 1:
             zero_counts = zero_counts.flatten()
 
-    triku_logger.triku('zero_counts stats [min / mean / max / std]', np.min(zero_counts),
-                       np.mean(zero_counts), np.max(zero_counts), np.std(zero_counts))
+    triku_logger.log(TRIKU_LEVEL, 'zero_counts stats || min: {} | mean: {} |  max: {} | std: {}]'.format(
+        np.min(zero_counts), np.mean(zero_counts), np.max(zero_counts), np.std(zero_counts)))
     return zero_counts / n_cells
 
 
@@ -57,8 +57,8 @@ def return_mean(mat: [np.ndarray, spr.csr.csr_matrix]):
         if len(mean_per_gene) == 1:
             mean_per_gene = mean_per_gene.flatten()
 
-    triku_logger.triku('mean per gene stats [min / mean / max / std]', np.min(mean_per_gene),
-                       np.mean(mean_per_gene), np.max(mean_per_gene), np.std(mean_per_gene))
+    triku_logger.log(TRIKU_LEVEL, 'zero_counts stats || min: {} | mean: {} |  max: {} | std: {}]'.format(
+        np.min(mean_per_gene), np.mean(mean_per_gene), np.max(mean_per_gene), np.std(mean_per_gene)))
     return mean_per_gene
 
 
@@ -100,9 +100,10 @@ def check_null_genes(arr_counts: np.ndarray):
 
     if len(idx) < arr_counts.shape[1]:
         error_msg = 'There are {} genes ({} %) with no counts. Remove those genes first. ' \
-                    'You can use sc.pp.filter_genes(min_cells=5).'.format(arr_counts.shape[1] - len(idx),
-                                                                          int(100 * (arr_counts.shape[1] - len(idx)) /
-                                                                              arr_counts.shape[1]))
+                    'You can use sc.pp.filter_genes(adata, min_cells=5).'.format(arr_counts.shape[1] - len(idx),
+                                                                                 int(100 * (arr_counts.shape[1] - len(
+                                                                                     idx)) /
+                                                                                     arr_counts.shape[1]))
 
         triku_logger.error(error_msg)
         raise BaseException(error_msg)

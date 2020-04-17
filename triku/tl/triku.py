@@ -8,7 +8,7 @@ from ._triku_functions import return_knn_indices, return_knn_expression, create_
     parallel_emd_calculation, subtract_median, get_cutoff_curve
 from ..utils._triku_tl_utils import check_count_mat, check_null_genes, return_mean, return_proportion_zeros
 from ..utils._general_utils import get_arr_counts_genes, set_level_logger
-from ..logg import triku_logger
+from ..logg import triku_logger, TRIKU_LEVEL
 
 import warnings
 
@@ -83,7 +83,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
                              'of used cores will be set to {}.'.format(n_procs, get_cpu_count(),
                                                                        max(1, get_cpu_count() - 1)))
         n_procs = max(1, get_cpu_count() - 1)
-    triku_logger.triku('Number of processors set to {}'.format(n_procs))
+    triku_logger.log(TRIKU_LEVEL, 'Number of processors set to {}'.format(n_procs))
 
     # Get the array of counts (np.array) and the array of genes.
     arr_counts, arr_genes = get_arr_counts_genes(object_triku)
@@ -103,7 +103,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
     knn_array = None
 
     if isinstance(object_triku, sc.AnnData):
-        if (use_adata_knn is None) | use_adata_knn:
+        if (use_adata_knn is None) or use_adata_knn:
             if 'neighbors' in object_triku.uns:
                 knn = object_triku.uns['neighbors']['params']['n_neighbors']
                 triku_logger.info('We found "neighbors" in the anndata, with knn={}. If you want to calculate the '

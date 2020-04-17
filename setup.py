@@ -30,9 +30,9 @@ setup(
     # https://stackoverflow.com/questions/7522250/how-to-include-package-data-with-setuptools-distribute
     # package_data={'': '*.txt'},
     # include_package_data=True,
-    entry_points=dict(
-        console_scripts=['triku=triku.cli.cli_triku:main', 'triku-plotentropy=triku.cli.cli_plot_entropy:main'],
-    ),
+    # entry_points=dict(
+    #     console_scripts=['triku=triku.cli.cli_triku:main', 'triku-plotentropy=triku.cli.cli_plot_entropy:main'],
+    # ),
     zip_safe=False,
     classifiers=[
         'Intended Audience :: Developers',

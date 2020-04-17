@@ -3,13 +3,12 @@ import pandas as pd
 import scipy.sparse as spr
 import numpy as np
 import os
+
+from ..logg import triku_logger, TRIKU_LEVEL
 import logging
 
-from ..logg import triku_logger
-
-
 def get_arr_counts_genes(object_triku):
-    triku_logger.triku('Obtaining count matrix and gene list.')
+    triku_logger.log(TRIKU_LEVEL,  'Obtaining count matrix and gene list.')
     # Check type of object and return the matrix as corresponded
 
     if isinstance(object_triku, sc.AnnData):
@@ -27,10 +26,10 @@ def get_arr_counts_genes(object_triku):
     if isinstance(arr_counts, np.matrix):
         arr_counts = np.asarray(arr_counts)
 
-    arr_genes = make_genes_unique(arr_genes)
+    make_genes_unique(arr_genes)
 
-    triku_logger.triku('Array of counts', arr_counts)
-    triku_logger.triku('Array of genes', arr_genes)
+    triku_logger.log(TRIKU_LEVEL,  'Array of counts\n{}'.format(arr_counts))
+    triku_logger.log(TRIKU_LEVEL,  'Array of genes\n{}'.format(arr_genes))
     return arr_counts, arr_genes
 
 
@@ -47,7 +46,7 @@ def make_genes_unique(arr):
 
 
 def set_level_logger(level):
-    dict_levels = {'debug': logging.DEBUG, 'info': logging.INFO, 'warning': logging.WARNING,
+    dict_levels = {'debug': logging.DEBUG, 'triku': TRIKU_LEVEL, 'info': logging.INFO, 'warning': logging.WARNING,
                    'error': logging.ERROR, 'critical': logging.CRITICAL}
 
     triku_logger.setLevel(dict_levels[level])

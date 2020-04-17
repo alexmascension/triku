@@ -3,3 +3,6 @@ include LICENSE
 include *.yaml
 include *.yml
 include scripts/triku
+exclude notebooks
+exclude data
+
