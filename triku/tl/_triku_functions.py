@@ -13,7 +13,7 @@ from triku.logg import triku_logger
 def return_knn_indices(array: np.ndarray, knn: int, return_random: bool, random_state: int, metric: str,
                        n_comps: int) -> np.ndarray:
     """
-    Given a expression array and a number of kNN, returns a n_cells x kNN + 1 matrix where each row, col is a
+    Given a expression array and a number of kNN, returns a n_cells x kNN matrix where each row, col is a
     neighbour of cell X.
 
     return_random attribute is used to assign random neighbours.
@@ -22,19 +22,19 @@ def return_knn_indices(array: np.ndarray, knn: int, return_random: bool, random_
     pca = PCA(n_components=n_comps, whiten=True, svd_solver='auto').fit_transform(array)
 
     if return_random:
-        knn_indices = np.zeros((array.shape[0], knn))
-        ran = np.arange(0, array.shape[
-            0])  # TODO: remove for loop and instead use np.random.randint(array.shape[0], array.size) and reshape
-        for i in ran:  # TODO: revise if kNN matrix yields kNN + 1 or kNN neighbours
-            knn_indices[i, 1:] = np.random.choice(ran, knn - 1, replace=False)
-
+        triku_logger.triku('Applying knn indices randomly')
+        # With this approach it is possible that two knns are the same for a cell. But well, not really that important.
+        knn_indices = np.random.randint(array.shape[0], array.shape[0] * knn).reshape(array.shape[0], knn)
         knn_indices[:, 0] = np.arange(array.shape[0])
 
     else:
+        triku_logger.triku('Calculating knn indices')
         knn_indices, knn_dists, forest = nearest_neighbors(pca, n_neighbors=knn, metric=metric,
                                                            random_state=np.random.RandomState(random_state),
                                                            angular=False, metric_kwds={})
 
+    triku_logger.triku('knn indices stats (shape | mean | std)', knn_indices.shape, np.mean(knn_indices),
+                       np.std(knn_indices))
     return knn_indices.astype(int)
 
 
@@ -55,11 +55,17 @@ def return_knn_expression(arr_expression: np.ndarray, knn_indices: np.ndarray) -
     own cell).
     """
 
+    triku_logger.triku('Calculating knn expression')
+
     sparse_mask = spr.lil_matrix((arr_expression.shape[0], arr_expression.shape[0]))
     # [:, 0] is [0,0,0,0,..., 0, 1, ..., 1, ... ] and [:, 1] are the indices of the rest of cells.
     sparse_mask[np.repeat(np.arange(knn_indices.shape[0]), knn_indices.shape[1]), knn_indices.flatten()] = 1
+    triku_logger.triku('sparse_mask: ', sparse_mask)
 
-    return sparse_mask.dot(arr_expression)
+    knn_expression = sparse_mask.dot(arr_expression)
+    triku_logger.triku('knn_expression: ', knn_expression)
+
+    return knn_expression
 
 
 def create_random_count_matrix(matrix: np.array = None) -> np.ndarray:
@@ -173,28 +179,51 @@ def compute_convolution_and_emd(array_counts: np.ndarray, array_knn_counts: np.n
     return x_conv, y_conv, emd
 
 
-# TODO comentar
 def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndarray,
                              n_procs: int, knn: int) -> (list, list, np.ndarray):
-    # TODO: possible memory leak! assert if transposition is applied after return and, if so, revert at the end of func
-    array_counts = array_counts.copy().T  # to make genes be rows, the indexing is faster!
-    array_knn_counts = array_knn_counts.copy().T
+    """
+    Calculation of convolution for each gene, and its emd. To do that we call compute_convolution_and_emd which,
+    in turn, calls compute_conv_idx to calculate the convolution of the reads; and calculate_emd, to calculate the
+    emd between the convolution and the knn_counts.
 
+    Since we are working with counts, rather than an adata, we transpose the arrays so that the expression of each gene
+    is a row. This makes a difference in time consumption (after 20000 genes, of course).
+
+    To make things faster we use ray parallelization. Ray selects the counts and knn counts on each gene, and computes
+    the convolution and distance. The output result is, for each gene, the convolution distribution
+    (x, and probabilities), and the distances.
+    """
+
+    triku_logger.triku('Parallel emd calculation')
+    ray.shutdown()
     ray.init(num_cpus=n_procs, ignore_reinit_error=True)
 
-    array_counts_id = ray.put(array_counts)
-    array_knn_counts_id = ray.put(array_knn_counts)
+    array_counts_id = ray.put(array_counts.T)  # IMPORTANT TO TRANSPOSE TO SELECT ROWS (much faster)!!!
+    array_knn_counts_id = ray.put(array_knn_counts.T)
 
     ray_obj_ids = [compute_convolution_and_emd.remote(array_counts_id, array_knn_counts_id, idx_gene, knn)
                    for idx_gene in range(array_counts.shape[0])]
+
+    triku_logger.triku('Parallel computation of distances.')
     ray_objs = ray.get(ray_obj_ids)
+    triku_logger.triku('Done.')
 
     list_x_conv, list_y_conv, list_emd = [x[0] for x in ray_objs], [x[1] for x in ray_objs], [x[2] for x in ray_objs]
+    # list_x_conv and list_y_conv are lists of lists. Each element are the x coordinates and probabilities of the
+    # convolution distribution for a gene. list_emd is an array with n_genes elements, where each element is the
+    # distance between the convolution and the knn_distribution
 
+    ray.shutdown()
     return list_x_conv, list_y_conv, np.array(list_emd)
 
 
 def subtract_median(x, y, n_windows):
+    """We working with EMD, we want to find genes with more deviation on emd compared with other genes with similar
+    mean expression. With higher expressions EMD tends to increase. To reduce that basal level we will substract the
+    median EMD to the genes using a number of windows. The approach is quite reliable between 15 and 80 windows.
+
+    Too many windows can over-normalize, and lose genes that have high emd but are alone in that window."""
+
     linspace = np.linspace(min(x), max(x), n_windows + 1)
     y_adjust = y.copy()
 
@@ -205,7 +234,7 @@ def subtract_median(x, y, n_windows):
     return y_adjust
 
 
-def get_cutoff_curve(y, s=0.1):
+def get_cutoff_curve(y, s):
     """
     Plots a curve, and finds the best point by joining the extremes of the curve with a line, and selecting
     the point from the curve with the greatest distance.

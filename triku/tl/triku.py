@@ -56,7 +56,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
         Seed for random processes
     n_procs : int, None
         Number of processes for parallel processing.
-    verbose : str ['debug', 'info', 'warning', 'error', 'critical']
+    verbose : str ['debug', 'triku', 'info', 'warning', 'error', 'critical']
         Logger verbosity output.
     Returns
     -------
@@ -69,6 +69,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
 
     # Basic checks of variables
     set_level_logger(verbose)
+
     for var in [n_features, knn, n_windows, n_procs, random_state, n_comps]:
         assert (var is None) | (isinstance(var, int)), "The variable value {} must be an integer!".format(var)
 
@@ -82,11 +83,12 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
                              'of used cores will be set to {}.'.format(n_procs, get_cpu_count(),
                                                                        max(1, get_cpu_count() - 1)))
         n_procs = max(1, get_cpu_count() - 1)
+    triku_logger.triku('Number of processors set to {}'.format(n_procs))
 
     # Get the array of counts (np.array) and the array of genes.
     arr_counts, arr_genes = get_arr_counts_genes(object_triku)
     mean_counts, per_counts = return_mean(arr_counts), return_proportion_zeros(arr_counts)
-    check_null_genes(arr_counts, arr_genes)
+    check_null_genes(arr_counts)
     check_count_mat(arr_counts)
 
     """
@@ -104,7 +106,8 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
         if (use_adata_knn is None) | use_adata_knn:
             if 'neighbors' in object_triku.uns:
                 knn = object_triku.uns['neighbors']['params']['n_neighbors']
-                triku_logger.info('We found "neighbors" in the anndata, with knn={}'.format(knn))
+                triku_logger.info('We found "neighbors" in the anndata, with knn={}. If you want to calculate the '
+                                  'neighbors with triku, set use_adata_knn=False'.format(knn))
 
                 # Connectivities array contains a pairwise relationship between cells. We want to select, for
                 # each cell, the knn "nearest" cells. We can easily do that with argsort. In the end we obtain a
@@ -119,7 +122,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
     if knn_array is None:
         if knn is None:
             knn = int(0.5 * (arr_counts.shape[0]) ** 0.5)
-            triku_logger.info('The number of neighbours by default will be {}'.format(knn))
+            triku_logger.info('The number of neighbours is set to {}'.format(knn))
 
         knn_array = return_knn_indices(arr_counts, knn=knn, return_random=False, random_state=random_state,
                                        metric=metric, n_comps=n_comps)

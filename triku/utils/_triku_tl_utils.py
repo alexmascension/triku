@@ -2,7 +2,7 @@ import numpy as np
 import scipy.sparse as spr
 import bottleneck as bn
 
-from triku.logg import logger
+from triku.logg import triku_logger
 
 
 def return_proportion_zeros(mat: [np.ndarray, spr.csr.csr_matrix]):
@@ -29,6 +29,8 @@ def return_proportion_zeros(mat: [np.ndarray, spr.csr.csr_matrix]):
         if len(zero_counts) == 1:
             zero_counts = zero_counts.flatten()
 
+    triku_logger.triku('zero_counts stats [min / mean / max / std]', np.min(zero_counts),
+                       np.mean(zero_counts), np.max(zero_counts), np.std(zero_counts))
     return zero_counts / n_cells
 
 
@@ -55,6 +57,8 @@ def return_mean(mat: [np.ndarray, spr.csr.csr_matrix]):
         if len(mean_per_gene) == 1:
             mean_per_gene = mean_per_gene.flatten()
 
+    triku_logger.triku('mean per gene stats [min / mean / max / std]', np.min(mean_per_gene),
+                       np.mean(mean_per_gene), np.max(mean_per_gene), np.std(mean_per_gene))
     return mean_per_gene
 
 
@@ -62,35 +66,43 @@ def check_count_mat(mat: [np.ndarray, spr.csr.csr_matrix]):
     """
     This function outputs a warning if we suspect the matrix is in logarithm value
     """
-    logger.info("Checking integrity of matrix.")
+    triku_logger.info("Checking integrity of matrix.")
 
     n_factors = 0
 
     if np.min(mat) < 0:
-        logger.warning("The count matrix contains negative values. Triku is supposed to run with raw count matrices.")
+        error_msg = "The count matrix contains negative values. Triku is supposed to run with raw count matrices."
+
+        triku_logger.error(error_msg)
+        raise BaseException(error_msg)
 
     # TODO: check if feature selection works on log-transformed data.
     if np.percentile(mat[mat > 0], 99.9) < 17:
-        logger.warning("The count matrix looks normalized or log-transformed (percentile 99.9: {}). "
-                       "Triku is supposed to run with raw count matrices.".format(np.percentile(mat[mat > 0], 99.9)))
+        triku_logger.warning("The count matrix looks normalized or log-transformed (percentile 99.9: {}). "
+                             "Triku is supposed to run with raw count matrices.".format(
+            np.percentile(mat[mat > 0], 99.9)))
 
     if mat.shape[1] > 20000:
-        logger.warning("The count matrix contains more than 25000 genes. We recommend filtering some genes, up to "
-                       "15000 - 18000 genes. You can do that in scanpy with the function 'sc.pp.filter_genes()'.")
+        triku_logger.warning(
+            "The count matrix contains more than 25000 genes. We recommend filtering some genes, up to "
+            "15000 - 18000 genes. You can do that in scanpy with the function 'sc.pp.filter_genes()'.")
 
     return n_factors
 
 
-def check_null_genes(arr_counts: np.ndarray, arr_genes: np.ndarray):
+def check_null_genes(arr_counts: np.ndarray):
     """
     Removes columns (genes) that have zero sum. These genes interfere in the analysis and are not useful at all.
     """
-    logger.info("Checking zero-count genes.")
+    triku_logger.info("Checking zero-count genes.")
 
     idx = np.argwhere(arr_counts.sum(0) != 0).flatten()
 
     if len(idx) < arr_counts.shape[1]:
-        logger.error('There are {} genes ({} %) with no counts. Remove those genes first. '
-                     'You can use sc.pp.filter_genes(min_cells=5).'.format(
-                      arr_counts.shape[1] - len(idx),
-                      int(100 * (arr_counts.shape[1] - len(idx)) / arr_counts.shape[1])))
+        error_msg = 'There are {} genes ({} %) with no counts. Remove those genes first. ' \
+                    'You can use sc.pp.filter_genes(min_cells=5).'.format(arr_counts.shape[1] - len(idx),
+                                                                          int(100 * (arr_counts.shape[1] - len(idx)) /
+                                                                              arr_counts.shape[1]))
+
+        triku_logger.error(error_msg)
+        raise BaseException(error_msg)
