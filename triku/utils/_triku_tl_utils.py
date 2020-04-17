@@ -4,6 +4,7 @@ import bottleneck as bn
 
 from triku.logg import logger
 
+
 def return_proportion_zeros(mat: [np.ndarray, spr.csr.csr_matrix]):
     """
     Returns a 1D array with the percentages. We have to do it using methods both for sparse arrays
@@ -57,34 +58,6 @@ def return_mean(mat: [np.ndarray, spr.csr.csr_matrix]):
     return mean_per_gene
 
 
-def return_std(mat: [np.ndarray, spr.csr.csr_matrix]):
-    """
-    Returns a 1D array with the mean of the array. We have to do it using methods both for sparse arrays
-    and dense arrays, which limits the options to do it.
-
-    Parameters
-    ----------
-    mat : [np.ndarray, scipy.sparse.csr_matrix, other sparse matrices]
-        Array of cells x genes.
-
-    Returns
-    -------
-    prop_zeros: np.1darray
-        Array with mean expression per gene.
-    """
-
-    mean_per_gene = bn.nanstd(mat, axis=0)
-
-    if isinstance(mean_per_gene, np.matrix):
-        mean_per_gene = np.asarray(mean_per_gene)
-        if len(mean_per_gene) == 1:
-            mean_per_gene = mean_per_gene.flatten()
-
-    return mean_per_gene
-
-
-
-
 def check_count_mat(mat: [np.ndarray, spr.csr.csr_matrix]):
     """
     This function outputs a warning if we suspect the matrix is in logarithm value
@@ -117,6 +90,7 @@ def check_null_genes(arr_counts: np.ndarray, arr_genes: np.ndarray):
     idx = np.argwhere(arr_counts.sum(0) != 0).flatten()
 
     if len(idx) < arr_counts.shape[1]:
-        logger.error('There are {} genes ({} %) with no counts. Remove those genes first. You can use sc.pp.filter_genes(min_cells=5).'.format(
-            arr_counts.shape[1] - len(idx), int(100 * (arr_counts.shape[1] - len(idx)) / arr_counts.shape[1])))
-
+        logger.error('There are {} genes ({} %) with no counts. Remove those genes first. '
+                     'You can use sc.pp.filter_genes(min_cells=5).'.format(
+                      arr_counts.shape[1] - len(idx),
+                      int(100 * (arr_counts.shape[1] - len(idx)) / arr_counts.shape[1])))
