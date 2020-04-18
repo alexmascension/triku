@@ -57,7 +57,7 @@ def return_mean(mat: [np.ndarray, spr.csr.csr_matrix]):
         if len(mean_per_gene) == 1:
             mean_per_gene = mean_per_gene.flatten()
 
-    triku_logger.log(TRIKU_LEVEL, 'zero_counts stats || min: {} | mean: {} |  max: {} | std: {}]'.format(
+    triku_logger.log(TRIKU_LEVEL, 'mean stats || min: {} | mean: {} |  max: {} | std: {}]'.format(
         np.min(mean_per_gene), np.mean(mean_per_gene), np.max(mean_per_gene), np.std(mean_per_gene)))
     return mean_per_gene
 

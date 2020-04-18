@@ -11,6 +11,7 @@ from ..utils._general_utils import get_arr_counts_genes, set_level_logger
 from ..logg import triku_logger, TRIKU_LEVEL
 
 import warnings
+import logging
 
 warnings.filterwarnings('ignore')  # To ignore Numba warnings
 
@@ -18,8 +19,8 @@ warnings.filterwarnings('ignore')  # To ignore Numba warnings
 def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = None,
           do_return: [None, bool] = None, use_adata_knn: [None, bool] = None,
           knn: [None, int] = None, s: [None, int, float] = -0.01, apply_background_correction: bool = True,
-          n_comps: [None, int] = None, metric: str = 'cosine', n_windows: int = 25,
-          random_state: [None, int] = 0, n_procs: [None, int] = None, verbose: [None, str] = 'info'):
+          n_comps: int = 25, metric: str = 'cosine', n_windows: int = 15,
+          random_state: [None, int] = 0, n_procs: [None, int] = None, verbose: [None, str] = 'warning'):
     """
     This function calls the triku method using python directly. This function expects an
     annData object or a csv / txt matrix of n_cells x n_genes. The function then returns an array / list
@@ -64,8 +65,6 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
         list of selected features
     """
     # Todo make functions private if necessary
-    # Todo check unnecessary functions
-    # Add logging statements
 
     # Basic checks of variables
     set_level_logger(verbose)
@@ -124,13 +123,16 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
             knn = int(0.5 * (arr_counts.shape[0]) ** 0.5)
             triku_logger.info('The number of neighbours is set to {}'.format(knn))
 
+        triku_logger.info('Calculating knn indices')
         knn_array = return_knn_indices(arr_counts, knn=knn, return_random=False, random_state=random_state,
                                        metric=metric, n_comps=n_comps)
 
     # Calculate the expression in the kNN (+ own cell) for all genes
+    triku_logger.info('Calculating knn expression')
     arr_knn_expression = return_knn_expression(arr_counts, knn_array)
 
     # Apply the convolution, and calculate the EMD. The convolution is quite fast, but we will still paralellize it.
+    triku_logger.info('Parallel emd calculation')
     list_x_conv, list_y_conv, array_emd = parallel_emd_calculation(array_counts=arr_counts,
                                                                    array_knn_counts=arr_knn_expression,
                                                                    knn=knn, n_procs=n_procs)
@@ -138,12 +140,20 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
     # Randomization!
     # The same steps must be applied to a randomized expression count matrix if we must
     list_x_conv_random, list_y_conv_random, array_emd_random = None, None, None
+    arr_knn_expression_random, knn_array_random = None, None
 
     if apply_background_correction:
+        triku_logger.info('Creating randomized count matrix')
         arr_counts_random = create_random_count_matrix(arr_counts)
+
+        triku_logger.info('Calculating knn indices on randomized matrix')
         knn_array_random = return_knn_indices(arr_counts, knn=knn, return_random=False, random_state=random_state,
                                               metric=metric, n_comps=n_comps)
+
+        triku_logger.info('Calculating knn expression on randomized matrix')
         arr_knn_expression_random = return_knn_expression(arr_counts_random, knn_array_random)
+
+        triku_logger.info('Parallel emd calculation on randomized matrix')
         list_x_conv_random, list_y_conv_random, array_emd_random = \
             parallel_emd_calculation(array_counts=arr_counts_random, array_knn_counts=arr_knn_expression_random,
                                      knn=knn, n_procs=n_procs)
@@ -155,13 +165,16 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
     else:
         array_emd_corrected = array_emd
 
+    triku_logger.info('Subtracting median')
     array_emd_subt_median = subtract_median(x=mean_counts, y=array_emd_corrected, n_windows=n_windows)
 
     # Selection of best genes, either by the curve method or as the N highest ones.
     if n_features is None:
+        triku_logger.info('Selecting cutoff point')
         dist_cutoff = get_cutoff_curve(y=array_emd_subt_median, s=s)
     else:
         dist_cutoff = np.sort(array_emd_subt_median)[- n_features]
+    triku_logger.info('Cutoff point set to {}'.format(dist_cutoff))
 
     # Returns phase. Return if object is not an adata or if return is set to true.
     is_highly_variable = array_emd_subt_median > dist_cutoff
@@ -177,5 +190,12 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
                        'emd_distance_uncorrected': array_emd}
         if array_emd_random is not None:
             dict_return['emd_distance_random'] = array_emd_random
+
+        if triku_logger.level < logging.INFO:
+            dict_return['knn_indices'], dict_return['knn_indices_random']  = knn_array, knn_array_random
+            dict_return['knn_expression'], dict_return['knn_expression_random'] = arr_knn_expression, arr_knn_expression_random
+
+            dict_return['x_convolution'], dict_return['x_convolution_random'] = list_x_conv, list_x_conv_random
+            dict_return['y_convolution'], dict_return['y_convolution_random'] = list_y_conv, list_y_conv_random
 
         return dict_return
