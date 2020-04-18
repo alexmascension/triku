@@ -28,7 +28,7 @@ def get_arr_counts_genes(object_triku):
 
     make_genes_unique(arr_genes)
 
-    triku_logger.log(TRIKU_LEVEL,  'Array of counts\n{}'.format(arr_counts))
+    triku_logger.log(TRIKU_LEVEL,  'Array of counts\n{}, shape:{}'.format(arr_counts, arr_counts.shape))
     triku_logger.log(TRIKU_LEVEL,  'Array of genes\n{}'.format(arr_genes))
     return arr_counts, arr_genes
 

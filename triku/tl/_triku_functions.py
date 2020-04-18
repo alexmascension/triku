@@ -18,7 +18,7 @@ def return_knn_indices(array: np.ndarray, knn: int, return_random: bool, random_
 
     return_random attribute is used to assign random neighbours.
     """
-
+    triku_logger.log(TRIKU_LEVEL, 'Calculating PCA for knn indices')
     pca = PCA(n_components=n_comps, whiten=True, svd_solver='auto').fit_transform(array)
 
     if return_random:
@@ -33,8 +33,9 @@ def return_knn_indices(array: np.ndarray, knn: int, return_random: bool, random_
                                                            random_state=np.random.RandomState(random_state),
                                                            angular=False, metric_kwds={})
 
-    triku_logger.log(TRIKU_LEVEL, 'knn indices stats (shape | mean | std): {} | {} | {}'.format(knn_indices.shape, np.mean(knn_indices),
-                       np.std(knn_indices)))
+    triku_logger.log(TRIKU_LEVEL, 'knn indices stats (shape | mean | std): {} | {} | {}'.format(knn_indices.shape,
+                                                                                                np.mean(knn_indices),
+                                                                                                np.std(knn_indices)))
     return knn_indices.astype(int)
 
 
@@ -55,15 +56,13 @@ def return_knn_expression(arr_expression: np.ndarray, knn_indices: np.ndarray) -
     own cell).
     """
 
-    triku_logger.log(TRIKU_LEVEL, 'Calculating knn expression')
-
     sparse_mask = spr.lil_matrix((arr_expression.shape[0], arr_expression.shape[0]))
     # [:, 0] is [0,0,0,0,..., 0, 1, ..., 1, ... ] and [:, 1] are the indices of the rest of cells.
     sparse_mask[np.repeat(np.arange(knn_indices.shape[0]), knn_indices.shape[1]), knn_indices.flatten()] = 1
-    triku_logger.log(TRIKU_LEVEL, 'sparse_mask: {}'.format(sparse_mask))
+    triku_logger.log(TRIKU_LEVEL, 'sparse_mask sum {} / shape: {}'.format(sparse_mask.sum(), sparse_mask.shape))
 
     knn_expression = sparse_mask.dot(arr_expression)
-    triku_logger.log(TRIKU_LEVEL, 'knn_expression: {}'.format(knn_expression))
+    triku_logger.log(TRIKU_LEVEL, 'knn_expression: {} | {}'.format(knn_expression, knn_expression.shape))
 
     return knn_expression
 
@@ -76,7 +75,6 @@ def create_random_count_matrix(matrix: np.array = None) -> np.ndarray:
     """
 
     n_reads_per_gene = matrix.sum(0).astype(int)
-    print(n_reads_per_gene)
     n_cells, n_genes = matrix.shape
     matrix_random = np.zeros((n_genes, n_cells))
 
@@ -167,7 +165,6 @@ def calculate_emd(knn_counts: np.ndarray, x_conv: np.ndarray, y_conv: np.ndarray
     return emd / std
 
 
-@ray.remote
 def compute_convolution_and_emd(array_counts: np.ndarray, array_knn_counts: np.ndarray, idx: int,
                                 knn: int, ) -> (np.ndarray, np.ndarray, np.ndarray):
     counts_gene = array_counts[idx, :].ravel()  # idx is chosen by rows, because it is more effective!
@@ -194,15 +191,16 @@ def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndar
     (x, and probabilities), and the distances.
     """
 
-    triku_logger.log(TRIKU_LEVEL, 'Parallel emd calculation')
     ray.shutdown()
     ray.init(num_cpus=n_procs, ignore_reinit_error=True)
+    n_genes = array_counts.shape[1]
 
+    compute_convolution_and_emd_remote = ray.remote(compute_convolution_and_emd)
     array_counts_id = ray.put(array_counts.T)  # IMPORTANT TO TRANSPOSE TO SELECT ROWS (much faster)!!!
     array_knn_counts_id = ray.put(array_knn_counts.T)
 
-    ray_obj_ids = [compute_convolution_and_emd.remote(array_counts_id, array_knn_counts_id, idx_gene, knn)
-                   for idx_gene in range(array_counts.shape[0])]
+    ray_obj_ids = [compute_convolution_and_emd_remote.remote(array_counts_id, array_knn_counts_id, idx_gene, knn)
+                   for idx_gene in range(n_genes)]
 
     triku_logger.log(TRIKU_LEVEL, 'Parallel computation of distances.')
     ray_objs = ray.get(ray_obj_ids)
