@@ -246,7 +246,8 @@ def subtract_median(x, y, n_windows):
 
     Too many windows can over-normalize, and lose genes that have high emd but are alone in that window."""
 
-    linspace = np.linspace(min(x), max(x), n_windows + 1)
+    # We have to take the distance in logarithm to account for the wide expression ranges
+    linspace = 10**np.linspace(min(np.log10(x)), max(np.log10(x)), n_windows + 1)
     y_adjust = y.copy()
 
     for i in range(n_windows):
