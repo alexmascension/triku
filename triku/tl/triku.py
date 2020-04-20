@@ -19,7 +19,7 @@ warnings.filterwarnings('ignore')  # To ignore Numba warnings
 def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = None, use_raw=True,
           do_return: [None, bool] = None, use_adata_knn: [None, bool] = None,
           knn: [None, int] = None, s: [None, int, float] = -0.01, apply_background_correction: bool = True,
-          n_comps: int = 25, metric: str = 'cosine', n_windows: int = 15, min_knn: int = 5,
+          n_comps: int = 25, metric: str = 'cosine', n_windows: int = 15, min_knn: int = 6,
           random_state: [None, int] = 0, n_procs: [None, int] = None, verbose: [None, str] = 'warning'):
     """
     This function calls the triku method using python directly. This function expects an
@@ -143,6 +143,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
 
     # Apply the convolution, and calculate the EMD. The convolution is quite fast, but we will still paralellize it.
     triku_logger.info('Parallel emd calculation')
+    triku_logger.log(TRIKU_LEVEL, 'min_knn set to {}'.format(min_knn))
     list_x_conv, list_y_conv, array_emd = parallel_emd_calculation(array_counts=arr_counts,
                                                                    array_knn_counts=arr_knn_expression,
                                                                    knn=knn, n_procs=n_procs, min_knn=min_knn)

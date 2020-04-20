@@ -6,9 +6,11 @@ from sklearn.decomposition import PCA
 from umap.umap_ import nearest_neighbors
 
 import ray
+from tqdm import tqdm
+import logging
 
 from triku.logg import triku_logger, TRIKU_LEVEL
-
+from triku.genutils import TqdmToLogger
 
 def return_knn_indices(array: np.ndarray, knn: int, return_random: bool, random_state: int, metric: str,
                        n_comps: int) -> np.ndarray:
@@ -168,15 +170,19 @@ def calculate_emd(knn_counts: np.ndarray, x_conv: np.ndarray, y_conv: np.ndarray
 
 
 def compute_convolution_and_emd(array_counts: np.ndarray, array_knn_counts: np.ndarray, idx: int,
-                                knn: int, ) -> (np.ndarray, np.ndarray, np.ndarray):
+                                knn: int, min_knn: int) -> (np.ndarray, np.ndarray, np.ndarray):
     counts_gene = array_counts[idx, :].ravel()  # idx is chosen by rows, because it is more effective!
     knn_counts = array_knn_counts[idx, :].ravel()
-
     knn_counts = knn_counts[knn_counts > 0]  # Remember that only knn expression from positively-expressed cells
     # From the previous step at the knn calculation we set knn expression from non-expressing cells to 0
 
-    x_conv, y_conv, y_probs = compute_conv_idx(counts_gene, knn)
-    emd = calculate_emd(knn_counts, x_conv, y_conv)
+    if np.sum(counts_gene > 0) > min_knn:
+        x_conv, y_conv, y_probs = compute_conv_idx(counts_gene, knn)
+        emd = calculate_emd(knn_counts, x_conv, y_conv)
+    else:
+        y_conv = np.bincount(knn_counts.astype(int))
+        x_conv = np.arange(len(y_conv))
+        emd = 0
 
     return x_conv, y_conv, emd
 
@@ -195,28 +201,41 @@ def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndar
     the convolution and distance. The output result is, for each gene, the convolution distribution
     (x, and probabilities), and the distances.
     """
-
-    ray.shutdown()
-    ray.init(num_cpus=n_procs, ignore_reinit_error=True)
     n_genes = array_counts.shape[1]
 
-    compute_convolution_and_emd_remote = ray.remote(compute_convolution_and_emd)
-    array_counts_id = ray.put(array_counts.T)  # IMPORTANT TO TRANSPOSE TO SELECT ROWS (much faster)!!!
-    array_knn_counts_id = ray.put(array_knn_counts.T)
+    # Apply a non_paralellized variant with tqdm
+    if n_procs == 1:
+        tqdm_out = TqdmToLogger(triku_logger, level=logging.INFO)
 
-    ray_obj_ids = [compute_convolution_and_emd_remote.remote(array_counts_id, array_knn_counts_id, idx_gene, knn)
-                   for idx_gene in range(n_genes)]
+        # TODO: I don't know if doing the transpose there is time and memory efficient...
+        return_objs = [compute_convolution_and_emd(array_counts.T, array_knn_counts.T, idx_gene, knn, min_knn)
+                       for idx_gene in tqdm(range(n_genes), file=tqdm_out)]
 
-    triku_logger.log(TRIKU_LEVEL, 'Parallel computation of distances.')
-    ray_objs = ray.get(ray_obj_ids)
-    triku_logger.log(TRIKU_LEVEL, 'Done.')
+    else:
+        ray.shutdown()
+        ray.init(num_cpus=n_procs, ignore_reinit_error=True)
 
-    list_x_conv, list_y_conv, list_emd = [x[0] for x in ray_objs], [x[1] for x in ray_objs], [x[2] for x in ray_objs]
+
+        compute_convolution_and_emd_remote = ray.remote(compute_convolution_and_emd)
+        array_counts_id = ray.put(array_counts.T)  # IMPORTANT TO TRANSPOSE TO SELECT ROWS (much faster)!!!
+        array_knn_counts_id = ray.put(array_knn_counts.T)
+
+        ray_obj_ids = [compute_convolution_and_emd_remote.remote(array_counts_id, array_knn_counts_id, idx_gene,
+                                                                 knn, min_knn)
+                       for idx_gene in range(n_genes)]
+
+        triku_logger.log(TRIKU_LEVEL, 'Parallel computation of distances.')
+        return_objs = ray.get(ray_obj_ids)
+        triku_logger.log(TRIKU_LEVEL, 'Done.')
+
+        ray.shutdown()
+
+    list_x_conv, list_y_conv, list_emd = [x[0] for x in return_objs], [x[1] for x in return_objs], [x[2] for x in return_objs]
     # list_x_conv and list_y_conv are lists of lists. Each element are the x coordinates and probabilities of the
     # convolution distribution for a gene. list_emd is an array with n_genes elements, where each element is the
     # distance between the convolution and the knn_distribution
 
-    ray.shutdown()
+
     return list_x_conv, list_y_conv, np.array(list_emd)
 
 
