@@ -6,8 +6,8 @@ import scipy.sparse as spr
 from ..genutils import get_cpu_count
 from ._triku_functions import return_knn_indices, return_knn_expression, create_random_count_matrix, \
     parallel_emd_calculation, subtract_median, get_cutoff_curve
-from ..utils._triku_tl_utils import check_count_mat, check_null_genes, return_mean, return_proportion_zeros
-from ..utils._general_utils import get_arr_counts_genes, set_level_logger
+from ..utils._triku_tl_utils import return_mean, return_proportion_zeros, get_arr_counts_and_genes
+from ..utils._general_utils import set_level_logger
 from ..logg import triku_logger, TRIKU_LEVEL
 
 import warnings
@@ -16,10 +16,10 @@ import logging
 warnings.filterwarnings('ignore')  # To ignore Numba warnings
 
 
-def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = None,
+def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = None, use_raw=True,
           do_return: [None, bool] = None, use_adata_knn: [None, bool] = None,
           knn: [None, int] = None, s: [None, int, float] = -0.01, apply_background_correction: bool = True,
-          n_comps: int = 25, metric: str = 'cosine', n_windows: int = 15,
+          n_comps: int = 25, metric: str = 'cosine', n_windows: int = 15, min_knn: int = 5,
           random_state: [None, int] = 0, n_procs: [None, int] = None, verbose: [None, str] = 'warning'):
     """
     This function calls the triku method using python directly. This function expects an
@@ -32,6 +32,11 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
         Object with count matrix. If `pandas.DataFrame`, rows are cells and columns are genes.
     n_features : int, None
         Number of features to select. If None, the number is chosen automatically.
+    use_raw : bool
+        If True, selects the adata.raw matrix, if it exists. This matrix is adjusted to select the genes and cells that
+        appear in the current adata. E.g. if we are running triku with a subpopulation, triku will select the cells
+        from adata.raw of that subpopulation. If certain genes have been removed after saving the raw, triku will not
+        consider the removed genes.
     do_return : bool, None
         If True, returns a dictionary with # TODO: add what features it returns
     use_adata_knn :  bool, None
@@ -53,6 +58,9 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
         Metric for knn selection.
     n_windows : int
         Number of windows used for median subtraction of EMD.
+    min_knn : int
+        minimum number of expressed cells based on the knn to apply thee convolution. If a genes has less than min_knn
+        expressing cells, EMD is set to 0, and the convolution is set as the knn expression.
     random_state : int
         Seed for random processes
     n_procs : int, None
@@ -85,10 +93,8 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
     triku_logger.log(TRIKU_LEVEL, 'Number of processors set to {}'.format(n_procs))
 
     # Get the array of counts (np.array) and the array of genes.
-    arr_counts, arr_genes = get_arr_counts_genes(object_triku)
+    arr_counts, arr_genes = get_arr_counts_and_genes(object_triku, use_raw=use_raw)
     mean_counts, per_counts = return_mean(arr_counts), return_proportion_zeros(arr_counts)
-    check_null_genes(arr_counts)
-    check_count_mat(arr_counts)
 
     """
     First step is to get the kNN for the expression matrix.
@@ -131,13 +137,18 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
     triku_logger.info('Calculating knn expression')
     arr_knn_expression = return_knn_expression(arr_counts, knn_array)
 
+    # Todo: for non integer values (alevin, kallisto, etc.) convolution must be discrete. We can divide the
+    # unit in 10 or 20 subunits, transform the read count to the nearest "pseudointeger" value and apply the convolution
+    # knn values will differ from the convolution, but with a "good" set of units it should be enough.
+
     # Apply the convolution, and calculate the EMD. The convolution is quite fast, but we will still paralellize it.
     triku_logger.info('Parallel emd calculation')
     list_x_conv, list_y_conv, array_emd = parallel_emd_calculation(array_counts=arr_counts,
                                                                    array_knn_counts=arr_knn_expression,
-                                                                   knn=knn, n_procs=n_procs)
+                                                                   knn=knn, n_procs=n_procs, min_knn=min_knn)
 
     # Randomization!
+    # Todo: study if it is possible to randomize with the same strategy as convolution for kallisto / alevin datasets.
     # The same steps must be applied to a randomized expression count matrix if we must
     list_x_conv_random, list_y_conv_random, array_emd_random = None, None, None
     arr_knn_expression_random, knn_array_random = None, None
@@ -156,7 +167,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
         triku_logger.info('Parallel emd calculation on randomized matrix')
         list_x_conv_random, list_y_conv_random, array_emd_random = \
             parallel_emd_calculation(array_counts=arr_counts_random, array_knn_counts=arr_knn_expression_random,
-                                     knn=knn, n_procs=n_procs)
+                                     knn=knn, n_procs=n_procs, min_knn=min_knn)
 
     # Apply emd distance correction (substract the emd to the random_emd)
     if array_emd_random is not None:
@@ -182,6 +193,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
         object_triku.var['highly_variable'] = is_highly_variable
         object_triku.var['emd_distance'] = array_emd_subt_median
         object_triku.var['emd_distance_uncorrected'] = array_emd
+        object_triku.uns['triku_params'] = {'knn': knn}
         if array_emd_random is not None:
             object_triku.var['emd_distance_random'] = array_emd_random
 
@@ -198,4 +210,5 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
             dict_return['x_convolution'], dict_return['x_convolution_random'] = list_x_conv, list_x_conv_random
             dict_return['y_convolution'], dict_return['y_convolution_random'] = list_y_conv, list_y_conv_random
 
+            dict_return['array_counts'], dict_return['array_genes'] = arr_counts, arr_genes
         return dict_return

@@ -139,8 +139,7 @@ def compute_conv_idx(counts_gene: np.ndarray, knn: int) -> (np.ndarray, np.ndarr
     Given a GENE x CELL matrix, and an index to select from, calculates the convolution of reads for that gene index.
     The function returns the
     """
-    x_counts, y_counts = np.unique(counts_gene, return_counts=True)
-    y_probs = y_counts / y_counts.sum()  # Important to transform count to probabilities
+    y_probs = np.bincount(counts_gene.astype(int)) / len(counts_gene) # Important to transform count to probabilities
     # to keep the convolution constant.
 
     x_conv, y_conv = apply_convolution_read_counts(y_probs, knn=knn)
@@ -183,7 +182,7 @@ def compute_convolution_and_emd(array_counts: np.ndarray, array_knn_counts: np.n
 
 
 def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndarray,
-                             n_procs: int, knn: int) -> (list, list, np.ndarray):
+                             n_procs: int, knn: int, min_knn: int) -> (list, list, np.ndarray):
     """
     Calculation of convolution for each gene, and its emd. To do that we call compute_convolution_and_emd which,
     in turn, calls compute_conv_idx to calculate the convolution of the reads; and calculate_emd, to calculate the
