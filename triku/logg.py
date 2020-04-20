@@ -14,5 +14,5 @@ TRIKU_LEVEL = (logging.INFO + logging.DEBUG) // 2
 logging.addLevelName(TRIKU_LEVEL, 'TRIKU')
 
 triku_logger = logging.getLogger()
-logging.basicConfig(format='\n%(asctime)s - triku / %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(format='\n%(asctime)s - triku - %(levelname)s - %(message)s')
 triku_logger.setLevel(logging.INFO)
