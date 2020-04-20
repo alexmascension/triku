@@ -11,3 +11,4 @@ def main():
 if __name__ == '__main__':
     main()
 
+# TODO: Apply CLI correctly (add object_triku as a path or like so)
