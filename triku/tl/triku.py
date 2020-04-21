@@ -19,7 +19,7 @@ warnings.filterwarnings('ignore')  # To ignore Numba warnings
 def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = None, use_raw=True,
           do_return: [None, bool] = None, use_adata_knn: [None, bool] = None,
           knn: [None, int] = None, s: [None, int, float] = -0.01, apply_background_correction: bool = True,
-          n_comps: int = 25, metric: str = 'cosine', n_windows: int = 25, min_knn: int = 6,
+          n_comps: int = 25, metric: str = 'cosine', n_windows: int = 75, min_knn: int = 6,
           random_state: [None, int] = 0, n_procs: [None, int] = None, verbose: [None, str] = 'warning'):
     """
     This function calls the triku method using python directly. This function expects an

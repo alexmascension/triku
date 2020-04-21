@@ -250,9 +250,12 @@ def subtract_median(x, y, n_windows):
     linspace = 10**np.linspace(min(np.log10(x)), max(np.log10(x)), n_windows + 1)
     y_adjust = y.copy()
 
+    y_median_array = np.zeros(len(y))
     for i in range(n_windows):
         mask = (x >= linspace[i]) & (x <= linspace[i + 1])
-        y_adjust[mask] -= np.median(y[mask])
+        y_median_array[mask] = np.median(y[mask])
+
+    y_adjust -= y_median_array
 
     return y_adjust
 
