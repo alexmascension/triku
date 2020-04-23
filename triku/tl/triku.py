@@ -194,7 +194,10 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
         object_triku.var['highly_variable'] = is_highly_variable
         object_triku.var['emd_distance'] = array_emd_subt_median
         object_triku.var['emd_distance_uncorrected'] = array_emd
-        object_triku.uns['triku_params'] = {'knn': knn}
+        object_triku.uns['triku_params'] = {'knn': knn, 'n_features': n_features, 'random_state': random_state,
+                                            's': s, 'n_comps': n_comps, 'metric': metric, 'n_windows': n_windows,
+                                            'min_knn': min_knn, 'n_procs': n_procs,
+                                            'apply_background_correction': apply_background_correction}
         if array_emd_random is not None:
             object_triku.var['emd_distance_random'] = array_emd_random
 
