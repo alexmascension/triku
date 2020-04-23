@@ -72,7 +72,7 @@ def return_knn_expression(arr_expression: np.ndarray, knn_indices: np.ndarray) -
     return knn_expression
 
 
-def create_random_count_matrix(matrix: np.array = None) -> np.ndarray:
+def create_random_count_matrix(matrix: np.array, random_state: int) -> np.ndarray:
     """
     Given a matrix with cells x genes, returns a randomized cells x genes matrix. This matrix has, for each genes,
     the counts of the gene from the original matrix dispersed across the cells. E.g., if gene X has 1000 across
@@ -86,6 +86,7 @@ def create_random_count_matrix(matrix: np.array = None) -> np.ndarray:
     # The limiting part generally is the random number generation.
     # Random.choice is rather slow, so to save some time we use random.random, then multiply by the
     # number of cells, and change to int.
+    np.random.seed(random_state)
     random_counts = np.random.randint(n_cells, size=np.sum(n_reads_per_gene))
 
     # Also, assigning values to a matrix is done by rows because it is 2 to 3 times faster than in rows.
@@ -214,7 +215,6 @@ def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndar
     else:
         ray.shutdown()
         ray.init(num_cpus=n_procs, ignore_reinit_error=True)
-
 
         compute_convolution_and_emd_remote = ray.remote(compute_convolution_and_emd)
         array_counts_id = ray.put(array_counts.T)  # IMPORTANT TO TRANSPOSE TO SELECT ROWS (much faster)!!!

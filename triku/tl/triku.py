@@ -156,7 +156,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
 
     if apply_background_correction:
         triku_logger.info('Creating randomized count matrix')
-        arr_counts_random = create_random_count_matrix(arr_counts)
+        arr_counts_random = create_random_count_matrix(arr_counts, random_state=random_state)
 
         triku_logger.info('Calculating knn indices on randomized matrix')
         knn_array_random = return_knn_indices(arr_counts, knn=knn, return_random=False, random_state=random_state,
@@ -205,8 +205,9 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
             dict_return['emd_distance_random'] = array_emd_random
 
         if triku_logger.level < logging.INFO:
-            dict_return['knn_indices'], dict_return['knn_indices_random']  = knn_array, knn_array_random
-            dict_return['knn_expression'], dict_return['knn_expression_random'] = arr_knn_expression, arr_knn_expression_random
+            dict_return['knn_indices'], dict_return['knn_indices_random'] = knn_array, knn_array_random
+            dict_return['knn_expression'], dict_return['knn_expression_random'] = \
+                arr_knn_expression, arr_knn_expression_random
 
             dict_return['x_convolution'], dict_return['x_convolution_random'] = list_x_conv, list_x_conv_random
             dict_return['y_convolution'], dict_return['y_convolution_random'] = list_y_conv, list_y_conv_random
