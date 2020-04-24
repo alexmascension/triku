@@ -13,3 +13,5 @@ def set_level_logger(level):
                    'error': logging.ERROR, 'critical': logging.CRITICAL}
 
     triku_logger.setLevel(dict_levels[level])
+
+    # TODO include ray warning as well
