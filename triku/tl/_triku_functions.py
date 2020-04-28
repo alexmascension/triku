@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.stats as sts
 import scipy.sparse as spr
+from scipy.signal import fftconvolve
 
 from sklearn.decomposition import PCA
 from umap.umap_ import nearest_neighbors
@@ -11,6 +12,7 @@ import logging
 
 from triku.logg import triku_logger, TRIKU_LEVEL
 from triku.genutils import TqdmToLogger
+
 
 def return_knn_indices(array: np.ndarray, knn: int, return_random: bool, random_state: int, metric: str,
                        n_comps: int) -> np.ndarray:
@@ -103,7 +105,7 @@ def create_random_count_matrix(matrix: np.array, random_state: int) -> np.ndarra
 
 
 # TODO: apply for log-transformed data? The convolution works assuming that X data are integers.
-def apply_convolution_read_counts(probs: np.ndarray, knn: int) -> (np.ndarray, np.ndarray):
+def apply_convolution_read_counts(probs: np.ndarray, knn: int, func: [np.convolve, fftconvolve]) -> (np.ndarray, np.ndarray):
     """
     Convolution of functions. The function applies a convolution using np.convolve
     of a probability distribution knn times. The result is an array of N elements (N arises as the convolution
@@ -125,16 +127,22 @@ def apply_convolution_read_counts(probs: np.ndarray, knn: int) -> (np.ndarray, n
     # We will use arr_bvase as the array with the read distribution
     arr_base = probs.copy()
 
-    arr_convolve = np.convolve(arr_0, arr_base, )
+    arr_convolve = func(arr_0, arr_base, )
 
     for knni in range(2, knn):
-        arr_convolve = np.convolve(arr_convolve, arr_base, )
+        arr_convolve = func(arr_convolve, arr_base, )
 
     # TODO: check the probability sum is 1 and, if so, remove
     arr_prob = arr_convolve / arr_convolve.sum()
 
     # TODO: if log transformed, this is untrue. Should not be arange.
     return np.arange(len(arr_prob)), arr_prob
+
+
+def nonnegative_fft(arr_a, arr_b):
+    conv = fftconvolve(arr_a, arr_b)
+    conv[conv < 0] = 0
+    return conv
 
 
 def compute_conv_idx(counts_gene: np.ndarray, knn: int) -> (np.ndarray, np.ndarray, np.ndarray):
@@ -145,7 +153,10 @@ def compute_conv_idx(counts_gene: np.ndarray, knn: int) -> (np.ndarray, np.ndarr
     y_probs = np.bincount(counts_gene.astype(int)) / len(counts_gene) # Important to transform count to probabilities
     # to keep the convolution constant.
 
-    x_conv, y_conv = apply_convolution_read_counts(y_probs, knn=knn)
+    if np.sum(counts_gene) > 7000:  # For low counts (< 5000 to < 10000), fttconvolve is 2-3 to 10 times faster.
+        x_conv, y_conv = apply_convolution_read_counts(y_probs, knn=knn, func=nonnegative_fft)
+    else:
+        x_conv, y_conv = apply_convolution_read_counts(y_probs, knn=knn, func=np.convolve)
 
     return x_conv, y_conv, y_probs
 
@@ -178,6 +189,8 @@ def compute_convolution_and_emd(array_counts: np.ndarray, array_knn_counts: np.n
     # From the previous step at the knn calculation we set knn expression from non-expressing cells to 0
 
     if np.sum(counts_gene > 0) > min_knn:
+        # triku_logger.log(TRIKU_LEVEL, 'Convolution on index {}: counts = {}, per_zero = {}'.format(idx,
+        #                 np.sum(counts_gene), np.sum(counts_gene == 0)/len(counts_gene)))
         x_conv, y_conv, y_probs = compute_conv_idx(counts_gene, knn)
         emd = calculate_emd(knn_counts, x_conv, y_conv)
     else:
