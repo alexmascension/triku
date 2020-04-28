@@ -20,20 +20,25 @@ def run_batch(adata, windows, n_comps, knns, seeds, save_dir, dataset_prefix):
 
     for window, n_comp, knn, seed in tqdm(product(*[windows, n_comps, knns, seeds])):
         print(window, n_comp, knn, seed)
-        tk.tl.triku(adata, n_windows=window, n_comps=n_comp, knn=knn, random_state=seed, verbose='error')
-
-        distances_with_random = adata.var['emd_distance'].values
-        mean_exp = adata.X.sum(0)
-        distances_without_random = subtract_median(x=mean_exp, y=adata.var['emd_distance_uncorrected'].values,
-                                                   n_windows=window)
-        print(adata.var['emd_distance_uncorrected'].values[:5])
-        df_res = pd.DataFrame(data={'emd_random_correction': distances_with_random,
-                                    'emd_no_correction': distances_without_random},
-                              index=adata.var_names.values)
-
         save_file = '{save_dir}/{pref}-w_{w}-comps_{n_comps}-knn_{knn}-seed_{seed}.csv'.format(
             save_dir=save_dir, pref=dataset_prefix, w=window, n_comps=n_comp, knn=knn, seed=seed)
-        df_res.to_csv(save_file)
+        
+        if os.path.exists(save_file):
+            print('FILE EXISTS!')
+        else:
+            tk.tl.triku(adata, n_windows=window, n_comps=n_comp, knn=knn, random_state=seed, verbose='triku')
+
+            distances_with_random = adata.var['emd_distance'].values
+            mean_exp = adata.X.sum(0)
+            distances_without_random = subtract_median(x=mean_exp, y=adata.var['emd_distance_uncorrected'].values,
+                                                       n_windows=window)
+            print(adata.var['emd_distance_uncorrected'].values[:5])
+            df_res = pd.DataFrame(data={'emd_random_correction': distances_with_random,
+                                        'emd_no_correction': distances_without_random},
+                                  index=adata.var_names.values)
+
+
+            df_res.to_csv(save_file)
 
 
 def return_knn_indices(save_dir, org, lib_prep):
@@ -58,6 +63,20 @@ def return_pca_indices(save_dir, org, lib_prep):
             pca_list.append(int(pca_str[: pca_str.find('-')]))
     pca_list = sorted(list(dict.fromkeys(pca_list)))
     return pca_list, knn_pinpoint
+
+
+def return_window_indices(save_dir, org, lib_prep):
+    # We need to recover the fixed kNN value. This value is the 5th value on the knn_list; so we will take it.
+    knn_pinpoint = return_knn_indices(save_dir, org, lib_prep)[4]
+
+    # Now we get the list of n_comps values
+    w_list = []
+    for file in os.listdir(save_dir):
+        if org in file and lib_prep in file and 'comps_30-' in file and 'knn_%s-' % knn_pinpoint in file:
+            w_str = file[file.find('w_') + 2:]
+            w_list.append(int(w_str[: w_str.find('-')]))
+    w_list = sorted(list(dict.fromkeys(w_list)))
+    return w_list, knn_pinpoint
 
 
 def return_relative_noise(df_1, df_2, select_index_df):
@@ -159,6 +178,7 @@ def compare_parameter(lib_prep, org, save_dir, min_n_feats, max_n_feats, what, b
 
     knn_list = return_knn_indices(save_dir, org, lib_prep)
     pca_list = return_pca_indices(save_dir, org, lib_prep)
+    window_list = return_window_indices(save_dir, org, lib_prep)
 
     # We first fill on list of dfs with knn = sqrt(N)
     list_dfs_knn_1 = []
@@ -173,6 +193,8 @@ def compare_parameter(lib_prep, org, save_dir, min_n_feats, max_n_feats, what, b
         parameter_list = knn_list
     elif by == 'pca':
         parameter_list, _ = pca_list
+    elif by == 'w':
+        parameter_list, _ = window_list
 
     for val in parameter_list:
         list_dfs_knn_2 = []
@@ -184,6 +206,9 @@ def compare_parameter(lib_prep, org, save_dir, min_n_feats, max_n_feats, what, b
             elif by == 'pca':
                 static_comp = 'w_100-' in file and 'knn_' + str(knn_list[4]) + '-' in file
                 dyn_comp = 'comps_{}-'.format(val) in file
+            elif by == 'w':
+                static_comp = 'comps_30-' in file and 'knn_' + str(knn_list[4]) + '-' in file
+                dyn_comp = 'w_{}-'.format(val) in file
 
             if org in file and lib_prep in file and static_comp and dyn_comp:
                 df = pd.read_csv(save_dir + file)
@@ -212,20 +237,23 @@ def compare_parameter(lib_prep, org, save_dir, min_n_feats, max_n_feats, what, b
     return df_violin
 
 
-def plot_scatter_parameter(list_dfs, categories, lib_prep, org, by, figsize=(7, 4), N=25, palette='sunsetcontrast3'):
+def plot_scatter_parameter(list_dfs, categories, lib_prep, org, by, figsize=(7, 4), step=25, palette='sunsetcontrast3',
+                           title='', ylabel='', save_dir='robustness_figs'):
     fig, ax = plt.subplots(1, 1, figsize=figsize)
-    fig.suptitle("PONER TITULO!")
-    # fig.suptitle("Random noise due to kNN ({}, {})".format(lib_prep, org))
+    fig.suptitle(title.replace('_', ' '))
     val_list = sorted(list(dict.fromkeys(list_dfs[0][by].values)))
     # Set params for plot:
     if by == 'knn':
         ticks = ["$\sqrt{N}/20$", "$\sqrt{N}/10$", "$\sqrt{N}/5$", "$\sqrt{N}/2$",
                                               "$\sqrt{N}$ (%s)" % val_list[4], "$2\sqrt{N}$", "$5\sqrt{N}$",
-                                              "$10\sqrt{N}$"]
+                                              ]
         xlabel = 'Number of kNN'
     if by == 'pca':
         ticks = val_list
         xlabel = 'Number of PCA components'
+    if by == 'w':
+        ticks = val_list
+        xlabel = 'Number of windows for median correction'
 
     for val_idx in range(len(val_list)):
         w, sep, s, alpha = 0.25, 0.05, 2, 0.20
@@ -236,8 +264,10 @@ def plot_scatter_parameter(list_dfs, categories, lib_prep, org, by, figsize=(7, 
         elif palette == 'sunsetmid4':
             list_colors = ["#faa476", "#f0746e", "#dc3977", "#7c1d6f"]
         for df_idx, sub_df in enumerate(list_dfs):
-            sub_df_ran = sub_df['d'][(sub_df[by] == val_list[val_idx]) & (sub_df['randomized'] == 'Yes')].values[::N]
-            sub_df_no_ran = sub_df['d'][(sub_df[by] == val_list[val_idx]) & (sub_df['randomized'] == 'No')].values[::N]
+            sub_df_ran = sub_df['d'][(sub_df[by] == val_list[val_idx]) &
+                                     (sub_df['randomized'] == 'Yes')].values[::step]
+            sub_df_no_ran = sub_df['d'][(sub_df[by] == val_list[val_idx]) &
+                                        (sub_df['randomized'] == 'No')].values[::step]
 
             alpha_idx = np.round(alpha + (1 - alpha) * (1 + df_idx) / (len(list_dfs)), 2)  # wild 1.0000000000002 LOL
             ax.scatter(val_idx + sep + w * np.random.rand(len(sub_df_ran)), sub_df_ran, c=list_colors[df_idx], s=s,
@@ -250,6 +280,10 @@ def plot_scatter_parameter(list_dfs, categories, lib_prep, org, by, figsize=(7, 
                        j in range(len(list_colors))]
     ax.legend(handles=legend_elements, title='N features')
     ax.set_xlabel(xlabel)
-
-    # ax.set_ylabel('$\\frac{|d_A - d_B|}{|d_A| + |d_B|}$')
+    ax.set_ylabel(ylabel)
+    os.makedirs(save_dir+'/png', exist_ok=True)
+    os.makedirs(save_dir+'/pdf', exist_ok=True)
+    
+    plt.savefig(save_dir + '/pdf/{}_{}_{}.pdf'.format(title.replace(',', ''), lib_prep, org), format='pdf')
+    plt.savefig(save_dir + '/png/{}_{}_{}.png'.format(title.replace(',', ''), lib_prep, org), format='png', dpi=350)
 
