@@ -8,6 +8,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as sts
+import scanpy as sc
 
 
 def run_batch(adata, windows, n_comps, knns, seeds, save_dir, dataset_prefix):
@@ -39,6 +40,31 @@ def run_batch(adata, windows, n_comps, knns, seeds, save_dir, dataset_prefix):
 
 
             df_res.to_csv(save_file)
+
+
+def run_all_batches(lib_preps, orgs, read_dir, save_dir):
+    for lib_prep, org in tqdm(product(*[lib_preps, orgs])):
+        for file in os.listdir(read_dir):
+            if org in file and 'exp_mat' in file and lib_prep in file:
+                file_in = file
+
+        print(file_in)
+        adata = sc.read_text(read_dir + file_in).transpose()
+        adata.var_names_make_unique()
+        sc.pp.filter_genes(adata, min_cells=10)
+        sqr_n_cells = int(adata.shape[0] ** 0.5)
+
+        run_batch(adata, windows=[100], n_comps=[3, 5, 10, 20, 30, 40, 50, 100],
+                  knns=[sqr_n_cells + 1], seeds=[0, 1, 2, 3, 4],
+                  save_dir=save_dir, dataset_prefix=lib_prep + '_' + org)
+
+        run_batch(adata, windows=[100], n_comps=[30],
+                  knns=[sqr_n_cells // 20 + 1, sqr_n_cells // 10 + 1, sqr_n_cells // 5 + 1, sqr_n_cells // 2 + 1,
+                        sqr_n_cells + 1, sqr_n_cells * 2 + 1, sqr_n_cells * 5 + 1 ],
+                  seeds=[0, 1, 2, 3, 4], save_dir=save_dir, dataset_prefix=lib_prep + '_' + org)
+
+        run_batch(adata, windows=[10, 20, 30, 50, 100, 200, 500, 1000], n_comps=[30], knns=[sqr_n_cells + 1],
+                  seeds=[0, 1, 2, 3, 4], save_dir=save_dir, dataset_prefix=lib_prep + '_' + org)
 
 
 def return_knn_indices(save_dir, org, lib_prep):
@@ -287,3 +313,65 @@ def plot_scatter_parameter(list_dfs, categories, lib_prep, org, by, figsize=(7, 
     plt.savefig(save_dir + '/pdf/{}_{}_{}.pdf'.format(title.replace(',', ''), lib_prep, org), format='pdf')
     plt.savefig(save_dir + '/png/{}_{}_{}.png'.format(title.replace(',', ''), lib_prep, org), format='png', dpi=350)
 
+
+def plot_scatter_datasets(list_dict_dfs, org, by, figsize=(7, 4),  palette='prism',
+                           title='', ylabel='', save_dir='robustness_figs'):
+    # List_dict_dfs will contain as many dicts as categories, and in each dict, with the category name we will
+    # include the dataframe with the sample name. In this case sample will refer to the library processsing technique.
+
+    if palette == 'prism':
+        list_colors = ['#5F4690', '#1D6996', '#38A6A5', '#0F8554', '#73AF48', '#EDAD08', '#E17C05',
+                       '#CC503E', '#94346E', '#6F4070', '#994E95', '#666666']
+    elif palette == 'bold':
+        list_colors = ['#7F3C8D', '#11A579', '#3969AC', '#F2B701', '#E73F74', '#80BA5A', '#E68310',
+                       '#008695', '#CF1C90', '#f97b72', '#4b4b8f', '#A5AA99']
+    elif palette == 'vivid':
+        list_colors = ['#E58606', '#5D69B1', '#52BCA3', '#99C945', '#CC61B0', '#24796C', '#DAA51B',
+                       '#2F8AC4', '#764E9F', '#ED645A', '#CC3A8E', '#A5AA99']
+
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    fig.suptitle(title.replace('_', ' '))
+    list_techniques = list(list_dict_dfs[0].keys())
+
+    color_counter = 0
+    for technique in list_techniques:
+        val_list = sorted(list(dict.fromkeys(list_dict_dfs[0][technique][by].values)))
+        y_low, y_mid, y_hi = [], [], []
+
+        df_lo, df_mid, df_hi = list_dict_dfs[0][technique], list_dict_dfs[1][technique], list_dict_dfs[2][technique]
+
+        for val_idx in range(len(val_list)):
+            y_low.append(df_lo['d'][(df_lo[by] == val_list[val_idx]) & (df_lo['randomized'] == 'Yes')].values.mean())
+            y_mid.append(df_mid['d'][(df_mid[by] == val_list[val_idx]) & (df_mid['randomized'] == 'Yes')].values.mean())
+            y_hi.append(df_hi['d'][(df_hi[by] == val_list[val_idx]) & (df_hi['randomized'] == 'Yes')].values.mean())
+
+        s, alpha = 25, 0.10
+        plt.scatter(range(len(val_list)), y_mid, c=list_colors[color_counter], label=technique, s=s)
+        plt.plot(range(len(val_list)), y_mid, c=list_colors[color_counter], )
+        plt.fill_between(range(len(val_list)), y_low, y_hi, color=list_colors[color_counter], alpha=alpha)
+
+
+        color_counter += 1
+
+    # Set params for plot:
+    if by == 'knn':
+        ticks = ["$\sqrt{N}/20$", "$\sqrt{N}/10$", "$\sqrt{N}/5$", "$\sqrt{N}/2$",
+                 "$\sqrt{N}$ (%s)" % val_list[4], "$2\sqrt{N}$", "$5\sqrt{N}$",
+                 ]
+        xlabel = 'Number of kNN'
+    if by == 'pca':
+        ticks = val_list
+        xlabel = 'Number of PCA components'
+    if by == 'w':
+        ticks = val_list
+        xlabel = 'Number of windows for median correction'
+
+    plt.xticks(np.arange(len(val_list)), ticks)
+    plt.legend()
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    os.makedirs(save_dir + '/png', exist_ok=True)
+    os.makedirs(save_dir + '/pdf', exist_ok=True)
+
+    plt.savefig(save_dir + '/pdf/{}_library-comparison_{}.pdf'.format(title.replace(',', ''), org), format='pdf')
+    plt.savefig(save_dir + '/png/{}_library-comparison_{}.png'.format(title.replace(',', ''), org), format='png', dpi=350)
