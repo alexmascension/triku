@@ -1,0 +1,17 @@
+*.gz
+*.loom
+*.h5ad
+*.txt
+*.csv
+*.h5
+*.tsv
+*.pdf
+*.png
+.ipynb_checkpoints
+.Rhistory
+.idea
+build
+triku.egg-info
+*.mtx
+*.RData
+*.egg
