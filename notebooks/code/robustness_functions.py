@@ -44,27 +44,30 @@ def run_batch(adata, windows, n_comps, knns, seeds, save_dir, dataset_prefix):
 
 def run_all_batches(lib_preps, orgs, dataset, read_dir, save_dir):
     for lib_prep, org in tqdm(product(*[lib_preps, orgs])):
+        file_in = None
         for file in os.listdir(read_dir):
-            if org in file and 'exp_mat' in file and lib_prep in file:
+            if org in file in file and lib_prep in file and file.endswith('.h5ad'):
                 file_in = file
-
+        
+        if file_in is None:
+            print(f'File for {lib_prep} in {org} not found.')
+            continue
+            
         print(file_in)
-        adata = sc.read_text(read_dir + file_in).transpose()
-        adata.var_names_make_unique()
-        sc.pp.filter_genes(adata, min_cells=10)
+        adata = sc.read_h5ad(read_dir + file_in)
         sqr_n_cells = int(adata.shape[0] ** 0.5)
 
         run_batch(adata, windows=[100], n_comps=[3, 5, 10, 20, 30, 40, 50, 100],
                   knns=[sqr_n_cells + 1], seeds=[0, 1, 2, 3, 4],
-                  save_dir=save_dir, dataset_prefix=lib_prep + '_' + org + '_' + dataset)
+                  save_dir=save_dir, dataset_prefix=lib_prep + '_' + dataset + '_' + org)
 
         run_batch(adata, windows=[100], n_comps=[30],
                   knns=[sqr_n_cells // 20 + 1, sqr_n_cells // 10 + 1, sqr_n_cells // 5 + 1, sqr_n_cells // 2 + 1,
-                        sqr_n_cells + 1, sqr_n_cells * 2 + 1, sqr_n_cells * 5 + 1 ],
-                  seeds=[0, 1, 2, 3, 4], save_dir=save_dir, dataset_prefix=lib_prep + '_' + org + '_' + dataset)
+                        sqr_n_cells + 1, int(sqr_n_cells * 1.5) + 1, sqr_n_cells * 2 + 1, sqr_n_cells * 4 + 1 ],
+                  seeds=[0, 1, 2, 3, 4], save_dir=save_dir, dataset_prefix=lib_prep + '_' + dataset + '_' + org)
 
         run_batch(adata, windows=[10, 20, 30, 50, 100, 200, 500, 1000], n_comps=[30], knns=[sqr_n_cells + 1],
-                  seeds=[0, 1, 2, 3, 4], save_dir=save_dir, dataset_prefix=lib_prep + '_' + org + '_' + dataset)
+                  seeds=[0, 1, 2, 3, 4], save_dir=save_dir, dataset_prefix=lib_prep + '_' + dataset + '_' + org)
 
 
 def return_knn_indices(save_dir, org, lib_prep):
@@ -271,7 +274,7 @@ def plot_scatter_parameter(list_dfs, categories, lib_prep, org, by, figsize=(7, 
     # Set params for plot:
     if by == 'knn':
         ticks = ["$\sqrt{N}/20$", "$\sqrt{N}/10$", "$\sqrt{N}/5$", "$\sqrt{N}/2$",
-                                              "$\sqrt{N}$ (%s)" % val_list[4], "$2\sqrt{N}$", "$5\sqrt{N}$",
+                                              "$\sqrt{N}$ (%s)" % val_list[4], "$1.5\sqrt{N}$", "$2\sqrt{N}$", "$4\sqrt{N}$"
                                               ]
         xlabel = 'Number of kNN'
     if by == 'pca':
