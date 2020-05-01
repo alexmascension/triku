@@ -15,3 +15,5 @@ triku.egg-info
 *.mtx
 *.RData
 *.egg
+*.pyc
+*.tab
