@@ -45,6 +45,7 @@ def process_ding(root_dir):
         print(f'mouse {method}')
         adata_method = adata[adata.obs['method'] == method]
         print(f'{len(adata_method)} cells selected')
+        sc.pp.filter_genes(adata_method, min_cells=5)
         adata_method.write_h5ad(root_dir + f'/{method}_mouse.h5ad')
 
     # Now we repeat with human
@@ -66,6 +67,7 @@ def process_ding(root_dir):
         print(f'human {method}')
         adata_method = adata[adata.obs['method'] == method]
         print(f'{len(adata_method)} cells selected')
+        sc.pp.filter_genes(adata_method, min_cells=5)
         adata_method.write_h5ad(root_dir + f'/{method}_human.h5ad')
 
 
@@ -104,6 +106,7 @@ def process_mereu(root_dir):
             
             adata.obs['cell_types'] = cell_types
             
-            adata.write_h5ad(root_dir + f'{technique}_{org}.h5')
+            sc.pp.filter_genes(adata, min_cells=5)
+            adata.write_h5ad(root_dir + f'{technique}_{org}.h5ad')
 
 
