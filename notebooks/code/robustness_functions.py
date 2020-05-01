@@ -27,7 +27,7 @@ def run_batch(adata, windows, n_comps, knns, seeds, save_dir, dataset_prefix):
         if os.path.exists(save_file):
             print('FILE EXISTS!')
         else:
-            tk.tl.triku(adata, n_windows=window, n_comps=n_comp, knn=knn, random_state=seed, verbose='triku')
+            tk.tl.triku(adata, n_windows=window, n_comps=n_comp, knn=knn, random_state=seed, verbose='triku', n_procs=25)
 
             distances_with_random = adata.var['emd_distance'].values
             mean_exp = adata.X.sum(0)
@@ -148,7 +148,7 @@ def return_correlation(df_1, df_2, min_n_feats, max_n_feats):
     return [correlation_non_rand[0]], [correlation_rand[0]]
 
 
-def random_noise_parameter(lib_prep, org, save_dir, min_n_feats, max_n_feats, what, by):
+def random_noise_parameter(lib_prep, org, dataset, save_dir, min_n_feats, max_n_feats, what, by):
     list_dists_non_randomized, list_dists_randomized, list_param_value = [], [], []
 
     knn_list = return_knn_indices(save_dir, org, lib_prep)
@@ -163,10 +163,10 @@ def random_noise_parameter(lib_prep, org, save_dir, min_n_feats, max_n_feats, wh
         list_dfs = []
         for file in os.listdir(save_dir):
             if by == 'knn':
-                static_comp = 'w_100-' in file and 'comps_30-' in file
+                static_comp = 'w_100-' in file and 'comps_30-' in file and dataset in file
                 dyn_comp = 'knn_' + str(val) in file
             elif by == 'pca':
-                static_comp = 'w_100-' in file and 'knn_' + str(knn_list[4]) + '-' in file
+                static_comp = 'w_100-' in file and 'knn_' + str(knn_list[4]) + '-' in file and dataset in file
                 dyn_comp = 'comps_{}-'.format(val) in file
 
             if org in file and lib_prep in file and static_comp and dyn_comp:
@@ -202,7 +202,7 @@ def random_noise_parameter(lib_prep, org, save_dir, min_n_feats, max_n_feats, wh
     return df_violin
 
 
-def compare_parameter(lib_prep, org, save_dir, min_n_feats, max_n_feats, what, by):
+def compare_parameter(lib_prep, org, dataset, save_dir, min_n_feats, max_n_feats, what, by):
     list_dists_non_randomized, list_dists_randomized, list_knn = [], [], []
 
     knn_list = return_knn_indices(save_dir, org, lib_prep)
@@ -213,7 +213,7 @@ def compare_parameter(lib_prep, org, save_dir, min_n_feats, max_n_feats, what, b
     list_dfs_knn_1 = []
     for file in os.listdir(save_dir):
         if org in file and lib_prep in file and 'w_100-' in file and 'comps_30-' in file and 'knn_' + str(
-                knn_list[4]) in file:
+                knn_list[4]) in file and dataset in file:
             df = pd.read_csv(save_dir + file)
             df = df.set_index('Unnamed: 0')
             list_dfs_knn_1.append(df)
@@ -230,13 +230,13 @@ def compare_parameter(lib_prep, org, save_dir, min_n_feats, max_n_feats, what, b
         for file in os.listdir(save_dir):
 
             if by == 'knn':
-                static_comp = 'w_100-' in file and 'comps_30-' in file
+                static_comp = 'w_100-' in file and 'comps_30-' in file and dataset in file
                 dyn_comp = 'knn_' + str(val) in file
             elif by == 'pca':
-                static_comp = 'w_100-' in file and 'knn_' + str(knn_list[4]) + '-' in file
+                static_comp = 'w_100-' in file and 'knn_' + str(knn_list[4]) + '-' in file and dataset in file
                 dyn_comp = 'comps_{}-'.format(val) in file
             elif by == 'w':
-                static_comp = 'comps_30-' in file and 'knn_' + str(knn_list[4]) + '-' in file
+                static_comp = 'comps_30-' in file and 'knn_' + str(knn_list[4]) + '-' in file and dataset in file
                 dyn_comp = 'w_{}-'.format(val) in file
 
             if org in file and lib_prep in file and static_comp and dyn_comp:
@@ -266,7 +266,7 @@ def compare_parameter(lib_prep, org, save_dir, min_n_feats, max_n_feats, what, b
     return df_violin
 
 
-def plot_scatter_parameter(list_dfs, categories, lib_prep, org, by, figsize=(7, 4), step=25, palette='sunsetcontrast3',
+def plot_scatter_parameter(list_dfs, categories, lib_prep, org, dataset, by, figsize=(7, 4), step=25, palette='sunsetcontrast3',
                            title='', ylabel='', save_dir='robustness_figs'):
     fig, ax = plt.subplots(1, 1, figsize=figsize)
     fig.suptitle(title.replace('_', ' '))
@@ -313,8 +313,8 @@ def plot_scatter_parameter(list_dfs, categories, lib_prep, org, by, figsize=(7, 
     os.makedirs(save_dir+'/png', exist_ok=True)
     os.makedirs(save_dir+'/pdf', exist_ok=True)
     
-    plt.savefig(save_dir + '/pdf/{}_{}_{}.pdf'.format(title.replace(',', ''), lib_prep, org), format='pdf')
-    plt.savefig(save_dir + '/png/{}_{}_{}.png'.format(title.replace(',', ''), lib_prep, org), format='png', dpi=350)
+    plt.savefig(save_dir + '/pdf/{}_{}_{}_{}.pdf'.format(title.replace(',', ''), lib_prep, dataset, org), format='pdf')
+    plt.savefig(save_dir + '/png/{}_{}_{}_{}.png'.format(title.replace(',', ''), lib_prep, dataset, org), format='png', dpi=350)
 
 
 def plot_scatter_datasets(list_dict_dfs, org, by, figsize=(7, 4),  palette='prism',
@@ -378,3 +378,131 @@ def plot_scatter_datasets(list_dict_dfs, org, by, figsize=(7, 4),  palette='pris
 
     plt.savefig(save_dir + '/pdf/{}_library-comparison_{}.pdf'.format(title.replace(',', ''), org), format='pdf')
     plt.savefig(save_dir + '/png/{}_library-comparison_{}.png'.format(title.replace(',', ''), org), format='png', dpi=350)
+    
+
+def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
+    df_0_250 = random_noise_parameter(lib_prep, org, dataset, save_dir, 0, 250, what='relative noise', by='knn')
+    df_250_1000 = random_noise_parameter(lib_prep, org, dataset, save_dir, 250, 1000, what='relative noise', by='knn')
+    df_1000_5000 = random_noise_parameter(lib_prep, org, dataset, save_dir, 1000, 5000, what='relative noise', by='knn')
+
+    plot_scatter_parameter(
+        [df_1000_5000, df_250_1000, df_0_250], 
+        ['1000 - 5000', '250 - 1000', '0 - 250'], 
+        lib_prep, org, dataset, by='knn', 
+        title='Noise_distance_based_on_seed,_kNN', ylabel="$\\frac{|d_A-d_B|}{|d_A| + |d_B|}$")
+    
+    
+    df_0_250 = random_noise_parameter(lib_prep, org, dataset, save_dir, 0, 250, what='relative noise', by='pca')
+    df_250_1000 = random_noise_parameter(lib_prep, org, dataset, save_dir, 250, 1000, what='relative noise', by='pca')
+    df_1000_5000 = random_noise_parameter(lib_prep, org, dataset, save_dir, 1000, 5000, what='relative noise', by='pca')
+
+    plot_scatter_parameter([df_1000_5000, df_250_1000, df_0_250], 
+                            ['1000 - 5000', '250 - 1000', '0 - 250'], 
+                           lib_prep, org, dataset, by='pca',
+                          title='Noise_distance_based_on_seed,_PCA', ylabel="$\\frac{|d_A-d_B|}{|d_A| + |d_B|}$")
+    
+    
+    df_0_250 = random_noise_parameter(lib_prep, org, dataset, save_dir, 0, 250, what='overlap', by='knn')
+    df_0_1000 = random_noise_parameter(lib_prep, org, dataset, save_dir, 0, 1000, what='overlap', by='knn')
+    df_0_5000 = random_noise_parameter(lib_prep, org, dataset, save_dir, 0, 5000, what='overlap', by='knn')
+
+    plot_scatter_parameter([df_0_5000, df_0_1000, df_0_250], 
+       ['0 - 5000', '0 - 1000', '0 - 250'],
+        lib_prep, org, dataset, step=1, by='knn',
+            palette = 'sunsetmid3', 
+            title='Overlap_of_features_based_on_seed,_kNN', ylabel="Overlap")
+    
+    
+    df_0_250 = random_noise_parameter(lib_prep, org, dataset, save_dir, 0, 250, what='overlap', by='pca')
+    df_0_1000 = random_noise_parameter(lib_prep, org, dataset, save_dir, 0, 1000, what='overlap', by='pca')
+    df_0_5000 = random_noise_parameter(lib_prep, org, dataset, save_dir, 0, 5000, what='overlap', by='pca')
+
+    plot_scatter_parameter([df_0_5000, df_0_1000, df_0_250], 
+                ['0 - 5000', '0 - 1000', '0 - 250'], lib_prep, org, dataset,
+                step=1, palette = 'sunsetmid3', 
+                by='pca', title='Overlap_of_features_based_on_seed,_PCA', ylabel="Overlap")
+    
+    
+    df_violin_0_500 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 500, what='overlap', by='knn')
+    df_violin_0_1000 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 1000, what='overlap', by='knn')
+    df_violin_0_2500 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 2500, what='overlap', by='knn')
+    df_violin_0_5000 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 5000, what='overlap', by='knn')
+
+    plot_scatter_parameter([df_violin_0_5000, df_violin_0_2500, df_violin_0_1000, df_violin_0_500], 
+       ['0 - 5000',  '0 - 2500', '0 - 1000', '0 - 500'], 
+        lib_prep, org, dataset, step=1, palette = 'sunsetmid4', by='knn',
+            title='kNN_robustness,_overlap', ylabel="Overlap")
+    
+    
+    df_violin_0_500 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 500, what='correlation', by='knn')
+    df_violin_0_1000 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 1000, what='correlation', by='knn')
+    df_violin_0_2500 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 2500, what='correlation', by='knn')
+    df_violin_0_5000 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 5000, what='correlation', by='knn')
+
+    plot_scatter_parameter([df_violin_0_5000, df_violin_0_2500, df_violin_0_1000, df_violin_0_500], 
+       ['0 - 5000',  '0 - 2500', '0 - 1000', '0 - 500'], 
+        lib_prep, org, dataset, step=1, 
+        palette = 'sunsetmid4', by='knn',
+        title='kNN_robustness,_correlation', 
+        ylabel='Pearson correlation')
+    
+
+    df_violin_0_500 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 500, what='overlap', by='knn')
+    df_violin_0_1000 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 1000, what='overlap', by='knn')
+    df_violin_0_2500 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 2500, what='overlap', by='knn')
+    df_violin_0_5000 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 5000, what='overlap', by='knn')
+
+    plot_scatter_parameter([df_violin_0_5000, df_violin_0_2500, df_violin_0_1000, df_violin_0_500], 
+       ['0 - 5000',  '0 - 2500', '0 - 1000', '0 - 500'], 
+        lib_prep, org, dataset, step=1, palette = 'sunsetmid4', by='knn',
+            title='kNN_robustness,_overlap', ylabel="Overlap")
+    
+    
+    df_violin_0_500 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 500, what='overlap', by='pca')
+    df_violin_0_1000 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 1000, what='overlap', by='pca')
+    df_violin_0_2500 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 2500, what='overlap', by='pca')
+    df_violin_0_5000 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 5000, what='overlap', by='pca')
+
+    plot_scatter_parameter([df_violin_0_5000, df_violin_0_2500, df_violin_0_1000, df_violin_0_500], 
+       ['0 - 5000',  '0 - 2500', '0 - 1000', '0 - 500'], 
+        lib_prep, org, dataset, step=1, palette = 'sunsetmid4', by='pca',
+                           title='PCA_robustness,_overlap', 
+        ylabel='Overlap')
+    
+    
+    
+    df_violin_0_500 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 500, what='correlation', by='pca')
+    df_violin_0_1000 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 1000, what='correlation', by='pca')
+    df_violin_0_2500 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 2500, what='correlation', by='pca')
+    df_violin_0_5000 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 5000, what='correlation', by='pca')
+
+    plot_scatter_parameter([df_violin_0_5000, df_violin_0_2500, df_violin_0_1000, df_violin_0_500], 
+       ['0 - 5000',  '0 - 2500', '0 - 1000', '0 - 500'], 
+        lib_prep, org, dataset, step=1, 
+        palette = 'sunsetmid4', by='pca', 
+        title='PCA_robustness,_correlation', 
+        ylabel='Pearson correlation')
+    
+    
+    df_violin_0_500 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 500, what='overlap', by='w')
+    df_violin_0_1000 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 1000, what='overlap', by='w')
+    df_violin_0_2500 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 2500, what='overlap', by='w')
+    df_violin_0_5000 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 5000, what='overlap', by='w')
+
+    plot_scatter_parameter([df_violin_0_5000, df_violin_0_2500, df_violin_0_1000, df_violin_0_500], 
+       ['0 - 5000',  '0 - 2500', '0 - 1000', '0 - 500'], 
+        lib_prep, org, dataset, step=1, palette = 'sunsetmid4', by='w', title='window_robustness,_overlap', 
+        ylabel='Overlap')
+
+
+
+    df_violin_0_500 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 500, what='correlation', by='w')
+    df_violin_0_1000 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 1000, what='correlation', by='w')
+    df_violin_0_2500 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 2500, what='correlation', by='w')
+    df_violin_0_5000 = compare_parameter(lib_prep, org, dataset, save_dir, 0, 5000, what='correlation', by='w')
+
+    plot_scatter_parameter([df_violin_0_5000, df_violin_0_2500, df_violin_0_1000, df_violin_0_500], 
+       ['0 - 5000',  '0 - 2500', '0 - 1000', '0 - 500'], 
+        lib_prep, org, dataset, step=1, palette = 'sunsetmid4', by='w',
+        title='window_robustness,_correlation',
+        ylabel="Pearson correlation")
