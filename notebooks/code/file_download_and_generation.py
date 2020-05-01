@@ -1,3 +1,6 @@
+import warnings
+warnings.simplefilter(action='ignore')
+
 import scanpy as sc
 import numpy as np
 import pandas as pd
@@ -39,8 +42,10 @@ def process_ding(root_dir):
 
     methods = list(dict.fromkeys(meta['Method']))
     for method in methods:
+        print(f'mouse {method}')
         adata_method = adata[adata.obs['method'] == method]
-        adata.to_h5ad(root_dir + f'/{adata_method}_mouse.h5ad')
+        print(f'{len(adata_method)} cells selected')
+        adata_method.write_h5ad(root_dir + f'/{method}_mouse.h5ad')
 
     # Now we repeat with human
     matrix = mmread(root_dir + '/human/counts.read.txt.gz')
@@ -54,12 +59,14 @@ def process_ding(root_dir):
     meta = pd.read_csv(root_dir + '/human/meta.txt', sep='\t', skiprows=[1])  # The 2nd row are datatypes
     adata = adata[meta['NAME'].values]
     adata.obs['method'] = meta['Method'].values
-    adata.obs['CellType'] = meta['CellType'].values
+    adata.obs['cell_types'] = meta['CellType'].values
 
     methods = list(dict.fromkeys(meta['Method']))
     for method in methods:
+        print(f'human {method}')
         adata_method = adata[adata.obs['method'] == method]
-        adata.to_h5ad(root_dir + f'/{adata_method}_human.h5ad')
+        print(f'{len(adata_method)} cells selected')
+        adata_method.write_h5ad(root_dir + f'/{method}_human.h5ad')
 
 
 def process_mereu(root_dir):
@@ -68,7 +75,10 @@ def process_mereu(root_dir):
     the adatas.   
     """
     tsv_dir = root_dir + '/tsv/'
+    
     df_cell_types_human = pd.read_csv(root_dir + '/cell_types/human.csv')
+#     df_cell_types_mouse = pd.read_csv(root_dir + '/cell_types/mouse.csv')
+    
     list_techniques = ['CELseq2', 'Dropseq', 'QUARTZseq', 'SMARTseq2', 'SingleNuclei', 'ddSEQ', 'inDrop', '10X']
     file_list = os.listdir(tsv_dir)
     
@@ -81,10 +91,19 @@ def process_mereu(root_dir):
             adata = sc.read_text(tsv_dir + file_select).transpose()
             adata.var_names_make_unique()
             
-            cells_select = np.intersect1d(df_cell_types_human['colnames'].values, adata.obs_names)
-            print(f'{len(adata.obs_names)} before removal, {len(cells_select)} after cell removal.')
+            if org == 'human':
+                cells_select = np.intersect1d(df_cell_types_human['colnames'].values, adata.obs_names.values)
+                cell_types = df_cell_types_human['cell_types'][df_cell_types_human['colnames'].isin(cells_select)].values
+            else:
+                cells_select = np.intersect1d(df_cell_types_mouse['colnames'].values, adata.obs_names.values)
+                cell_types = df_cell_types_mouse['cell_types'][df_cell_types_mouse['colnames'].isin(cells_select)].values
+                                                 
+            len_before, len_after = len(adata.obs_names), len(cells_select)
+            print(f'{len_before} before removal, {len_after} after cell removal.')
             adata = adata[cells_select]
-                        
+            
+            adata.obs['cell_types'] = cell_types
+            
             adata.write_h5ad(root_dir + f'{technique}_{org}.h5')
 
 
