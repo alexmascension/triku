@@ -62,17 +62,29 @@ def process_ding(root_dir):
         adata.to_h5ad(root_dir + f'/{adata_method}_human.h5ad')
 
 
-def download_and_process_mereu(root_dir):
+def process_mereu(root_dir):
     """
     In this case, because names are informative, we only need to download the data, read the csv files and output
-    the adatas.
-
-    RData object from https://www.dropbox.com/s/i8mwmyymchx8mn8/sce.all_classified.technologies.RData?dl=0
-    must be downloaded first!
+    the adatas.   
     """
-
-
-
-    os.system('aria2c -x 16 ')
+    tsv_dir = root_dir + '/tsv/'
+    df_cell_types_human = pd.read_csv(root_dir + '/cell_types/human.csv')
+    list_techniques = ['CELseq2', 'Dropseq', 'QUARTZseq', 'SMARTseq2', 'SingleNuclei', 'ddSEQ', 'inDrop', '10X']
+    file_list = os.listdir(tsv_dir)
+    
+    for technique in list_techniques:
+        for org in ['human']:  # TODO: add mouse when I have the df
+            print(technique, org)
+            
+            file_select = [f for f in file_list if (technique in f) & (org in f)][0]
+            
+            adata = sc.read_text(tsv_dir + file_select).transpose()
+            adata.var_names_make_unique()
+            
+            cells_select = np.intersect1d(df_cell_types_human['colnames'].values, adata.obs_names)
+            print(f'{len(adata.obs_names)} before removal, {len(cells_select)} after cell removal.')
+            adata = adata[cells_select]
+                        
+            adata.write_h5ad(root_dir + f'{technique}_{org}.h5')
 
 
