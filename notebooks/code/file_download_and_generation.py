@@ -46,8 +46,11 @@ def process_ding(root_dir):
         adata_method = adata[adata.obs['method'] == method]
         print(f'{len(adata_method)} cells selected')
         sc.pp.filter_genes(adata_method, min_cells=5)
+        adata_method.X = np.asarray(adata_method.X.todense())
         adata_method.write_h5ad(root_dir + f'/{method}_mouse.h5ad')
 
+        
+        
     # Now we repeat with human
     matrix = mmread(root_dir + '/human/counts.read.txt.gz')
     features = np.loadtxt(root_dir + 'human/genes.read.txt', dtype=str)
@@ -68,6 +71,7 @@ def process_ding(root_dir):
         adata_method = adata[adata.obs['method'] == method]
         print(f'{len(adata_method)} cells selected')
         sc.pp.filter_genes(adata_method, min_cells=5)
+        adata_method.X = np.asarray(adata_method.X.todense())
         adata_method.write_h5ad(root_dir + f'/{method}_human.h5ad')
 
 
