@@ -83,13 +83,13 @@ def process_mereu(root_dir):
     tsv_dir = root_dir + '/tsv/'
     
     df_cell_types_human = pd.read_csv(root_dir + '/cell_types/human.csv')
-#     df_cell_types_mouse = pd.read_csv(root_dir + '/cell_types/mouse.csv')
+    df_cell_types_mouse = pd.read_csv(root_dir + '/cell_types/mouse.csv')
     
     list_techniques = ['CELseq2', 'Dropseq', 'QUARTZseq', 'SMARTseq2', 'SingleNuclei', 'ddSEQ', 'inDrop', '10X']
     file_list = os.listdir(tsv_dir)
     
     for technique in list_techniques:
-        for org in ['human']:  # TODO: add mouse when I have the df
+        for org in ['mouse', 'human']:  # TODO: add mouse when I have the df
             print(technique, org)
             
             file_select = [f for f in file_list if (technique in f) & (org in f)][0]
