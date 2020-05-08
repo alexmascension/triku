@@ -27,17 +27,22 @@ def run_batch(adata, windows, n_comps, knns, seeds, save_dir, dataset_prefix):
         if os.path.exists(save_file):
             print('FILE EXISTS!')
         else:
-            tk.tl.triku(adata, n_windows=window, n_comps=n_comp, knn=knn, random_state=seed, verbose='triku', n_procs=25)
-
-            distances_with_random = adata.var['emd_distance'].values
-            mean_exp = adata.X.sum(0)
-            distances_without_random = subtract_median(x=mean_exp, y=adata.var['emd_distance_uncorrected'].values,
-                                                       n_windows=window)
-            print(adata.var['emd_distance_uncorrected'].values[:5])
-            df_res = pd.DataFrame(data={'emd_random_correction': distances_with_random,
-                                        'emd_no_correction': distances_without_random},
-                                  index=adata.var_names.values)
-
+            try:
+                tk.tl.triku(adata, n_windows=window, n_comps=n_comp, knn=knn, random_state=seed, verbose='triku', n_procs=25)
+                distances_with_random = adata.var['emd_distance'].values
+                mean_exp = adata.X.sum(0)
+                distances_without_random = subtract_median(x=mean_exp, y=adata.var['emd_distance_uncorrected'].values,
+                                                           n_windows=window)
+                print(adata.var['emd_distance_uncorrected'].values[:5])
+                df_res = pd.DataFrame(data={'emd_random_correction': distances_with_random,
+                                            'emd_no_correction': distances_without_random},
+                                      index=adata.var_names.values)
+                
+            except:
+                    df_res = pd.DataFrame(data={'emd_random_correction': [np.NaN] * len(adata.var_names),
+                                            'emd_no_correction': [np.NaN] * len(adata.var_names)},
+                                      index=adata.var_names.values)
+            
 
             df_res.to_csv(save_file)
 
@@ -70,38 +75,38 @@ def run_all_batches(lib_preps, orgs, dataset, read_dir, save_dir):
                   seeds=[0, 1, 2, 3, 4], save_dir=save_dir, dataset_prefix=lib_prep + '_' + dataset + '_' + org)
 
 
-def return_knn_indices(save_dir, org, lib_prep):
+def return_knn_indices(save_dir, org, lib_prep, dataset):
     knn_list = []
     for file in os.listdir(save_dir):
-        if org in file and lib_prep in file and 'w_100-' in file and 'comps_30-' in file in file:
+        if org in file and lib_prep in file and 'w_100-' in file and 'comps_30-' in file and dataset in file:
             knn_str = file[file.find('knn') + 4:]
             knn_list.append(int(knn_str[: knn_str.find('-')]))
     knn_list = sorted(list(dict.fromkeys(knn_list)))
     return knn_list
 
 
-def return_pca_indices(save_dir, org, lib_prep):
+def return_pca_indices(save_dir, org, lib_prep, dataset):
     # We need to recover the fixed kNN value. This value is the 5th value on the knn_list; so we will take it.
-    knn_pinpoint = return_knn_indices(save_dir, org, lib_prep)[4]
+    knn_pinpoint = return_knn_indices(save_dir, org, lib_prep, dataset)[4]
 
     # Now we get the list of n_comps values
     pca_list = []
     for file in os.listdir(save_dir):
-        if org in file and lib_prep in file and 'w_100-' in file and 'knn_%s-' % knn_pinpoint in file:
+        if org in file and lib_prep in file and 'w_100-' in file and 'knn_%s-' % knn_pinpoint in file and dataset in file:
             pca_str = file[file.find('comps') + 6:]
             pca_list.append(int(pca_str[: pca_str.find('-')]))
     pca_list = sorted(list(dict.fromkeys(pca_list)))
     return pca_list, knn_pinpoint
 
 
-def return_window_indices(save_dir, org, lib_prep):
+def return_window_indices(save_dir, org, lib_prep, dataset):
     # We need to recover the fixed kNN value. This value is the 5th value on the knn_list; so we will take it.
-    knn_pinpoint = return_knn_indices(save_dir, org, lib_prep)[4]
+    knn_pinpoint = return_knn_indices(save_dir, org, lib_prep, dataset)[4]
 
     # Now we get the list of n_comps values
     w_list = []
     for file in os.listdir(save_dir):
-        if org in file and lib_prep in file and 'comps_30-' in file and 'knn_%s-' % knn_pinpoint in file:
+        if org in file and lib_prep in file and 'comps_30-' in file and 'knn_%s-' % knn_pinpoint in file and dataset in file:
             w_str = file[file.find('w_') + 2:]
             w_list.append(int(w_str[: w_str.find('-')]))
     w_list = sorted(list(dict.fromkeys(w_list)))
@@ -151,9 +156,8 @@ def return_correlation(df_1, df_2, min_n_feats, max_n_feats):
 def random_noise_parameter(lib_prep, org, dataset, save_dir, min_n_feats, max_n_feats, what, by):
     list_dists_non_randomized, list_dists_randomized, list_param_value = [], [], []
 
-    knn_list = return_knn_indices(save_dir, org, lib_prep)
-    pca_list = return_pca_indices(save_dir, org, lib_prep)
-
+    knn_list = return_knn_indices(save_dir, org, lib_prep, dataset)
+    pca_list = return_pca_indices(save_dir, org, lib_prep, dataset)
     if by == 'knn':
         parameter_list = knn_list
     elif by == 'pca':
@@ -205,9 +209,9 @@ def random_noise_parameter(lib_prep, org, dataset, save_dir, min_n_feats, max_n_
 def compare_parameter(lib_prep, org, dataset, save_dir, min_n_feats, max_n_feats, what, by):
     list_dists_non_randomized, list_dists_randomized, list_knn = [], [], []
 
-    knn_list = return_knn_indices(save_dir, org, lib_prep)
-    pca_list = return_pca_indices(save_dir, org, lib_prep)
-    window_list = return_window_indices(save_dir, org, lib_prep)
+    knn_list = return_knn_indices(save_dir, org, lib_prep, dataset)
+    pca_list = return_pca_indices(save_dir, org, lib_prep, dataset)
+    window_list = return_window_indices(save_dir, org, lib_prep, dataset)
 
     # We first fill on list of dfs with knn = sqrt(N)
     list_dfs_knn_1 = []
