@@ -6,14 +6,15 @@ import scipy.sparse as spr
 from palettes_and_cmaps import prism
 from matplotlib.lines import Line2D
 
-def clustering_binary_search(adata, min_res, max_res, max_depth, seed, n_target_c, features, apply_log=True):
+def clustering_binary_search(adatax, min_res, max_res, max_depth, seed, n_target_c, features, apply_log=True):
     depth = 0
-    adata = adata.copy()
+    adata = adatax.copy()
         
     if apply_log:
         sc.pp.log1p(adata)
-        
+    
     adata.var['highly_variable'] = [i in features for i in adata.var_names]
+    
     sc.pp.pca(adata, n_comps=35, use_highly_variable=True)
     sc.pp.neighbors(adata, n_neighbors=int(0.5 * len(adata) ** 0.5), random_state=seed, metric='cosine')
     
@@ -122,6 +123,36 @@ def plot_max_var_x_dataset(dict_df_feature_ranks, dict_df_max_var_dataset, n_fea
     ax.set_xticks(range(len(list_datasets)))
     ax.set_xticklabels(list_datasets, rotation = 45)
     ax.set_ylabel('Maximum difference')
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.suptitle(title)
+    plt.show()
+    
+    
+def plot_ARI_x_method(dict_ARI, title='', figsize=(15,8)):
+    fig, ax = plt.subplot(1,1, figsize=figsize)
+    palette = prism
+    list_dfs = list(dict_ARI.keys())
+    list_methods = dict_ARI[list_dfs[0]].columns
+    
+    for x_idx, method in enumerate(list_methods):
+        for df_idx, df in enumerate(list_dfs):
+            y_vals = dict_ARI[df][method].values
+            median, per25, per75 = np.median(y_vals), np.percentile(y_vals, 25), np.percentile(y_vals, 75)
+            w = 0.09
+            
+            x = x_idx + (len(list_dfs) // 2 - df_idx) * w
+                        
+            ax.scatter([x]*len(y_vals), y_vals, color=palette[df_idx], s=13)
+            ax.plot([x, x], [per25, per75], color=palette[df_idx], linewidth=2)
+            ax.plot([x-w/2, x+w/2], [median, median], color=palette[df_idx], linewidth=2)
+            
+            
+    legend_elements = [Line2D([0], [0], marker='o', color=palette[idx], label=list_dfs[idx]) for idx in range(len(list_dfs))]
+    ax.legend(handles=legend_elements)
+    ax.set_xticks(range(len(list_methods)))
+    ax.set_xticklabels(list_methods, rotation = 45)
+    ax.set_ylabel('ARI')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     plt.suptitle(title)
