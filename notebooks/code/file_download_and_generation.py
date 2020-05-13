@@ -8,6 +8,17 @@ from scipy.io import mmread
 import os
 
 
+def ensembl2symbol(adata, root_dir, org, ens_sep):
+    df_ens2sym = pd.read_csv(os.path.dirname(root_dir) + f'/ensembl2symbol/{org}.txt', sep='\t')
+    dict_ens2sym = pd.Series(df_ens2sym['Gene name'].values,index=df_ens2sym['Gene stable ID']).to_dict()
+    symbols = [dict_ens2sym[i.split(ens_sep)[0]] if i.split(ens_sep)[0] in dict_ens2sym else None  for i in adata.var_names]
+    idx_not_None = [i is not None for i in symbols]
+    adata = adata[:, idx_not_None]
+    adata.var_names = np.array(symbols)[idx_not_None]
+    adata.var_names_make_unique()
+    return adata
+
+
 def process_ding(root_dir):
     """
     root_dir should be Ding_2020 with the following structure:
@@ -47,6 +58,7 @@ def process_ding(root_dir):
         print(f'{len(adata_method)} cells selected')
         sc.pp.filter_genes(adata_method, min_cells=5)
         adata_method.X = np.asarray(adata_method.X.todense())
+        adata_method = ensembl2symbol(adata_method, root_dir[:-1], 'mouse', '_')  # [:-1] to remove last / from dir
         adata_method.write_h5ad(root_dir + f'/{method}_mouse.h5ad')
 
         
@@ -72,6 +84,7 @@ def process_ding(root_dir):
         print(f'{len(adata_method)} cells selected')
         sc.pp.filter_genes(adata_method, min_cells=5)
         adata_method.X = np.asarray(adata_method.X.todense())
+        adata_method = ensembl2symbol(adata_method, root_dir[:-1], 'human', '_')
         adata_method.write_h5ad(root_dir + f'/{method}_human.h5ad')
 
 
@@ -111,6 +124,7 @@ def process_mereu(root_dir):
             adata.obs['cell_types'] = cell_types
             
             sc.pp.filter_genes(adata, min_cells=5)
+            adata = ensembl2symbol(adata, root_dir[:-1], org, '.')
             adata.write_h5ad(root_dir + f'{technique}_{org}.h5ad')
 
 
