@@ -9,6 +9,7 @@ from umap.umap_ import nearest_neighbors
 import ray
 from tqdm import tqdm
 import logging
+import gc
 
 from triku.logg import triku_logger, TRIKU_LEVEL
 from triku.genutils import TqdmToLogger
@@ -241,6 +242,7 @@ def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndar
         return_objs = ray.get(ray_obj_ids)
         triku_logger.log(TRIKU_LEVEL, 'Done.')
 
+        del [array_counts_id, array_knn_counts_id]; gc.collect()
         ray.shutdown()
 
     list_x_conv, list_y_conv, list_emd = [x[0] for x in return_objs], [x[1] for x in return_objs], [x[2] for x in return_objs]
