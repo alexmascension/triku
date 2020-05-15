@@ -95,8 +95,8 @@ def process_mereu(root_dir):
     """
     tsv_dir = root_dir + '/tsv/'
     
-    df_cell_types_human = pd.read_csv(root_dir + '/cell_types/human.csv')
-    df_cell_types_mouse = pd.read_csv(root_dir + '/cell_types/mouse.csv')
+    df_cell_types_human = pd.read_csv(root_dir + '/cell_types/human.csv', index_col='colnames')
+    df_cell_types_mouse = pd.read_csv(root_dir + '/cell_types/mouse.csv', index_col='colnames')
     
     list_techniques = ['CELseq2', 'Dropseq', 'QUARTZseq', 'SMARTseq2', 'SingleNuclei', 'ddSEQ', 'inDrop', '10X']
     file_list = os.listdir(tsv_dir)
@@ -111,11 +111,11 @@ def process_mereu(root_dir):
             adata.var_names_make_unique()
             
             if org == 'human':
-                cells_select = np.intersect1d(df_cell_types_human['colnames'].values, adata.obs_names.values)
-                cell_types = df_cell_types_human['cell_types'][df_cell_types_human['colnames'].isin(cells_select)].values
+                cells_select = np.intersect1d(df_cell_types_human.index.values, adata.obs_names.values)
+                cell_types = df_cell_types_human['cell_types'].loc[cells_select].values
             else:
-                cells_select = np.intersect1d(df_cell_types_mouse['colnames'].values, adata.obs_names.values)
-                cell_types = df_cell_types_mouse['cell_types'][df_cell_types_mouse['colnames'].isin(cells_select)].values
+                cells_select = np.intersect1d(df_cell_types_mouse.index.values, adata.obs_names.values)
+                cell_types = df_cell_types_mouse['cell_types'].loc[cells_select].values
                                                  
             len_before, len_after = len(adata.obs_names), len(cells_select)
             print(f'{len_before} before removal, {len_after} after cell removal.')
