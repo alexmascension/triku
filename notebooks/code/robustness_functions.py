@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as sts
 import scanpy as sc
+import gc
 
 
 def run_batch(adata, windows, n_comps, knns, seeds, save_dir, dataset_prefix):
@@ -45,6 +46,8 @@ def run_batch(adata, windows, n_comps, knns, seeds, save_dir, dataset_prefix):
             
 
             df_res.to_csv(save_file)
+            del [df_res]
+            gc.collect()
 
 
 def run_all_batches(lib_preps, orgs, dataset, read_dir, save_dir):
@@ -73,7 +76,8 @@ def run_all_batches(lib_preps, orgs, dataset, read_dir, save_dir):
 
         run_batch(adata, windows=[10, 20, 30, 50, 100, 200, 500, 1000], n_comps=[30], knns=[sqr_n_cells + 1],
                   seeds=[0, 1, 2, 3, 4], save_dir=save_dir, dataset_prefix=lib_prep + '_' + dataset + '_' + org)
-
+        
+        del adata; gc.collect()
 
 def return_knn_indices(save_dir, org, lib_prep, dataset):
     knn_list = []

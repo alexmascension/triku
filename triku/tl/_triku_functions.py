@@ -249,8 +249,6 @@ def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndar
     # list_x_conv and list_y_conv are lists of lists. Each element are the x coordinates and probabilities of the
     # convolution distribution for a gene. list_emd is an array with n_genes elements, where each element is the
     # distance between the convolution and the knn_distribution
-
-
     return list_x_conv, list_y_conv, np.array(list_emd)
 
 
