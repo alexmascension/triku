@@ -194,3 +194,116 @@ def plot_ARI_x_dataset(dict_ARI, title='', figsize=(15,8)):
     ax.spines['top'].set_visible(False)
     plt.suptitle(title)
     plt.show()
+    
+
+def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cell_types_col='cell_types'):
+    list_methods = ['triku'] + [i for i in df_rank.columns if 'triku' not in i]
+    df_score = pd.DataFrame(index=['ARI', 'ARI_random', 'NMI', 'NMI_random' 
+                                   'Sil_bench_PCA', 'Sil_bench_all_hvg', 'Sil_bench_all_base',
+                                   'Sil_bench_PCA_random', 'Sil_bench_all_hvg_random', 'Sil_bench_all_base_random', 
+                                   'Sil_leiden_PCA', 'Sil_leiden_all_hvg', 'Sil_leiden_all_base',
+                                   'Sil_leiden_PCA_random', 'Sil_leiden_all_hvg_random', 'Sil_leiden_all_base_random', 
+                                   'DavBo_bench_PCA', 'DavBo_bench_all_hvg', 'DavBo_bench_all_base',
+                                   'DavBo_bench_PCA_random', 'DavBo_bench_all_hvg_random', 'DavBo_bench_all_base_random', 
+                                   'DavBo_leiden_PCA', 'DavBo_leiden_all_hvg', 'DavBo_leiden_all_base',
+                                   'DavBo_leiden_PCA_random', 'DavBo_leiden_all_hvg_random', 'DavBo_leiden_all_base_random'], 
+                            columns=list_methods)
+    cell_types = adata.obs[cell_types_col].values
+    
+    # Get number of HVG with triku.
+    tk.tl.triku(adata, random_state=seed)
+    n_hvg = np.sum(adata.var['highly_variable'])
+    
+    adata_copy = adata.copy()
+    sc.pp.log1p(adata_copy)
+    
+    for method in list_methods:
+        if method != 'triku':
+            adata_copy.var['highly_variable'] = [i in df_rank[method].sort_values().index.values[:n_hvg] for i in adata_copy.var_names]
+            
+        sc.pp.pca(adata_copy, n_comps=30)
+        sc.pp.neighbors(adata_copy, n_neighbors=int(0.5 * len(adata_copy) ** 0.5), random_state=seed, metric='cosine')
+
+        features = adata_copy.var[adata_copy.var['highly_variable'] == True].index.values
+
+        leiden_sol, res = clustering_binary_search(adata_copy, 0.1, 2, 5, seed=seed, n_target_c=len(list(dict.fromkeys(cell_types))), 
+                                            features=features, apply_log=False)
+        
+        leiden_sol_random = leiden_sol.copy(); np.random.shuffle(leiden_sol_random)
+        cell_types_random = cell_types.copy(); np.random.shuffle(cell_types_random)
+        
+        ARI, NMIs = ARS(leiden_sol, cell_types), NMI(leiden_sol, cell_types)
+        ARI_random, NMI_random = ARS(leiden_sol_random, cell_types), NMI(leiden_sol_random, cell_types)
+        adata_copy.obs['leiden'] = leiden_sol
+
+        Sil_bench_PCA = silhouette_score(adata_copy.obsm['X_pca'], cell_types, metric='cosine')
+        Sil_bench_all_hvg = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types, metric='cosine')
+        Sil_bench_all_base = silhouette_score(adata_copy.X, cell_types, metric='cosine')
+        
+        Sil_bench_PCA_random = silhouette_score(adata_copy.obsm['X_pca'], cell_types_random, metric='cosine')
+        Sil_bench_all_hvg_random = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types_random, metric='cosine')
+        Sil_bench_all_base_random = silhouette_score(adata_copy.X, cell_types_random, metric='cosine')
+        
+        Sil_leiden_PCA = silhouette_score(adata_copy.obsm['X_pca'], adata_copy.obs['leiden'].values, metric='cosine')
+        Sil_leiden_all_hvg = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], adata_copy.obs['leiden'].values, metric='cosine')
+        Sil_leiden_all_base = silhouette_score(adata_copy.X, adata_copy.obs['leiden'].values, metric='cosine')
+        
+        Sil_leiden_PCA_random = silhouette_score(adata_copy.obsm['X_pca'], adata_copy.obs['leiden'].values, metric='cosine')
+        Sil_leiden_all_hvg_random = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], adata_copy.obs['leiden'].values, metric='cosine')
+        Sil_leiden_all_base_random = silhouette_score(adata_copy.X, adata_copy.obs['leiden'].values, metric='cosine')
+        
+        DavBo_bench_PCA = davies_bouldin_score(adata_copy.obsm['X_pca'], cell_types)
+        DavBo_bench_all_hvg = davies_bouldin_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types)
+        DavBo_bench_all_base = davies_bouldin_score(adata_copy.X, cell_types)
+        
+        DavBo_bench_PCA_random = davies_bouldin_score(adata_copy.obsm['X_pca'], cell_types_random)
+        DavBo_bench_all_hvg_random = davies_bouldin_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types_random)
+        DavBo_bench_all_base_random = davies_bouldin_score(adata_copy.X, cell_types_random)
+        
+        DavBo_leiden_PCA = davies_bouldin_score(adata_copy.obsm['X_pca'], adata_copy.obs['leiden'].values)
+        DavBo_leiden_all_hvg = davies_bouldin_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], adata_copy.obs['leiden'].values)
+        DavBo_leiden_all_base = davies_bouldin_score(adata_copy.X, adata_copy.obs['leiden'].values)
+        
+        DavBo_leiden_PCA_random = davies_bouldin_score(adata_copy.obsm['X_pca'], adata_copy.obs['leiden'].values)
+        DavBo_leiden_all_hvg_random = davies_bouldin_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], adata_copy.obs['leiden'].values)
+        DavBo_leiden_all_base_random = davies_bouldin_score(adata_copy.X, adata_copy.obs['leiden'].values)
+        
+        
+        
+        df_score.loc['ARI', method], df_score.loc['ARI_random', method] = ARI, ARI_random
+        df_score.loc['NMI', method], df_score.loc['NMI_random', method] = NMI, NMI_random
+        
+        df_score.loc['Sil_bench_PCA', method] = Sil_bench_PCA
+        df_score.loc['Sil_bench_all_hvg', method] = Sil_bench_all_hvg
+        df_score.loc['Sil_bench_all_base', method] = Sil_bench_all_base
+        df_score.loc['Sil_bench_PCA_random', method] = Sil_bench_PCA_random
+        df_score.loc['Sil_bench_all_hvg_random', method] = Sil_bench_all_hvg_random
+        df_score.loc['Sil_bench_all_base_random', method] = Sil_bench_all_base_random
+        
+        df_score.loc['Sil_leiden_PCA', method] = Sil_leiden_PCA
+        df_score.loc['Sil_leiden_all_hvg', method] = Sil_leiden_all_hvg
+        df_score.loc['Sil_leiden_all_base', method] = Sil_leiden_all_base
+        df_score.loc['Sil_leiden_PCA_random', method] = Sil_leiden_PCA_random
+        df_score.loc['Sil_leiden_all_hvg_random', method] = Sil_leiden_all_hvg_random
+        df_score.loc['Sil_leiden_all_base_random', method] = Sil_leiden_all_base_random
+        
+        
+        df_score.loc['DavBo_bench_PCA', method] = DavBo_bench_PCA
+        df_score.loc['DavBo_bench_all_hvg', method] = DavBo_bench_all_hvg
+        df_score.loc['DavBo_bench_all_base', method] = DavBo_bench_all_base
+        df_score.loc['DavBo_bench_PCA_random', method] = DavBo_bench_PCA_random
+        df_score.loc['DavBo_bench_all_hvg_random', method] = DavBo_bench_all_hvg_random
+        df_score.loc['DavBo_bench_all_base_random', method] = DavBo_bench_all_base_random
+        
+        df_score.loc['DavBo_leiden_PCA', method] = DavBo_leiden_PCA
+        df_score.loc['DavBo_leiden_all_hvg', method] = DavBo_leiden_all_hvg
+        df_score.loc['DavBo_leiden_all_base', method] = DavBo_leiden_all_base
+        df_score.loc['DavBo_leiden_PCA_random', method] = DavBo_leiden_PCA_random
+        df_score.loc['DavBo_leiden_all_hvg_random', method] = DavBo_leiden_all_hvg_random
+        df_score.loc['DavBo_leiden_all_base_random', method] = DavBo_leiden_all_base_random
+        
+        
+        print(df_score)
+        
+    del adata_copy; gc.collect()
+    df_score.to_csv(f'{outdir}/{file_root}_comparison-scores_seed-{seed}.csv')
