@@ -138,7 +138,7 @@ def return_percentage_overlap(df_1, df_2, min_n_feats, max_n_feats):
     feats_2_no_cor = df_2.sort_values(by='emd_no_correction', ascending=False).index[min_n_feats:max_n_feats].values
     feats_1_rand = df_1.sort_values(by='emd_random_correction', ascending=False).index[min_n_feats:max_n_feats].values
     feats_2_rand = df_2.sort_values(by='emd_random_correction', ascending=False).index[min_n_feats:max_n_feats].values
-
+    
     percentage_overlap_non_rand = len(np.intersect1d(feats_1_no_cor, feats_2_no_cor)) / (max_n_feats - min_n_feats)
     percentage_overlap_rand = len(np.intersect1d(feats_1_rand, feats_2_rand)) / (max_n_feats - min_n_feats)
 
@@ -150,7 +150,10 @@ def return_correlation(df_1, df_2, min_n_feats, max_n_feats):
     feats_2_no_cor = df_2['emd_no_correction'].sort_values(ascending=False).iloc[min_n_feats:max_n_feats].values
     feats_1_rand = df_1['emd_random_correction'].sort_values(ascending=False).iloc[min_n_feats:max_n_feats].values
     feats_2_rand = df_2['emd_random_correction'].sort_values(ascending=False).iloc[min_n_feats:max_n_feats].values
-
+    
+    for array in [feats_1_no_cor, feats_2_no_cor, feats_1_rand, feats_2_rand]:
+        np.nan_to_num(array, copy=False)
+    
     correlation_non_rand = sts.pearsonr(feats_1_no_cor, feats_2_no_cor)
     correlation_rand = sts.pearsonr(feats_1_rand, feats_2_rand)
 
