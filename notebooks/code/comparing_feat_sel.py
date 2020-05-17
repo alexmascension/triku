@@ -198,7 +198,7 @@ def plot_ARI_x_dataset(dict_ARI, title='', figsize=(15,8)):
 
 def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cell_types_col='cell_types'):
     list_methods = ['triku'] + [i for i in df_rank.columns if 'triku' not in i]
-    df_score = pd.DataFrame(index=['ARI', 'ARI_random', 'NMI', 'NMI_random' 
+    df_score = pd.DataFrame(index=['ARI', 'ARI_random', 'NMI', 'NMI_random',
                                    'Sil_bench_PCA', 'Sil_bench_all_hvg', 'Sil_bench_all_base',
                                    'Sil_bench_PCA_random', 'Sil_bench_all_hvg_random', 'Sil_bench_all_base_random', 
                                    'Sil_leiden_PCA', 'Sil_leiden_all_hvg', 'Sil_leiden_all_base',
@@ -271,7 +271,7 @@ def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cel
         
         
         df_score.loc['ARI', method], df_score.loc['ARI_random', method] = ARI, ARI_random
-        df_score.loc['NMI', method], df_score.loc['NMI_random', method] = NMI, NMI_random
+        df_score.loc['NMI', method], df_score.loc['NMI_random', method] = NMIs, NMI_random
         
         df_score.loc['Sil_bench_PCA', method] = Sil_bench_PCA
         df_score.loc['Sil_bench_all_hvg', method] = Sil_bench_all_hvg
