@@ -7,6 +7,11 @@ from palettes_and_cmaps import prism
 from matplotlib.lines import Line2D
 import gc
 
+import triku as tk
+from sklearn.metrics import adjusted_rand_score as ARS
+from sklearn.metrics import adjusted_mutual_info_score as NMI
+from sklearn.metrics import silhouette_score, davies_bouldin_score
+
 def clustering_binary_search(adatax, min_res, max_res, max_depth, seed, n_target_c, features, apply_log=True):
     depth = 0
     adata = adatax.copy()
