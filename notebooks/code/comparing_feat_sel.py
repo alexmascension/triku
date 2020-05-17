@@ -253,9 +253,9 @@ def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cel
         Sil_leiden_all_hvg = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], adata_copy.obs['leiden'].values, metric='cosine')
         Sil_leiden_all_base = silhouette_score(adata_copy.X, adata_copy.obs['leiden'].values, metric='cosine')
         
-        Sil_leiden_PCA_random = silhouette_score(adata_copy.obsm['X_pca'], adata_copy.obs['leiden'].values, metric='cosine')
-        Sil_leiden_all_hvg_random = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], adata_copy.obs['leiden'].values, metric='cosine')
-        Sil_leiden_all_base_random = silhouette_score(adata_copy.X, adata_copy.obs['leiden'].values, metric='cosine')
+        Sil_leiden_PCA_random = silhouette_score(adata_copy.obsm['X_pca'], cell_types_random, metric='cosine')
+        Sil_leiden_all_hvg_random = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types_random, metric='cosine')
+        Sil_leiden_all_base_random = silhouette_score(adata_copy.X, cell_types_random, metric='cosine')
         
         DavBo_bench_PCA = davies_bouldin_score(adata_copy.obsm['X_pca'], cell_types)
         DavBo_bench_all_hvg = davies_bouldin_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types)
@@ -269,9 +269,9 @@ def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cel
         DavBo_leiden_all_hvg = davies_bouldin_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], adata_copy.obs['leiden'].values)
         DavBo_leiden_all_base = davies_bouldin_score(adata_copy.X, adata_copy.obs['leiden'].values)
         
-        DavBo_leiden_PCA_random = davies_bouldin_score(adata_copy.obsm['X_pca'], adata_copy.obs['leiden'].values)
-        DavBo_leiden_all_hvg_random = davies_bouldin_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], adata_copy.obs['leiden'].values)
-        DavBo_leiden_all_base_random = davies_bouldin_score(adata_copy.X, adata_copy.obs['leiden'].values)
+        DavBo_leiden_PCA_random = davies_bouldin_score(adata_copy.obsm['X_pca'], cell_types_random)
+        DavBo_leiden_all_hvg_random = davies_bouldin_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types_random)
+        DavBo_leiden_all_base_random = davies_bouldin_score(adata_copy.X, cell_types_random)
         
         
         
