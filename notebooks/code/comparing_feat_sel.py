@@ -312,3 +312,44 @@ def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cel
         
     del adata_copy; gc.collect()
     df_score.to_csv(f'{outdir}/{file_root}_comparison-scores_seed-{seed}.csv')
+    
+
+def plot_lab_org_comparison_scores(lab, org='-', read_dir='', variables=[], figsize=(10, 6), title=''):
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    
+    if isinstance(variables, str):
+        variables = [variables]
+    
+    markers = ['o', 'v', 's', '1']
+    palette = prism
+    
+    list_files = [i for i in os.listdir(read_dir) if lab in i and org in i and 'comparison-scores' in i]
+    
+    list_libpreps = sorted(list(set([i.split('_')[1] + ' '  + i.split('_')[2]  for i in list_files])))
+        
+    for libprep_idx, libprep in enumerate(list_libpreps):
+        files_seeds = [i for i in list_files if libprep.replace(' ', '_') in i]
+                
+        for seed in range(len(files_seeds)):
+            file = [i for i in files_seeds if f'seed-{seed}' in i][0]
+            df = pd.read_csv(read_dir + '/' + file, index_col=0)
+            
+            methods = df.columns.tolist()
+            for method_idx, method in enumerate(methods):
+                for variable_idx, variable in enumerate(variables):
+                    ax.scatter(libprep_idx + (method_idx - len(methods) // 2) * 0.07, df.loc[variable, method], marker=markers[variable_idx],
+                               c=palette[method_idx])
+    
+    
+    ax.set_xticks(np.arange(len(list_libpreps)))
+    ax.set_xticklabels(list_libpreps, rotation=45, ha='right')
+    
+    l1 = ax.legend(handles=[Line2D([0], [0], marker='o', color=palette[method_idx], label=method) for method_idx, method in enumerate(methods)])
+    ax.add_artist(l1)
+    
+    if len(variables) > 1:
+        l2 = ax.legend(handles=[Line2D([0], [0], marker=markers[variable_idx], label=variable) for variable_idx, variable in enumerate(variables)])
+        ax.add_artist(l2)
+    
+    plt.title(title)
+    plt.show()
