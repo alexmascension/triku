@@ -7,6 +7,8 @@
 *.tsv
 *.pdf
 *.png
+*.svg
+*.pkl
 .ipynb_checkpoints
 .Rhistory
 .idea
@@ -17,3 +19,7 @@ triku.egg-info
 *.egg
 *.pyc
 *.tab
+notebooks/triku_nb_code.egg-info
+notebooks/build
+notebooks/cache
+
