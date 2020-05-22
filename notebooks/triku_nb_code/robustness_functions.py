@@ -278,7 +278,7 @@ def compare_parameter(lib_prep, org, dataset, save_dir, min_n_feats, max_n_feats
 
 
 def plot_scatter_parameter(list_dfs, categories, lib_prep, org, dataset, by, figsize=(7, 4), step=25, palette='sunsetcontrast3',
-                           title='', ylabel='', save_dir='robustness_figs'):
+                           title='', ylabel='', save_dir='figures/robustness_figs'):
     fig, ax = plt.subplots(1, 1, figsize=figsize)
     fig.suptitle(title.replace('_', ' '))
     val_list = sorted(list(dict.fromkeys(list_dfs[0][by].values)))
@@ -329,7 +329,7 @@ def plot_scatter_parameter(list_dfs, categories, lib_prep, org, dataset, by, fig
 
 
 def plot_scatter_datasets(list_dict_dfs, org, by, figsize=(7, 4),  palette='prism',
-                           title='', ylabel='', save_dir='robustness_figs'):
+                           title='', ylabel='', save_dir='figures/robustness_figs'):
     # List_dict_dfs will contain as many dicts as categories, and in each dict, with the category name we will
     # include the dataframe with the sample name. In this case sample will refer to the library processsing technique.
 

@@ -37,7 +37,7 @@ def clustering_binary_search(adatax, min_res, max_res, max_depth, seed, n_target
     sc.pp.neighbors(adata, n_neighbors=int(0.5 * len(adata) ** 0.5), random_state=seed, metric='cosine')
     
     while depth < max_depth:
-        print(f'Depth: {depth}, min res: {min_res}, max res: {max_res}')
+#         print(f'Depth: {depth}, min res: {min_res}, max res: {max_res}')
         if depth == 0:
             sc.tl.leiden(adata, resolution=min_res, random_state=seed)
             leiden_sol, res_sol = adata.obs['leiden'], min_res
@@ -235,10 +235,6 @@ def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cel
     for method in list_methods:
         if method != 'triku':
             adata_copy.var['highly_variable'] = [i in df_rank[method].sort_values().index.values[:n_hvg] for i in adata_copy.var_names]
-            
-          # TODO REMOVE COMMENTS!
-#         sc.pp.pca(adata_copy, n_comps=30)
-#         sc.pp.neighbors(adata_copy, n_neighbors=int(0.5 * len(adata_copy) ** 0.5), random_state=seed, metric='cosine')
 
         features = adata_copy.var[adata_copy.var['highly_variable'] == True].index.values
 
@@ -322,9 +318,7 @@ def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cel
         df_score.loc['DavBo_leiden_PCA_random', method] = DavBo_leiden_PCA_random
         df_score.loc['DavBo_leiden_all_hvg_random', method] = DavBo_leiden_all_hvg_random
         df_score.loc['DavBo_leiden_all_base_random', method] = DavBo_leiden_all_base_random
-        
-        
-        print(df_score)
+#         print(df_score)
         
     del adata_copy; gc.collect()
     df_score.to_csv(f'{outdir}/{file_root}_comparison-scores_seed-{seed}.csv')
@@ -371,25 +365,94 @@ def plot_lab_org_comparison_scores(lab, org='-', read_dir='', variables=[], figs
     plt.show()
     
 
-def plot_UMAPs_datasets(dict_returns, figsize=(25, 40)):
+def create_UMAP_adataset_libprep_org(adata_dir, df_rank_dir, lib_prep, org, lab):
+    list_methods = ['triku', 'm3drop', 'nbumi', 'scanpy', 'brennecke', 'scry', 'std']
+    
+    adata = sc.read_h5ad(f'{adata_dir}/{lib_prep}_{org}.h5ad')
+    df_rank = pd.read_csv(f'{df_rank_dir}/{lab}_{lib_prep}_{org}_feature_ranks.csv', index_col=0)
+        
+    tk.tl.triku(adata, n_procs=1, )
+    n_HVG = np.sum(adata.var['highly_variable'].values)
+    print('n_HVG', n_HVG)
+    col_cell_types = 'cell_types' if 'cell_types' in adata.obs else 'CellType' 
+    cell_types = adata.obs[col_cell_types]
+
+    dict_return = {}
+    
+    dict_other_stuff = {'cell_types': cell_types.values, 'mean': adata.X.mean(0).ravel(), 'std': adata.X.std(0).ravel(), 
+                                  'per_0': (adata.X == 0).mean(0).ravel(), 'CV2': (adata.X.mean(0).ravel() / adata.X.std(0).ravel())**2}
+    for method in list_methods:
+        adata_copy = adata.copy()
+        apply_log = True
+        
+        if method == 'scanpy':
+            sc.pp.log1p(adata_copy)
+            apply_log=False
+            ret = sc.pp.highly_variable_genes(adata_copy, n_top_genes=n_HVG, inplace=False)
+            dict_other_stuff['disp'], dict_other_stuff['disp_norm'] = ret['dispersions'], ret['dispersions_norm']
+        
+        if method != 'triku':
+            adata_copy.var['highly_variable'] = [i in df_rank[method].sort_values().index[: n_HVG] for i in adata_copy.var_names]
+        
+        leiden_sol, res_sol = clustering_binary_search(adata_copy, min_res=0.1, max_res=2, max_depth=6, seed=0, 
+                                 n_target_c=len(set(cell_types)), features = adata_copy[:, adata_copy.var['highly_variable'] == True].var_names, 
+                                 apply_log=apply_log, transform_adata=True)
+        
+        sc.tl.umap(adata_copy)
+        
+        dict_return[method] = {'UMAP': adata_copy.obsm['X_umap'], 'leiden': leiden_sol.values, 'highly_variable': adata_copy.var['highly_variable'].values}
+        
+        del adata_copy; gc.collect()
+    
+    dict_return['other_stuff'] = dict_other_stuff
+    
+    return f'{lib_prep} {org}', dict_return
+
+
+def create_dict_UMAPs_datasets(adata_dir, df_rank_dir, lab, lib_preps, list_orgs = ['human', 'mouse'], ):
+    list_org_preps_all = list(product(*[lib_preps, list_orgs,]))
+    list_org_preps_exist = []
+    
+    for lib_prep, org in list_org_preps_all:
+        for file in os.listdir(adata_dir):
+            if org in file and lib_prep in file:
+                list_org_preps_exist.append((lib_prep, org))
+                break
+                
+    create_UMAP_adataset_libprep_org_remote = ray.remote(create_UMAP_adataset_libprep_org)
+    
+    ray.init(ignore_reinit_error=True)
+    
+    list_ids = [create_UMAP_adataset_libprep_org_remote.remote(adata_dir, df_rank_dir, lib_prep, org, lab) for lib_prep, org in list_org_preps_exist]
+    list_returns = ray.get(list_ids)
+    
+    ray.shutdown()
+    
+    return dict(list_returns)  
+
+    
+def plot_UMAPs_datasets(dict_returns, fig_save_dir, lab, figsize=(25, 40)):
     list_rows = list(dict_returns.keys())
     list_methods = list(dict_returns[list_rows[0]].keys())[:-1]
         
-    fig_leiden, axs_leiden = plt.subplots(len(list_rows), len(list_methods), figsize=(16, 25))
-    fig_cell_types, axs_cell_types = plt.subplots(len(list_rows), len(list_methods), figsize=(16, 25))
+    fig_leiden, axs_leiden = plt.subplots(len(list_rows), len(list_methods), figsize=figsize)
+    fig_cell_types, axs_cell_types = plt.subplots(len(list_rows), len(list_methods), figsize=figsize)
     
     for row_idx, row_name in enumerate(list_rows):
         for col_idx, col_name in enumerate(list_methods):
             UMAP_coords = dict_returns[row_name][col_name]['UMAP']
             leiden_labels = dict_returns[row_name][col_name]['leiden']
             cell_types = dict_returns[row_name]['other_stuff']['cell_types']
+            # Names are too long for plots, so we are goinf to simplify them
+            set_cell_types = list(dict.fromkeys(cell_types))
+            cell_types = pd.Categorical([f'C{set_cell_types.index(i)}' for i in cell_types])
             
             # We will create the adata to plot the labels, its much easier than programming the feature by yourself. 
             adata = sc.AnnData(X = np.zeros((UMAP_coords.shape[0], 100)))
             adata.obsm['X_umap'], adata.obs['leiden'], adata.obs['cell_type'] = UMAP_coords, leiden_labels, cell_types
             
-            sc.pl.umap(adata, color='leiden', ax = axs_leiden[row_idx][col_idx], legend_loc='on data', show=False)
-            sc.pl.umap(adata, color='cell_type', ax = axs_cell_types[row_idx][col_idx], legend_loc='on data', show=False)
+            sc.pl.umap(adata, color='leiden', ax = axs_leiden[row_idx][col_idx], legend_loc='on data', show=False, s=35, legend_fontweight=1000)
+            sc.pl.umap(adata, color='cell_type', ax = axs_cell_types[row_idx][col_idx], legend_loc='on data', show=False, s=35, legend_fontweight=1000)
             
             for axs in [axs_leiden, axs_cell_types]:
                 axs[row_idx][col_idx].set_xlabel(""); axs[row_idx][col_idx].set_ylabel('')
@@ -404,40 +467,45 @@ def plot_UMAPs_datasets(dict_returns, figsize=(25, 40)):
                     axs[row_idx][col_idx].yaxis.set_label_position('left') 
     
     plt.tight_layout()
-    fig_leiden
-    fig_cell_types
-    plt.show()
-    
-
-def plot_XY(dict_returns, x_var, y_var):
-    list_rows = list(dict_returns.keys())
-    list_methods = list(dict_returns[list_rows[0]].keys()).pop('other_stuff')
+    for fmt in ['png', 'svg']:
+        os.makedirs(f'{fig_save_dir}/{fmt}', exist_ok=True)
+        fig_leiden.savefig(f'{fig_save_dir}/{fmt}/{lab}_UMAP_leiden.{fmt}', bbox_inches='tight')
+        fig_cell_types.savefig(f'{fig_save_dir}/{fmt}/{lab}_UMAP_cell_types.{fmt}', bbox_inches='tight')
         
-    fig, axs = plt.subplots(len(list_rows), len(list_methods))
+        
+
+def plot_XY(dict_returns, x_var, y_var, fig_save_dir, lab, figsize=(20, 20), logx=True, logy=True, title=''):
+    list_rows = list(dict_returns.keys())
+    list_methods = list(dict_returns[list_rows[0]].keys())[:-1]
+        
+    fig, axs = plt.subplots(len(list_rows), len(list_methods), figsize=figsize)
     
     for row_idx, row_name in enumerate(list_rows):
         for col_idx, col_name in enumerate(list_methods):
             x_coords = dict_returns[row_name]['other_stuff'][x_var]
             y_coords = dict_returns[row_name]['other_stuff'][y_var]
-            highly_variable = dict_returns[row_name][method_name]['highly_variable']
+            highly_variable = dict_returns[row_name][col_name]['highly_variable']
             
-            axs[row][col].scatter(x_coords[highly_variable == True], y_coords[highly_variable == True], c = '#007ab7', alpha=0.2, s=2)
-            axs[row][col].scatter(x_coords[highly_variable == True], y_coords[highly_variable == True], c = '#007ab7', alpha=0.05, s=2)
+            if logx: 
+                x_coords = np.log10(x_coords)
+            if logy: 
+                y_coords = np.log10(y_coords)
+                
+            axs[row_idx][col_idx].scatter(x_coords[highly_variable == True], y_coords[highly_variable == True], c = '#007ab7', alpha=0.2, s=2)
+            axs[row_idx][col_idx].scatter(x_coords[highly_variable == False], y_coords[highly_variable == False], c = '#cbcbcb', alpha=0.05, s=2)
                        
             if row_idx == 0:
-                axs[row][col].set_title(f"{col_name}")
+                axs[row_idx][col_idx].set_title(f"{col_name}")
                 
             if col_idx == 0:
-                axs[row][col].set_ylabel(f"{row_name}")
-                axs[row][col].yaxis.set_label_position('left') 
+                axs[row_idx][col_idx].set_ylabel(f"{row_name}")
+                axs[row_idx][col_idx].yaxis.set_label_position('left') 
     
-    ax = fig.add_subplot(111)
-    ax.spines['top'].set_color('none')
-    ax.spines['bottom'].set_color('none')
-    ax.spines['left'].set_color('none')
-    ax.spines['right'].set_color('none')
-    ax.tick_params(labelcolor='w', top=False, bottom=False, left=False, right=False)
-    ax.set_xlabel(x_var)
-    ax.set_ylabel(y_var)
-
+    fig.suptitle(title)
+    plt.tight_layout()
+    
+    for fmt in ['png', 'svg']:
+        os.makedirs(f'{fig_save_dir}/{fmt}', exist_ok=True)
+        fig.savefig(f'{fig_save_dir}/{fmt}/{lab}_{x_var}-VS-{y_var}.{fmt}', bbox_inches='tight')
+        
     plt.show()
