@@ -288,10 +288,10 @@ def plot_scatter_parameter(list_dfs, categories, lib_prep, org, dataset, by, fig
                                               "$\sqrt{N}$ (%s)" % val_list[4], "$1.5\sqrt{N}$", "$2\sqrt{N}$", "$4\sqrt{N}$"
                                               ]
         xlabel = 'Number of kNN'
-    if by == 'pca':
+    elif by == 'pca':
         ticks = val_list
         xlabel = 'Number of PCA components'
-    if by == 'w':
+    elif by == 'w':
         ticks = val_list
         xlabel = 'Number of windows for median correction'
 
@@ -373,10 +373,10 @@ def plot_scatter_datasets(list_dict_dfs, org, by, figsize=(7, 4),  palette='pris
                  "$\sqrt{N}$ (%s)" % val_list[4], "$2\sqrt{N}$", "$5\sqrt{N}$",
                  ]
         xlabel = 'Number of kNN'
-    if by == 'pca':
+    elif by == 'pca':
         ticks = val_list
         xlabel = 'Number of PCA components'
-    if by == 'w':
+    elif by == 'w':
         ticks = val_list
         xlabel = 'Number of windows for median correction'
 

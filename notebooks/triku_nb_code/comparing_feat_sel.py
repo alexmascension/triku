@@ -3,18 +3,30 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.sparse as spr
-from palettes_and_cmaps import prism
 from matplotlib.lines import Line2D
 import gc
+import ray
+from itertools import product
+import os
 
 import triku as tk
 from sklearn.metrics import adjusted_rand_score as ARS
 from sklearn.metrics import adjusted_mutual_info_score as NMI
 from sklearn.metrics import silhouette_score, davies_bouldin_score
 
-def clustering_binary_search(adatax, min_res, max_res, max_depth, seed, n_target_c, features, apply_log=True):
+try:
+    from palettes_and_cmaps import prism
+except ModuleNotFoundError:
+    from .palettes_and_cmaps import prism
+    
+
+def clustering_binary_search(adatax, min_res, max_res, max_depth, seed, n_target_c, features, apply_log=True, transform_adata=False):
     depth = 0
-    adata = adatax.copy()
+    
+    if not transform_adata:
+        adata = adatax.copy()
+    else:
+        adata = adatax
         
     if apply_log:
         sc.pp.log1p(adata)
@@ -51,7 +63,9 @@ def clustering_binary_search(adatax, min_res, max_res, max_depth, seed, n_target
             
         depth += 1
     
-    del adata; gc.collect()
+    if not transform_adata:
+        del adata; gc.collect()
+        
     return leiden_sol, res_sol
 
 
@@ -143,8 +157,6 @@ def plot_ARI_x_method(dict_ARI, title='', figsize=(15,8)):
     list_dfs = list(dict_ARI.keys())
     list_methods = dict_ARI[list_dfs[0]].columns
     
-    
-    
     for x_idx, method in enumerate(list_methods):
         for df_idx, df in enumerate(list_dfs):
             y_vals = dict_ARI[df][method].values
@@ -176,7 +188,6 @@ def plot_ARI_x_dataset(dict_ARI, title='', figsize=(15,8)):
     list_dfs = list(dict_ARI.keys())
     list_methods = dict_ARI[list_dfs[0]].columns
     
-    
     for df_idx, df in enumerate(list_dfs):
         for x_idx, method in enumerate(list_methods):
             y_vals = dict_ARI[df][method].values
@@ -189,7 +200,6 @@ def plot_ARI_x_dataset(dict_ARI, title='', figsize=(15,8)):
             ax.plot([x, x], [per25, per75], color=palette[x_idx], linewidth=2)
             ax.plot([x-w/2, x+w/2], [median, median], color=palette[x_idx], linewidth=2)
             
-            
     legend_elements = [Line2D([0], [0], marker='o', color=palette[idx], label=list_methods[idx]) for idx in range(len(list_methods)-1, -1, -1)]
     ax.legend(handles=legend_elements)
     ax.set_xticks(range(len(list_dfs)))
@@ -201,12 +211,12 @@ def plot_ARI_x_dataset(dict_ARI, title='', figsize=(15,8)):
     plt.show()
     
 
-def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cell_types_col='cell_types'):
+def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cell_types_col='cell_types', n_procs=None):
     list_methods = ['triku'] + [i for i in df_rank.columns if 'triku' not in i]
-    df_score = pd.DataFrame(index=['ARI', 'ARI_random', 'NMI', 'NMI_random',
+    df_score = pd.DataFrame(index=['ARI', 'ARI_random', 'NMI', 'NMI_random', 'Sil_bench_UMAP', 
                                    'Sil_bench_PCA', 'Sil_bench_all_hvg', 'Sil_bench_all_base',
                                    'Sil_bench_PCA_random', 'Sil_bench_all_hvg_random', 'Sil_bench_all_base_random', 
-                                   'Sil_leiden_PCA', 'Sil_leiden_all_hvg', 'Sil_leiden_all_base',
+                                   'Sil_leiden_UMAP', 'Sil_leiden_PCA', 'Sil_leiden_all_hvg', 'Sil_leiden_all_base',
                                    'Sil_leiden_PCA_random', 'Sil_leiden_all_hvg_random', 'Sil_leiden_all_base_random', 
                                    'DavBo_bench_PCA', 'DavBo_bench_all_hvg', 'DavBo_bench_all_base',
                                    'DavBo_bench_PCA_random', 'DavBo_bench_all_hvg_random', 'DavBo_bench_all_base_random', 
@@ -216,7 +226,7 @@ def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cel
     cell_types = adata.obs[cell_types_col].values
     
     # Get number of HVG with triku.
-    tk.tl.triku(adata, random_state=seed)
+    tk.tl.triku(adata, random_state=seed, n_procs=n_procs)
     n_hvg = np.sum(adata.var['highly_variable'])
     
     adata_copy = adata.copy()
@@ -226,13 +236,16 @@ def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cel
         if method != 'triku':
             adata_copy.var['highly_variable'] = [i in df_rank[method].sort_values().index.values[:n_hvg] for i in adata_copy.var_names]
             
-        sc.pp.pca(adata_copy, n_comps=30)
-        sc.pp.neighbors(adata_copy, n_neighbors=int(0.5 * len(adata_copy) ** 0.5), random_state=seed, metric='cosine')
+          # TODO REMOVE COMMENTS!
+#         sc.pp.pca(adata_copy, n_comps=30)
+#         sc.pp.neighbors(adata_copy, n_neighbors=int(0.5 * len(adata_copy) ** 0.5), random_state=seed, metric='cosine')
 
         features = adata_copy.var[adata_copy.var['highly_variable'] == True].index.values
 
         leiden_sol, res = clustering_binary_search(adata_copy, 0.1, 2, 5, seed=seed, n_target_c=len(list(dict.fromkeys(cell_types))), 
-                                            features=features, apply_log=False)
+                                            features=features, apply_log=False, transform_adata=True)
+        
+        sc.tl.umap(adata_copy)
         
         leiden_sol_random = leiden_sol.copy(); np.random.shuffle(leiden_sol_random)
         cell_types_random = cell_types.copy(); np.random.shuffle(cell_types_random)
@@ -241,6 +254,7 @@ def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cel
         ARI_random, NMI_random = ARS(leiden_sol_random, cell_types), NMI(leiden_sol_random, cell_types)
         adata_copy.obs['leiden'] = leiden_sol
 
+        Sil_bench_UMAP = silhouette_score(adata_copy.obsm['X_umap'], cell_types, metric='cosine')
         Sil_bench_PCA = silhouette_score(adata_copy.obsm['X_pca'], cell_types, metric='cosine')
         Sil_bench_all_hvg = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types, metric='cosine')
         Sil_bench_all_base = silhouette_score(adata_copy.X, cell_types, metric='cosine')
@@ -249,6 +263,7 @@ def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cel
         Sil_bench_all_hvg_random = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types_random, metric='cosine')
         Sil_bench_all_base_random = silhouette_score(adata_copy.X, cell_types_random, metric='cosine')
         
+        Sil_leiden_UMAP = silhouette_score(adata_copy.obsm['X_umap'], adata_copy.obs['leiden'].values, metric='cosine')
         Sil_leiden_PCA = silhouette_score(adata_copy.obsm['X_pca'], adata_copy.obs['leiden'].values, metric='cosine')
         Sil_leiden_all_hvg = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], adata_copy.obs['leiden'].values, metric='cosine')
         Sil_leiden_all_base = silhouette_score(adata_copy.X, adata_copy.obs['leiden'].values, metric='cosine')
@@ -274,10 +289,10 @@ def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cel
         DavBo_leiden_all_base_random = davies_bouldin_score(adata_copy.X, cell_types_random)
         
         
-        
         df_score.loc['ARI', method], df_score.loc['ARI_random', method] = ARI, ARI_random
         df_score.loc['NMI', method], df_score.loc['NMI_random', method] = NMIs, NMI_random
         
+        df_score.loc['Sil_bench_UMAP', method] = Sil_bench_UMAP
         df_score.loc['Sil_bench_PCA', method] = Sil_bench_PCA
         df_score.loc['Sil_bench_all_hvg', method] = Sil_bench_all_hvg
         df_score.loc['Sil_bench_all_base', method] = Sil_bench_all_base
@@ -285,6 +300,7 @@ def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cel
         df_score.loc['Sil_bench_all_hvg_random', method] = Sil_bench_all_hvg_random
         df_score.loc['Sil_bench_all_base_random', method] = Sil_bench_all_base_random
         
+        df_score.loc['Sil_leiden_UMAP', method] = Sil_leiden_UMAP
         df_score.loc['Sil_leiden_PCA', method] = Sil_leiden_PCA
         df_score.loc['Sil_leiden_all_hvg', method] = Sil_leiden_all_hvg
         df_score.loc['Sil_leiden_all_base', method] = Sil_leiden_all_base
@@ -352,4 +368,76 @@ def plot_lab_org_comparison_scores(lab, org='-', read_dir='', variables=[], figs
         ax.add_artist(l2)
     
     plt.title(title)
+    plt.show()
+    
+
+def plot_UMAPs_datasets(dict_returns, figsize=(25, 40)):
+    list_rows = list(dict_returns.keys())
+    list_methods = list(dict_returns[list_rows[0]].keys())[:-1]
+        
+    fig_leiden, axs_leiden = plt.subplots(len(list_rows), len(list_methods), figsize=(16, 25))
+    fig_cell_types, axs_cell_types = plt.subplots(len(list_rows), len(list_methods), figsize=(16, 25))
+    
+    for row_idx, row_name in enumerate(list_rows):
+        for col_idx, col_name in enumerate(list_methods):
+            UMAP_coords = dict_returns[row_name][col_name]['UMAP']
+            leiden_labels = dict_returns[row_name][col_name]['leiden']
+            cell_types = dict_returns[row_name]['other_stuff']['cell_types']
+            
+            # We will create the adata to plot the labels, its much easier than programming the feature by yourself. 
+            adata = sc.AnnData(X = np.zeros((UMAP_coords.shape[0], 100)))
+            adata.obsm['X_umap'], adata.obs['leiden'], adata.obs['cell_type'] = UMAP_coords, leiden_labels, cell_types
+            
+            sc.pl.umap(adata, color='leiden', ax = axs_leiden[row_idx][col_idx], legend_loc='on data', show=False)
+            sc.pl.umap(adata, color='cell_type', ax = axs_cell_types[row_idx][col_idx], legend_loc='on data', show=False)
+            
+            for axs in [axs_leiden, axs_cell_types]:
+                axs[row_idx][col_idx].set_xlabel(""); axs[row_idx][col_idx].set_ylabel('')
+                axs[row_idx][col_idx].set_title(f"")
+                
+                if row_idx == 0:
+                    axs[row_idx][col_idx].set_xlabel(f"{col_name}")
+                    axs[row_idx][col_idx].xaxis.set_label_position('top') 
+
+                if col_idx == 0:
+                    axs[row_idx][col_idx].set_ylabel(f"{row_name}")
+                    axs[row_idx][col_idx].yaxis.set_label_position('left') 
+    
+    plt.tight_layout()
+    fig_leiden
+    fig_cell_types
+    plt.show()
+    
+
+def plot_XY(dict_returns, x_var, y_var):
+    list_rows = list(dict_returns.keys())
+    list_methods = list(dict_returns[list_rows[0]].keys()).pop('other_stuff')
+        
+    fig, axs = plt.subplots(len(list_rows), len(list_methods))
+    
+    for row_idx, row_name in enumerate(list_rows):
+        for col_idx, col_name in enumerate(list_methods):
+            x_coords = dict_returns[row_name]['other_stuff'][x_var]
+            y_coords = dict_returns[row_name]['other_stuff'][y_var]
+            highly_variable = dict_returns[row_name][method_name]['highly_variable']
+            
+            axs[row][col].scatter(x_coords[highly_variable == True], y_coords[highly_variable == True], c = '#007ab7', alpha=0.2, s=2)
+            axs[row][col].scatter(x_coords[highly_variable == True], y_coords[highly_variable == True], c = '#007ab7', alpha=0.05, s=2)
+                       
+            if row_idx == 0:
+                axs[row][col].set_title(f"{col_name}")
+                
+            if col_idx == 0:
+                axs[row][col].set_ylabel(f"{row_name}")
+                axs[row][col].yaxis.set_label_position('left') 
+    
+    ax = fig.add_subplot(111)
+    ax.spines['top'].set_color('none')
+    ax.spines['bottom'].set_color('none')
+    ax.spines['left'].set_color('none')
+    ax.spines['right'].set_color('none')
+    ax.tick_params(labelcolor='w', top=False, bottom=False, left=False, right=False)
+    ax.set_xlabel(x_var)
+    ax.set_ylabel(y_var)
+
     plt.show()
