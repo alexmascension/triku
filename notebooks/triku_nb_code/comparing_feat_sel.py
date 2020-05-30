@@ -95,7 +95,7 @@ def get_max_diff_gene(adata, gene, group_col, per_expressing_cells=0.25, trim=0.
     return info, mean_exp_val_to_1
 
 
-def plot_max_var_x_method(df_feature_ranks, df_max_var_dataset, feature_list=[0, 50, 100, 200, 500, 1000], title=''):
+def plot_max_var_x_method(df_feature_ranks, df_max_var_dataset, feature_list=[0, 50, 100, 200, 500, 1000], title='', file=''):
     fig, ax = plt.subplots(1, 1, figsize=(8, 5))
     palette = prism
     
@@ -115,10 +115,12 @@ def plot_max_var_x_method(df_feature_ranks, df_max_var_dataset, feature_list=[0,
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     plt.suptitle(title)
-    plt.show()
+    
+    for fmt in ['png', 'pdf']:
+        fig.savefig(f'{os.getcwd()}/figures/comparison_figs/{fmt}/{file}.{fmt}', bbox_inches='tight')
     
     
-def plot_max_var_x_dataset(dict_df_feature_ranks, dict_df_max_var_dataset, n_features=200, title=''):
+def plot_max_var_x_dataset(dict_df_feature_ranks, dict_df_max_var_dataset, n_features=200, title='', file=''):
     # keys in dict_df_feature_ranks and in dict_df_feature_ranks must be in the same order!
     fig, ax = plt.subplots(1, 1, figsize=(9, 5))
     palette = prism
@@ -144,13 +146,15 @@ def plot_max_var_x_dataset(dict_df_feature_ranks, dict_df_max_var_dataset, n_fea
     ax.set_xticks(range(len(list_datasets)))
     ax.set_xticklabels(list_datasets, rotation = 45)
     ax.set_ylabel('Maximum difference')
+    ax.set_xlabel('DE probability')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     plt.suptitle(title)
-    plt.show()
+    for fmt in ['png', 'pdf']:
+        fig.savefig(f'{os.getcwd()}/figures/comparison_figs/{fmt}/{file}.{fmt}', bbox_inches='tight')
     
     
-def plot_ARI_x_method(dict_ARI, title='', figsize=(15,8)):
+def plot_ARI_x_method(dict_ARI, title='', figsize=(15,8), file=''):
     fig, ax = plt.subplots(1,1, figsize=figsize)
     palette = prism
     
@@ -178,10 +182,11 @@ def plot_ARI_x_method(dict_ARI, title='', figsize=(15,8)):
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     plt.suptitle(title)
-    plt.show()
+    for fmt in ['png', 'pdf']:
+        fig.savefig(f'{os.getcwd()}/figures/comparison_figs/{fmt}/{file}.{fmt}', bbox_inches='tight')
     
 
-def plot_ARI_x_dataset(dict_ARI, title='', figsize=(15,8)):
+def plot_ARI_x_dataset(dict_ARI, title='', figsize=(15,8), file=''):
     fig, ax = plt.subplots(1,1, figsize=figsize)
     palette = prism
     
@@ -205,10 +210,12 @@ def plot_ARI_x_dataset(dict_ARI, title='', figsize=(15,8)):
     ax.set_xticks(range(len(list_dfs)))
     ax.set_xticklabels(list_dfs, rotation = 45)
     ax.set_ylabel('ARI')
+    ax.set_xlabel('DE probability')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     plt.suptitle(title)
-    plt.show()
+    for fmt in ['png', 'pdf']:
+        fig.savefig(f'{os.getcwd()}/figures/comparison_figs/{fmt}/{file}.{fmt}', bbox_inches='tight')
     
 
 def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cell_types_col='cell_types', n_procs=None):
@@ -238,7 +245,7 @@ def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cel
 
         features = adata_copy.var[adata_copy.var['highly_variable'] == True].index.values
 
-        leiden_sol, res = clustering_binary_search(adata_copy, 0.1, 2, 5, seed=seed, n_target_c=len(list(dict.fromkeys(cell_types))), 
+        leiden_sol, res = clustering_binary_search(adata_copy, 0.1, 2, 7, seed=seed, n_target_c=len(set(cell_types)), 
                                             features=features, apply_log=False, transform_adata=True)
         
         sc.tl.umap(adata_copy)
@@ -324,7 +331,7 @@ def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cel
     df_score.to_csv(f'{outdir}/{file_root}_comparison-scores_seed-{seed}.csv')
     
 
-def plot_lab_org_comparison_scores(lab, org='-', read_dir='', variables=[], figsize=(10, 6), title=''):
+def plot_lab_org_comparison_scores(lab, org='-', read_dir='', variables=[], figsize=(10, 6), title='', filename=''):
     fig, ax = plt.subplots(1, 1, figsize=figsize)
     
     if isinstance(variables, str):
@@ -362,7 +369,8 @@ def plot_lab_org_comparison_scores(lab, org='-', read_dir='', variables=[], figs
         ax.add_artist(l2)
     
     plt.title(title)
-    plt.show()
+    for fmt in ['png', 'pdf']:
+        fig.savefig(f'{os.getcwd()}/figures/comparison_figs/{fmt}/{filename}.{fmt}', bbox_inches='tight')
     
 
 def create_UMAP_adataset_libprep_org(adata_dir, df_rank_dir, lib_prep, org, lab):
@@ -386,7 +394,7 @@ def create_UMAP_adataset_libprep_org(adata_dir, df_rank_dir, lib_prep, org, lab)
         apply_log = True
         
         if method == 'scanpy':
-            sc.pp.log1p(adata_copy)
+            sc.pp.log1p(adata_copy) # We need scanpy to calculate the dispersions, so we take advantage of log being already calculated
             apply_log=False
             ret = sc.pp.highly_variable_genes(adata_copy, n_top_genes=n_HVG, inplace=False)
             dict_other_stuff['disp'], dict_other_stuff['disp_norm'] = ret['dispersions'], ret['dispersions_norm']
@@ -394,7 +402,7 @@ def create_UMAP_adataset_libprep_org(adata_dir, df_rank_dir, lib_prep, org, lab)
         if method != 'triku':
             adata_copy.var['highly_variable'] = [i in df_rank[method].sort_values().index[: n_HVG] for i in adata_copy.var_names]
         
-        leiden_sol, res_sol = clustering_binary_search(adata_copy, min_res=0.1, max_res=2, max_depth=6, seed=0, 
+        leiden_sol, res_sol = clustering_binary_search(adata_copy, min_res=0.1, max_res=2, max_depth=7, seed=0, 
                                  n_target_c=len(set(cell_types)), features = adata_copy[:, adata_copy.var['highly_variable'] == True].var_names, 
                                  apply_log=apply_log, transform_adata=True)
         
@@ -467,14 +475,18 @@ def plot_UMAPs_datasets(dict_returns, fig_save_dir, lab, figsize=(25, 40)):
                     axs[row_idx][col_idx].yaxis.set_label_position('left') 
     
     plt.tight_layout()
-    for fmt in ['png', 'svg']:
-        os.makedirs(f'{fig_save_dir}/{fmt}', exist_ok=True)
-        fig_leiden.savefig(f'{fig_save_dir}/{fmt}/{lab}_UMAP_leiden.{fmt}', bbox_inches='tight')
-        fig_cell_types.savefig(f'{fig_save_dir}/{fmt}/{lab}_UMAP_cell_types.{fmt}', bbox_inches='tight')
+    fig_leiden.savefig(f'{fig_save_dir}/pdf/{lab}_UMAP_leiden.pdf', bbox_inches='tight')
+    fig_cell_types.savefig(f'{fig_save_dir}/pdf/{lab}_UMAP_cell_types.pdf', bbox_inches='tight')
+    fig_leiden.savefig(f'{fig_save_dir}/png/{lab}_UMAP_leiden.png', bbox_inches='tight', dpi=400)
+    fig_cell_types.savefig(f'{fig_save_dir}/png/{lab}_UMAP_cell_types.png', bbox_inches='tight', dpi=400)
+#     for fmt in ['png', 'pdf']:
+#         os.makedirs(f'{fig_save_dir}/{fmt}', exist_ok=True)
+#         fig_leiden.savefig(f'{fig_save_dir}/{fmt}/{lab}_UMAP_leiden.{fmt}', bbox_inches='tight')
+#         fig_cell_types.savefig(f'{fig_save_dir}/{fmt}/{lab}_UMAP_cell_types.{fmt}', bbox_inches='tight')
         
         
 
-def plot_XY(dict_returns, x_var, y_var, fig_save_dir, lab, figsize=(20, 20), logx=True, logy=True, title=''):
+def plot_XY(dict_returns, x_var, y_var, fig_save_dir, lab, figsize=(20, 35), logx=True, logy=True, title=''):
     list_rows = list(dict_returns.keys())
     list_methods = list(dict_returns[list_rows[0]].keys())[:-1]
         
@@ -490,21 +502,21 @@ def plot_XY(dict_returns, x_var, y_var, fig_save_dir, lab, figsize=(20, 20), log
                 x_coords = np.log10(x_coords)
             if logy: 
                 y_coords = np.log10(y_coords)
-                
-            axs[row_idx][col_idx].scatter(x_coords[highly_variable == True], y_coords[highly_variable == True], c = '#007ab7', alpha=0.2, s=2)
+            
             axs[row_idx][col_idx].scatter(x_coords[highly_variable == False], y_coords[highly_variable == False], c = '#cbcbcb', alpha=0.05, s=2)
+            axs[row_idx][col_idx].scatter(x_coords[highly_variable == True], y_coords[highly_variable == True], c = '#007ab7', alpha=0.2, s=2)
                        
             if row_idx == 0:
                 axs[row_idx][col_idx].set_title(f"{col_name}")
                 
             if col_idx == 0:
-                axs[row_idx][col_idx].set_ylabel(f"{row_name}")
+                axs[row_idx][col_idx].set_ylabel(f"{row_name}".replace(' ', '\n'))
                 axs[row_idx][col_idx].yaxis.set_label_position('left') 
     
     fig.suptitle(title)
     plt.tight_layout()
     
-    for fmt in ['png', 'svg']:
+    for fmt in ['png', 'pdf']:
         os.makedirs(f'{fig_save_dir}/{fmt}', exist_ok=True)
         fig.savefig(f'{fig_save_dir}/{fmt}/{lab}_{x_var}-VS-{y_var}.{fmt}', bbox_inches='tight')
         
