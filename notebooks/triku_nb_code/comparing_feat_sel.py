@@ -20,7 +20,7 @@ except ModuleNotFoundError:
     from .palettes_and_cmaps import prism
     
 
-def clustering_binary_search(adatax, min_res, max_res, max_depth, seed, n_target_c, features, apply_log=True, transform_adata=False):
+def clustering_binary_search(adatax, min_res, max_res, max_depth, seed, n_target_c, features, apply_log=None, transform_adata=False):
     depth = 0
     
     if not transform_adata:
@@ -28,8 +28,12 @@ def clustering_binary_search(adatax, min_res, max_res, max_depth, seed, n_target
     else:
         adata = adatax
         
-    if apply_log:
-        sc.pp.log1p(adata)
+    if apply_log is not None:
+        if apply_log:
+            sc.pp.log1p(adata)
+    else:
+        if 'log1p' not in adata.uns:
+            sc.pp.log1p(adata)
     
     adata.var['highly_variable'] = [i in features for i in adata.var_names]
     
