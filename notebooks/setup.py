@@ -15,7 +15,7 @@ setup(
     version=__version__,
     description='Code to run triku notebooks.',
     long_description="",
-    url='https://gitlab.com/alexmascension/robin',
+    url='https://gitlab.com/alexmascension/triku',
     author=__author__,
     author_email=__email__,
     license='BSD',
