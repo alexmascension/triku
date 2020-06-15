@@ -185,8 +185,9 @@ def calculate_emd(knn_counts: np.ndarray, x_conv: np.ndarray, y_conv: np.ndarray
     real_vals = np.bincount(knn_counts.astype(int)) / len(knn_counts)
 
     # IMPORTANT: either for std or emd calculation, all x variables must be scaled back!
-    real_vals /= n_divisions
-    x_conv /= n_divisions
+    real_vals = real_vals / n_divisions
+    # triku_logger.info(f'xconv: {x_conv}')
+    x_conv = x_conv / n_divisions
 
     emd = sts.wasserstein_distance(dist_range, x_conv, real_vals, y_conv)
 
