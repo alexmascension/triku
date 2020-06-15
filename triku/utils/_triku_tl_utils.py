@@ -93,14 +93,9 @@ def check_null_genes(arr_counts: np.ndarray):
     """
     triku_logger.info("Checking zero-count genes.")
 
-    idx = np.argwhere(arr_counts.sum(0) != 0).flatten()
-
-    if len(idx) < arr_counts.shape[1]:
-        error_msg = 'There are {} genes ({} %) with no counts. Remove those genes first. ' \
-                    'You can use sc.pp.filter_genes(adata, min_cells=5).'.format(arr_counts.shape[1] - len(idx),
-                                                                                 int(100 * (arr_counts.shape[1] - len(
-                                                                                     idx)) /
-                                                                                     arr_counts.shape[1]))
+    if np.any((arr_counts.sum(0) == 0).flatten()):
+        error_msg = 'There are genes with no counts. Remove those genes first. ' \
+                    'You can use sc.pp.filter_genes(adata, min_cells=5).'
 
         triku_logger.error(error_msg)
         raise BaseException(error_msg)
