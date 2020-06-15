@@ -162,7 +162,8 @@ def compute_conv_idx(counts_gene: np.ndarray, knn: int) -> (np.ndarray, np.ndarr
     return x_conv, y_conv, y_probs
 
 
-def calculate_emd(knn_counts: np.ndarray, x_conv: np.ndarray, y_conv: np.ndarray) -> np.ndarray:
+def calculate_emd(knn_counts: np.ndarray, x_conv: np.ndarray, y_conv: np.ndarray, n_divisions: int) -> \
+        (np.ndarray, np.ndarray):
     """
     Returns "normalized" earth movers distance (EMD). The function calculates the x positions and probabilities
     of the "real" dataset using the knn_counts, and the x positions and probabilities of the convolution as attributes.
@@ -174,26 +175,34 @@ def calculate_emd(knn_counts: np.ndarray, x_conv: np.ndarray, y_conv: np.ndarray
     # np.bincount transforms [3, 3, 4, 1, 2, 9] into [0, 1, 1, 2, 1, 0, 0, 0, 0, 1]
     real_vals = np.bincount(knn_counts.astype(int)) / len(knn_counts)
 
+    # IMPORTANT: either for std or emd calculation, all x variables must be scaled back!
+    real_vals /= n_divisions
+    x_conv /= n_divisions
+
     emd = sts.wasserstein_distance(dist_range, x_conv, real_vals, y_conv)
 
     mean = (x_conv * y_conv).sum()
     std = np.sqrt(np.sum(y_conv * (x_conv - mean) ** 2))
 
-    return emd / std
+    return x_conv, emd / std
 
 
 def compute_convolution_and_emd(array_counts: np.ndarray, array_knn_counts: np.ndarray, idx: int,
-                                knn: int, min_knn: int) -> (np.ndarray, np.ndarray, np.ndarray):
+                                knn: int, min_knn: int, n_divisions: int) -> (np.ndarray, np.ndarray, np.ndarray):
     counts_gene = array_counts[idx, :].ravel()  # idx is chosen by rows, because it is more effective!
     knn_counts = array_knn_counts[idx, :].ravel()
     knn_counts = knn_counts[knn_counts > 0]  # Remember that only knn expression from positively-expressed cells
     # From the previous step at the knn calculation we set knn expression from non-expressing cells to 0
 
+    counts_gene = (counts_gene * n_divisions).astype(int)
+    knn_counts = (knn_counts * n_divisions).astype(int)
+
     if np.sum(counts_gene > 0) > min_knn:
         # triku_logger.log(TRIKU_LEVEL, 'Convolution on index {}: counts = {}, per_zero = {}'.format(idx,
         #                 np.sum(counts_gene), np.sum(counts_gene == 0)/len(counts_gene)))
+
         x_conv, y_conv, y_probs = compute_conv_idx(counts_gene, knn)
-        emd = calculate_emd(knn_counts, x_conv, y_conv)
+        x_conv, emd = calculate_emd(knn_counts, x_conv, y_conv, n_divisions)
     else:
         y_conv = np.bincount(knn_counts.astype(int))
         x_conv = np.arange(len(y_conv))
@@ -203,7 +212,7 @@ def compute_convolution_and_emd(array_counts: np.ndarray, array_knn_counts: np.n
 
 
 def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndarray,
-                             n_procs: int, knn: int, min_knn: int) -> (list, list, np.ndarray):
+                             n_procs: int, knn: int, min_knn: int, n_divisions: int) -> (list, list, np.ndarray):
     """
     Calculation of convolution for each gene, and its emd. To do that we call compute_convolution_and_emd which,
     in turn, calls compute_conv_idx to calculate the convolution of the reads; and calculate_emd, to calculate the
@@ -222,8 +231,8 @@ def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndar
     if n_procs == 1:
         tqdm_out = TqdmToLogger(triku_logger, level=logging.INFO)
 
-        # TODO: I don't know if doing the transpose there is time and memory efficient...
-        return_objs = [compute_convolution_and_emd(array_counts.T, array_knn_counts.T, idx_gene, knn, min_knn)
+        return_objs = [compute_convolution_and_emd(array_counts.T, array_knn_counts.T, idx_gene, knn, min_knn,
+                                                   n_divisions)
                        for idx_gene in tqdm(range(n_genes), file=tqdm_out)]
 
     else:
@@ -235,7 +244,7 @@ def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndar
         array_knn_counts_id = ray.put(array_knn_counts.T)
 
         ray_obj_ids = [compute_convolution_and_emd_remote.remote(array_counts_id, array_knn_counts_id, idx_gene,
-                                                                 knn, min_knn)
+                                                                 knn, min_knn, n_divisions)
                        for idx_gene in range(n_genes)]
 
         triku_logger.log(TRIKU_LEVEL, 'Parallel computation of distances.')
@@ -245,7 +254,8 @@ def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndar
         del [array_counts_id, array_knn_counts_id]; gc.collect()
         ray.shutdown()
 
-    list_x_conv, list_y_conv, list_emd = [x[0] for x in return_objs], [x[1] for x in return_objs], [x[2] for x in return_objs]
+    list_x_conv, list_y_conv, list_emd = [x[0] for x in return_objs], [x[1] for x in return_objs], [x[2] for x in
+                                                                                                    return_objs]
     # list_x_conv and list_y_conv are lists of lists. Each element are the x coordinates and probabilities of the
     # convolution distribution for a gene. list_emd is an array with n_genes elements, where each element is the
     # distance between the convolution and the knn_distribution
