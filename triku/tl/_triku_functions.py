@@ -16,7 +16,7 @@ from triku.genutils import TqdmToLogger
 
 
 def get_n_divisions(arr_counts: np.array) -> int:
-    if np.sum(arr_counts) == np.sum(arr_counts.view(int)):  # view is 2 to 10x faster than astype
+    if np.sum(arr_counts) == np.sum(arr_counts.astype(int)):
         n_divisions = 1
     else:  # TODO: Make this more complex if we see that time is an important issue
         n_divisions = 10
