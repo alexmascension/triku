@@ -5,7 +5,7 @@ import scipy.sparse as spr
 
 from ..genutils import get_cpu_count
 from ._triku_functions import return_knn_indices, return_knn_expression, create_random_count_matrix, \
-    parallel_emd_calculation, subtract_median, get_cutoff_curve
+    parallel_emd_calculation, subtract_median, get_cutoff_curve, get_n_divisions
 from ..utils._triku_tl_utils import return_mean, return_proportion_zeros, get_arr_counts_and_genes
 from ..utils._general_utils import set_level_logger
 from ..logg import triku_logger, TRIKU_LEVEL
@@ -17,7 +17,7 @@ warnings.filterwarnings('ignore')  # To ignore Numba warnings
 
 
 def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = None, use_raw=True,
-          do_return: [None, bool] = None, use_adata_knn: [None, bool] = None,
+          do_return: [None, bool] = None, use_adata_knn: [None, bool] = None, n_divisions: [None, int] = None,
           knn: [None, int] = None, s: [None, int, float] = -0.01, apply_background_correction: bool = True,
           n_comps: int = 25, metric: str = 'cosine', n_windows: int = 75, min_knn: int = 6,
           random_state: [None, int] = 0, n_procs: [None, int] = None, verbose: [None, str] = 'warning'):
@@ -42,6 +42,12 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
     use_adata_knn :  bool, None
         If object_triku is a scanpy.AnnData object, and sc.pp.neighbors was run, select neighbors and knn from
         adata.uns['neighbors']['connectivities'] and  adata.uns['neighbors']['params']['n_neighbors'].
+    n_divisions : int, None
+        If the array of counts is not integer, number of bins in which each unit will be divided to account for
+        that effect. For example, if n_divisions is 10, then 0.12 and 0.13 would be in the same bin, and 0.12 and 0.34
+        in two different bins. If n_divisions is 2, the two cases would be in the same bin.
+        The higher the number of divisions the more precise the calculation of distances will be. It will be more
+        time consuming, though. If n_divisions is None, we will adjust it automatically.
     knn: int, None
         If use_adata_knn is False, number of neighbors to choose for feature selection. By default
         the half the square root of the number of cells is chosen.
@@ -78,7 +84,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
     # Basic checks of variables
     set_level_logger(verbose)
 
-    for var in [n_features, knn, n_windows, n_procs, random_state, n_comps]:
+    for var in [n_features, knn, n_windows, n_procs, random_state, n_comps, n_divisions]:
         assert (var is None) | (isinstance(var, int)), "The variable value {} must be an integer!".format(var)
 
     if isinstance(object_triku, pd.DataFrame):
@@ -96,6 +102,10 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
     # Get the array of counts (np.array) and the array of genes.
     arr_counts, arr_genes = get_arr_counts_and_genes(object_triku, use_raw=use_raw)
     mean_counts, per_counts = return_mean(arr_counts), return_proportion_zeros(arr_counts)
+
+    # Get n_divisions if None:
+    if n_divisions is None:
+        n_divisions = get_n_divisions(arr_counts)
 
     """
     First step is to get the kNN for the expression matrix.
@@ -147,7 +157,8 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
     triku_logger.log(TRIKU_LEVEL, 'min_knn set to {}'.format(min_knn))
     list_x_conv, list_y_conv, array_emd = parallel_emd_calculation(array_counts=arr_counts,
                                                                    array_knn_counts=arr_knn_expression,
-                                                                   knn=knn, n_procs=n_procs, min_knn=min_knn)
+                                                                   knn=knn, n_procs=n_procs, min_knn=min_knn,
+                                                                   n_divisions=n_divisions)
 
     # Randomization!
     # Todo: study if it is possible to randomize with the same strategy as convolution for kallisto / alevin datasets.
@@ -169,7 +180,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
         triku_logger.info('Parallel emd calculation on randomized matrix')
         list_x_conv_random, list_y_conv_random, array_emd_random = \
             parallel_emd_calculation(array_counts=arr_counts_random, array_knn_counts=arr_knn_expression_random,
-                                     knn=knn, n_procs=n_procs, min_knn=min_knn)
+                                     knn=knn, n_procs=n_procs, min_knn=min_knn, n_divisions=n_divisions)
 
     # Apply emd distance correction (substract the emd to the random_emd)
     if array_emd_random is not None:
