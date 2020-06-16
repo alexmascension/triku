@@ -84,7 +84,7 @@ def return_knn_expression(arr_expression: np.ndarray, knn_indices: np.ndarray) -
     return knn_expression
 
 
-def create_random_count_matrix(matrix: np.array, random_state: int) -> np.ndarray:
+def create_random_count_matrix(matrix: np.array, random_state: int, n_divisions: int) -> np.ndarray:
     """
     Given a matrix with cells x genes, returns a randomized cells x genes matrix. This matrix has, for each genes,
     the counts of the gene from the original matrix dispersed across the cells. E.g., if gene X has 1000 across
@@ -99,16 +99,22 @@ def create_random_count_matrix(matrix: np.array, random_state: int) -> np.ndarra
     # Random.choice is rather slow, so to save some time we use random.random, then multiply by the
     # number of cells, and change to int.
     np.random.seed(random_state)
-    random_counts = np.random.randint(n_cells, size=np.sum(n_reads_per_gene))
+
+    # With that we assign to each cell a count, i.e., 1 count goes to cell 1, one count to cell 5,
+    # 1 count to cell 10, one count to cell 3...
+    # To adjust to the n_divisions, we will assign n_division times more reads, and then later on, on the
+    # bincount, divide it by n_divisions
+    random_counts = np.random.randint(n_cells, size=np.sum(n_reads_per_gene) * n_divisions)
 
     # Also, assigning values to a matrix is done by rows because it is 2 to 3 times faster than in rows.
     # Numpy rows are row-based so it will always be more efficient to do a row-wise assignment.
     idx_counts = 0
     for gene in range(n_genes):
-        counts_gene = random_counts[idx_counts: idx_counts + n_reads_per_gene[gene]]
+        # This array will have n_counts_per_gene * n_division cell asignments, which will be used for the bincount
+        counts_gene = random_counts[idx_counts: idx_counts + n_reads_per_gene[gene] * n_divisions]
         bincount = np.bincount(counts_gene, minlength=n_cells)
-        matrix_random[gene, :] = bincount
-        idx_counts += n_reads_per_gene[gene]
+        matrix_random[gene, :] = bincount / n_divisions
+        idx_counts += n_reads_per_gene[gene] * n_divisions
 
     matrix_random = matrix_random.T
     return matrix_random

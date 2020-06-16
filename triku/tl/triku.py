@@ -106,6 +106,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
     # Get n_divisions if None:
     if n_divisions is None:
         n_divisions = get_n_divisions(arr_counts)
+        triku_logger.log(TRIKU_LEVEL, f'Number of divisions set to {n_divisions}')
 
     """
     First step is to get the kNN for the expression matrix.
@@ -148,10 +149,6 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
     triku_logger.info('Calculating knn expression')
     arr_knn_expression = return_knn_expression(arr_counts, knn_array)
 
-    # Todo: for non integer values (alevin, kallisto, etc.) convolution must be discrete. We can divide the
-    # unit in 10 or 20 subunits, transform the read count to the nearest "pseudointeger" value and apply the convolution
-    # knn values will differ from the convolution, but with a "good" set of units it should be enough.
-
     # Apply the convolution, and calculate the EMD. The convolution is quite fast, but we will still paralellize it.
     triku_logger.info('Parallel emd calculation')
     triku_logger.log(TRIKU_LEVEL, 'min_knn set to {}'.format(min_knn))
@@ -168,7 +165,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
 
     if apply_background_correction:
         triku_logger.info('Creating randomized count matrix')
-        arr_counts_random = create_random_count_matrix(arr_counts, random_state=random_state)
+        arr_counts_random = create_random_count_matrix(arr_counts, random_state=random_state, n_divisions=n_divisions)
 
         triku_logger.info('Calculating knn indices on randomized matrix')
         knn_array_random = return_knn_indices(arr_counts, knn=knn, return_random=False, random_state=random_state,
