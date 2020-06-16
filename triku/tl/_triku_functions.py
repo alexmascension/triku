@@ -142,7 +142,6 @@ def apply_convolution_read_counts(probs: np.ndarray, knn: int, func: [np.convolv
     for knni in range(2, knn):
         arr_convolve = func(arr_convolve, arr_base, )
 
-    # TODO: check the probability sum is 1 and, if so, remove
     arr_prob = arr_convolve / arr_convolve.sum()
 
     # TODO: if log transformed, this is untrue. Should not be arange.
@@ -185,7 +184,7 @@ def calculate_emd(knn_counts: np.ndarray, x_conv: np.ndarray, y_conv: np.ndarray
     real_vals = np.bincount(knn_counts.astype(int)) / len(knn_counts)
 
     # IMPORTANT: either for std or emd calculation, all x variables must be scaled back!
-    real_vals = real_vals / n_divisions
+    dist_range = dist_range / n_divisions
     x_conv = x_conv / n_divisions
 
     emd = sts.wasserstein_distance(dist_range, x_conv, real_vals, y_conv)
