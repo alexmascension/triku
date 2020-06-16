@@ -158,7 +158,6 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
                                                                    n_divisions=n_divisions)
 
     # Randomization!
-    # Todo: study if it is possible to randomize with the same strategy as convolution for kallisto / alevin datasets.
     # The same steps must be applied to a randomized expression count matrix if we must
     list_x_conv_random, list_y_conv_random, array_emd_random = None, None, None
     arr_knn_expression_random, knn_array_random = None, None
