@@ -38,7 +38,28 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
         from adata.raw of that subpopulation. If certain genes have been removed after saving the raw, triku will not
         consider the removed genes.
     do_return : bool, None
-        If True, returns a dictionary with # TODO: add what features it returns
+        If True, returns a dictionary with several features:
+            * `highly_variable`: boolean array. True if gene is selected as highly variabel by triku.
+            * `emd_distance`: Distance calculated by triku.
+            * `emd_distance_uncorrected`: Distance without randomization correction.
+        If verbose level is `triku` or `debug`, there are these additional columns:
+            * `knn_indices`: indices of kNN algorithm. Each row is a cell, and each column [1:] is the index of a neighbour.
+            * `knn_expression` and `knn_expression_random`: expression values in neighbours.
+            * `x_convolution` and `x_convolution_random`: x values of convolution.
+            * `y_convolution` and `y_convolution_random`: y values of convolution. Their sum is 1.
+            * `array_counts`: count array. It is be equal to `adata.X`.
+            * `array_genes`: list of genes. It is equal to `adata.var`.
+        if triku_logger.level < logging.INFO:
+            dict_return['knn_indices'], dict_return['knn_indices_random'] = knn_array, knn_array_random
+            dict_return['knn_expression'], dict_return['knn_expression_random'] = \
+                arr_knn_expression, arr_knn_expression_random
+
+            dict_return['x_convolution'], dict_return['x_convolution_random'] = list_x_conv, list_x_conv_random
+            dict_return['y_convolution'], dict_return['y_convolution_random'] = list_y_conv, list_y_conv_random
+
+            dict_return['array_counts'], dict_return['array_genes'] = arr_counts, arr_genes
+
+
     use_adata_knn :  bool, None
         If object_triku is a scanpy.AnnData object, and sc.pp.neighbors was run, select neighbors and knn from
         adata.uns['neighbors']['connectivities'] and  adata.uns['neighbors']['params']['n_neighbors'].

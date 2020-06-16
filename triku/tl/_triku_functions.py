@@ -120,7 +120,6 @@ def create_random_count_matrix(matrix: np.array, random_state: int, n_divisions:
     return matrix_random
 
 
-# TODO: apply for log-transformed data? The convolution works assuming that X data are integers.
 def apply_convolution_read_counts(probs: np.ndarray, knn: int, func: [np.convolve, fftconvolve]) -> (np.ndarray, np.ndarray):
     """
     Convolution of functions. The function applies a convolution using np.convolve
@@ -137,7 +136,7 @@ def apply_convolution_read_counts(probs: np.ndarray, knn: int, func: [np.convolv
     # We are calculating the convolution of cells with positive expression. Thus, in the first distribution
     # we have to remove the cells with 0 reads, and rescale the probabilities.
     arr_0 = probs.copy()
-    arr_0[0] = 0  # TODO: this will fail in log-transformed data
+    arr_0[0] = 0
     arr_0 /= arr_0.sum()
 
     # We will use arr_bvase as the array with the read distribution
@@ -150,7 +149,6 @@ def apply_convolution_read_counts(probs: np.ndarray, knn: int, func: [np.convolv
 
     arr_prob = arr_convolve / arr_convolve.sum()
 
-    # TODO: if log transformed, this is untrue. Should not be arange.
     return np.arange(len(arr_prob)), arr_prob
 
 
