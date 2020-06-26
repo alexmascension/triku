@@ -24,7 +24,4 @@ example with the ``pbmc3k`` dataset from scanpy::
 This is a basic preprocessing of a dataset. You can run triku either after or before
 ``sc.pp.log1p``. It usually works better after log transformation.
 
-Common arguments
------------------
 
-There are some common arguments
