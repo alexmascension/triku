@@ -31,14 +31,14 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_features: [None, int]
     ----------
     object_triku : scanpy.AnnData or pandas.DataFrame
         Object with count matrix. If `pandas.DataFrame`, rows are cells and columns are genes.
-    n_features : int, None
+    n_features : int
         Number of features to select. If None, the number is chosen automatically.
     use_raw : bool
         If True, selects the adata.raw matrix, if it exists. This matrix is adjusted to select the genes and cells that
         appear in the current adata. E.g. if we are running triku with a subpopulation, triku will select the cells
         from adata.raw of that subpopulation. If certain genes have been removed after saving the raw, triku will not
         consider the removed genes.
-    do_return : bool, None
+    do_return : bool
         If True, returns a dictionary with several features:
             * `highly_variable`: boolean array. True if gene is selected as highly variable by triku.
             * `emd_distance`: Distance calculated by triku.
@@ -59,7 +59,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_features: [None, int]
         in two different bins. If n_divisions is 2, the two cases would be in the same bin.
         The higher the number of divisions the more precise the calculation of distances will be. It will be more
         time consuming, though. If n_divisions is None, we will adjust it automatically.
-    knn: int, None
+    knn: int
         If use_adata_knn is False, number of neighbors to choose for feature selection. By default
         the half the square root of the number of cells is chosen.
     s : float
@@ -80,7 +80,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_features: [None, int]
         expressing cells, Wasserstein distance is set to 0, and the convolution is set as the knn expression.
     random_state : int
         Seed for random processes
-    n_procs : int, None
+    n_procs : int
         Number of processors for parallel processing.
     verbose : str ['debug', 'triku', 'info', 'warning', 'error', 'critical']
         Logger verbosity output.
@@ -99,7 +99,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_features: [None, int]
     set_level_logger(verbose)
 
     for var in [n_features, knn, n_windows, n_procs, random_state, n_comps, n_divisions]:
-        assert (var is None) | (isinstance(var, int)), "The variable value {} must be an integer!".format(var)
+        assert (var is None) | (isinstance(var, int)), f"The variable value {var} must be an integer!"
 
     if isinstance(object_triku, str):
         object_triku, save_prefix = load_object_triku(object_triku)
