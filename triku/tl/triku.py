@@ -5,7 +5,7 @@ import scipy.sparse as spr
 
 from ..genutils import get_cpu_count
 from ._triku_functions import return_knn_indices, return_knn_expression, create_random_count_matrix, \
-    parallel_emd_calculation, subtract_median, get_cutoff_curve, get_n_divisions
+    parallel_emd_calculation, subtract_median, get_cutoff_curve, get_n_divisions, load_object_triku, save_object_triku
 from ..utils._triku_tl_utils import return_mean, return_proportion_zeros, get_arr_counts_and_genes
 from ..utils._general_utils import set_level_logger
 from ..logg import triku_logger, TRIKU_LEVEL
@@ -16,11 +16,12 @@ import logging
 warnings.filterwarnings('ignore')  # To ignore Numba warnings
 
 
-def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = None, use_raw=True,
+def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_features: [None, int] = None, use_raw=True,
           do_return: [None, bool] = None, use_adata_knn: [None, bool] = None, n_divisions: [None, int] = None,
           knn: [None, int] = None, s: [None, int, float] = -0.01, apply_background_correction: bool = False,
           n_comps: int = 25, metric: str = 'cosine', n_windows: int = 75, min_knn: int = 6,
-          random_state: [None, int] = 0, n_procs: [None, int] = None, verbose: [None, str] = 'warning'):
+          random_state: [None, int] = 0, n_procs: [None, int] = None, verbose: [None, str] = 'warning',
+          save_return: [None, str] = None):
     """
     This function calls the triku method using python directly. This function expects an
     annData object or a csv / txt matrix of n_cells x n_genes. The function then returns an array / list
@@ -83,6 +84,8 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
         Number of processors for parallel processing.
     verbose : str ['debug', 'triku', 'info', 'warning', 'error', 'critical']
         Logger verbosity output.
+    save_return  : str, None
+        File (csv) to save triku returns (selected features, distance, etc.)
     Returns
     -------
     list_features : list
@@ -97,6 +100,11 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
 
     for var in [n_features, knn, n_windows, n_procs, random_state, n_comps, n_divisions]:
         assert (var is None) | (isinstance(var, int)), "The variable value {} must be an integer!".format(var)
+
+    if isinstance(object_triku, str):
+        object_triku, save_prefix = load_object_triku(object_triku)
+        if save_return is None: save_return = save_prefix
+        do_return = True
 
     if isinstance(object_triku, pd.DataFrame):
         use_adata_knn = False
@@ -225,6 +233,8 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
                        'emd_distance_uncorrected': array_emd}
         if array_emd_random is not None:
             dict_return['emd_distance_random'] = array_emd_random
+
+        save_object_triku(dict_return, arr_genes, save_return)
 
         if triku_logger.level < logging.INFO:
             dict_return['knn_indices'], dict_return['knn_indices_random'] = knn_array, knn_array_random

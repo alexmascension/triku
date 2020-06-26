@@ -13,7 +13,7 @@ except ImportError:  # Deps not yet installed
 setup(
     name='triku',
     version=__version__,
-    description='Detection of HVG on single cell data.',
+    description='Feature selection method for Single Cell data.',
     long_description=Path('README.md').read_text('utf-8'),
     url='https://gitlab.com/alexmascension/robin',
     author=__author__,
@@ -30,9 +30,9 @@ setup(
     # https://stackoverflow.com/questions/7522250/how-to-include-package-data-with-setuptools-distribute
     # package_data={'': '*.txt'},
     # include_package_data=True,
-    # entry_points=dict(
-    #     console_scripts=['triku=triku.cli.cli_triku:main', 'triku-plotentropy=triku.cli.cli_plot_entropy:main'],
-    # ),
+    entry_points=dict(
+        console_scripts=['triku=triku.cli.cli_triku:main'],
+    ),
     zip_safe=False,
     classifiers=[
         'Intended Audience :: Developers',

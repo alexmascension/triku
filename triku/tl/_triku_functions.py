@@ -1,10 +1,13 @@
+import os
 import numpy as np
+import pandas as pd
 import scipy.stats as sts
 import scipy.sparse as spr
 from scipy.signal import fftconvolve
 
 from sklearn.decomposition import PCA
 from umap.umap_ import nearest_neighbors
+import scanpy as sc
 
 import ray
 from tqdm import tqdm
@@ -13,6 +16,17 @@ import gc
 
 from triku.logg import triku_logger, TRIKU_LEVEL
 from triku.genutils import TqdmToLogger
+
+
+def load_object_triku(object_triku):
+    assert os.path.exists(object_triku)
+    return sc.read(object_triku), '.'.join(object_triku.split('.')[:-1]) + '.triku_return.csv'
+
+
+def save_object_triku(dict_triku, list_genes, path):
+    df = pd.DataFrame(dict_triku)
+    df = df.set_index(list_genes, drop=True)
+    df.to_csv(path, sep=',')
 
 
 def get_n_divisions(arr_counts: np.array) -> int:

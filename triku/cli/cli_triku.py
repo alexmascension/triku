@@ -1,6 +1,7 @@
 from triku.tl import triku
 from funcargparse import FuncArgParser
 
+
 def main():
     parser = FuncArgParser()
     parser.setup_args(triku)
@@ -8,7 +9,6 @@ def main():
     parser.create_arguments()
     parser.parse2func()
 
+
 if __name__ == '__main__':
     main()
-
-# TODO: Apply CLI correctly (add object_triku as a path or like so)
