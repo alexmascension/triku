@@ -20,7 +20,7 @@ except ModuleNotFoundError:
     from .palettes_and_cmaps import prism
     
 
-def clustering_binary_search(adatax, min_res, max_res, max_depth, seed, n_target_c, features, apply_log=None, transform_adata=False):
+def clustering_binary_search(adatax, min_res, max_res, max_depth, seed, n_target_c=0, features=[], apply_log=None, transform_adata=False, res=1):
     depth = 0
     
     if not transform_adata:
@@ -39,34 +39,37 @@ def clustering_binary_search(adatax, min_res, max_res, max_depth, seed, n_target
     
     sc.pp.pca(adata, n_comps=35, use_highly_variable=True)
     sc.pp.neighbors(adata, n_neighbors=int(0.5 * len(adata) ** 0.5), random_state=seed, metric='cosine')
-    
-    while depth < max_depth:
-#         print(f'Depth: {depth}, min res: {min_res}, max res: {max_res}')
-        if depth == 0:
-            sc.tl.leiden(adata, resolution=min_res, random_state=seed)
-            leiden_sol, res_sol = adata.obs['leiden'], min_res
-            if len(list(dict.fromkeys(leiden_sol))) == n_target_c:
+    if n_target_c != 0:
+        while depth < max_depth:
+    #         print(f'Depth: {depth}, min res: {min_res}, max res: {max_res}')
+            if depth == 0:
+                sc.tl.leiden(adata, resolution=min_res, random_state=seed)
+                leiden_sol, res_sol = adata.obs['leiden'], min_res
+                if len(list(dict.fromkeys(leiden_sol))) == n_target_c:
+                    break
+
+                sc.tl.leiden(adata, resolution=max_res, random_state=seed)
+                leiden_sol, res_sol = adata.obs['leiden'], max_res
+                if len(list(dict.fromkeys(leiden_sol))) == n_target_c:
+                    break
+
+            mid_res = 0.5 * (max_res + min_res)
+            sc.tl.leiden(adata, resolution=mid_res, random_state=seed)
+            leiden_sol, res_sol = adata.obs['leiden'], mid_res
+            n_clust_mid = len(list(dict.fromkeys(leiden_sol)))
+            if n_clust_mid == n_target_c:
                 break
 
-            sc.tl.leiden(adata, resolution=max_res, random_state=seed)
-            leiden_sol, res_sol = adata.obs['leiden'], max_res
-            if len(list(dict.fromkeys(leiden_sol))) == n_target_c:
-                break
+            if n_clust_mid > n_target_c:
+                max_res = mid_res
+            else:
+                min_res = mid_res
+
+            depth += 1
+    else:
+        sc.tl.leiden(adata, resolution=res, random_state=seed)
+        leiden_sol, res_sol = adata.obs['leiden'], res
         
-        mid_res = 0.5 * (max_res + min_res)
-        sc.tl.leiden(adata, resolution=mid_res, random_state=seed)
-        leiden_sol, res_sol = adata.obs['leiden'], mid_res
-        n_clust_mid = len(list(dict.fromkeys(leiden_sol)))
-        if n_clust_mid == n_target_c:
-            break
-            
-        if n_clust_mid > n_target_c:
-            max_res = mid_res
-        else:
-            min_res = mid_res
-            
-        depth += 1
-    
     if not transform_adata:
         del adata; gc.collect()
         
@@ -222,7 +225,7 @@ def plot_ARI_x_dataset(dict_ARI, title='', figsize=(15,8), file=''):
         fig.savefig(f'{os.getcwd()}/figures/comparison_figs/{fmt}/{file}.{fmt}', bbox_inches='tight')
     
 
-def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cell_types_col='cell_types', n_procs=None):
+def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cell_types_col='cell_types', n_procs=None, res=1):
     list_methods = ['triku'] + [i for i in df_rank.columns if 'triku' not in i]
     df_score = pd.DataFrame(index=['ARI', 'ARI_random', 'NMI', 'NMI_random', 'Sil_bench_UMAP', 
                                    'Sil_bench_PCA', 'Sil_bench_all_hvg', 'Sil_bench_all_base',
@@ -234,67 +237,92 @@ def biological_silhouette_ARI_table(adata, df_rank, outdir, file_root, seed, cel
                                    'DavBo_leiden_PCA', 'DavBo_leiden_all_hvg', 'DavBo_leiden_all_base',
                                    'DavBo_leiden_PCA_random', 'DavBo_leiden_all_hvg_random', 'DavBo_leiden_all_base_random'], 
                             columns=list_methods)
-    cell_types = adata.obs[cell_types_col].values
+    cell_types = adata.obs[cell_types_col].values if cell_types_col is not None else None
     
     # Get number of HVG with triku.
     tk.tl.triku(adata, random_state=seed, n_procs=n_procs)
     n_hvg = np.sum(adata.var['highly_variable'])
     
     adata_copy = adata.copy()
-    sc.pp.log1p(adata_copy)
+    
+    if 'log1p' not in adata_copy.uns:
+        sc.pp.log1p(adata_copy)
     
     for method in list_methods:
         if method != 'triku':
             adata_copy.var['highly_variable'] = [i in df_rank[method].sort_values().index.values[:n_hvg] for i in adata_copy.var_names]
+        else:
+            adata_copy.var['highly_variable'] = [i in df_rank['triku_0'].sort_values().index.values[:n_hvg] for i in adata_copy.var_names]
 
         features = adata_copy.var[adata_copy.var['highly_variable'] == True].index.values
-
-        leiden_sol, res = clustering_binary_search(adata_copy, 0.1, 2, 7, seed=seed, n_target_c=len(set(cell_types)), 
-                                            features=features, apply_log=False, transform_adata=True)
         
+        if cell_types is not None:
+            leiden_sol, res = clustering_binary_search(adata_copy, 0.1, 2, 7, seed=seed, n_target_c=len(set(cell_types)), 
+                                                features=features, apply_log=False, transform_adata=True)
+        else:
+            leiden_sol, res = clustering_binary_search(adata_copy, 0.1, 2, 7, seed=seed, n_target_c=0, features=features, apply_log=False, transform_adata=True, res=res)
+            
         sc.tl.umap(adata_copy)
         
-        leiden_sol_random = leiden_sol.copy(); np.random.shuffle(leiden_sol_random)
-        cell_types_random = cell_types.copy(); np.random.shuffle(cell_types_random)
-        
-        ARI, NMIs = ARS(leiden_sol, cell_types), NMI(leiden_sol, cell_types)
-        ARI_random, NMI_random = ARS(leiden_sol_random, cell_types), NMI(leiden_sol_random, cell_types)
-        adata_copy.obs['leiden'] = leiden_sol
 
-        Sil_bench_UMAP = silhouette_score(adata_copy.obsm['X_umap'], cell_types, metric='cosine')
-        Sil_bench_PCA = silhouette_score(adata_copy.obsm['X_pca'], cell_types, metric='cosine')
-        Sil_bench_all_hvg = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types, metric='cosine')
-        Sil_bench_all_base = silhouette_score(adata_copy.X, cell_types, metric='cosine')
         
-        Sil_bench_PCA_random = silhouette_score(adata_copy.obsm['X_pca'], cell_types_random, metric='cosine')
-        Sil_bench_all_hvg_random = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types_random, metric='cosine')
-        Sil_bench_all_base_random = silhouette_score(adata_copy.X, cell_types_random, metric='cosine')
+        if cell_types is not None:
+            leiden_sol_random = leiden_sol.copy(); np.random.shuffle(leiden_sol_random)
+            cell_types_random = cell_types.copy(); np.random.shuffle(cell_types_random)
         
+            ARI, NMIs = ARS(leiden_sol, cell_types), NMI(leiden_sol, cell_types)
+            ARI_random, NMI_random = ARS(leiden_sol_random, cell_types), NMI(leiden_sol_random, cell_types)
+            adata_copy.obs['leiden'] = leiden_sol
+        else:
+            ARI, NMIs, ARI_random, NMI_random = None, None, None, None
+        
+        if cell_types is not None:
+            Sil_bench_UMAP = silhouette_score(adata_copy.obsm['X_umap'], cell_types, metric='cosine')
+            Sil_bench_PCA = silhouette_score(adata_copy.obsm['X_pca'], cell_types, metric='cosine')
+            Sil_bench_all_hvg = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types, metric='cosine')
+            Sil_bench_all_base = silhouette_score(adata_copy.X, cell_types, metric='cosine')
+
+            Sil_bench_PCA_random = silhouette_score(adata_copy.obsm['X_pca'], cell_types_random, metric='cosine')
+            Sil_bench_all_hvg_random = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types_random, metric='cosine')
+            Sil_bench_all_base_random = silhouette_score(adata_copy.X, cell_types_random, metric='cosine')
+        else:
+            Sil_bench_UMAP, Sil_bench_PCA, Sil_bench_all_hvg, Sil_bench_all_base = None, None, None, None
+            Sil_bench_PCA_random, Sil_bench_all_hvg_random, Sil_bench_all_base_random  = None, None, None
+            
         Sil_leiden_UMAP = silhouette_score(adata_copy.obsm['X_umap'], adata_copy.obs['leiden'].values, metric='cosine')
         Sil_leiden_PCA = silhouette_score(adata_copy.obsm['X_pca'], adata_copy.obs['leiden'].values, metric='cosine')
         Sil_leiden_all_hvg = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], adata_copy.obs['leiden'].values, metric='cosine')
         Sil_leiden_all_base = silhouette_score(adata_copy.X, adata_copy.obs['leiden'].values, metric='cosine')
         
-        Sil_leiden_PCA_random = silhouette_score(adata_copy.obsm['X_pca'], cell_types_random, metric='cosine')
-        Sil_leiden_all_hvg_random = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types_random, metric='cosine')
-        Sil_leiden_all_base_random = silhouette_score(adata_copy.X, cell_types_random, metric='cosine')
+        if cell_types is not None:
+            Sil_leiden_PCA_random = silhouette_score(adata_copy.obsm['X_pca'], cell_types_random, metric='cosine')
+            Sil_leiden_all_hvg_random = silhouette_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types_random, metric='cosine')
+            Sil_leiden_all_base_random = silhouette_score(adata_copy.X, cell_types_random, metric='cosine')
+        else:
+            Sil_leiden_PCA_random, Sil_leiden_all_hvg_random, Sil_leiden_all_base_random = None, None, None
         
-        DavBo_bench_PCA = davies_bouldin_score(adata_copy.obsm['X_pca'], cell_types)
-        DavBo_bench_all_hvg = davies_bouldin_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types)
-        DavBo_bench_all_base = davies_bouldin_score(adata_copy.X, cell_types)
-        
-        DavBo_bench_PCA_random = davies_bouldin_score(adata_copy.obsm['X_pca'], cell_types_random)
-        DavBo_bench_all_hvg_random = davies_bouldin_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types_random)
-        DavBo_bench_all_base_random = davies_bouldin_score(adata_copy.X, cell_types_random)
+        if cell_types is not None:
+            DavBo_bench_PCA = davies_bouldin_score(adata_copy.obsm['X_pca'], cell_types)
+            DavBo_bench_all_hvg = davies_bouldin_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types)
+            DavBo_bench_all_base = davies_bouldin_score(adata_copy.X, cell_types)
+
+            DavBo_bench_PCA_random = davies_bouldin_score(adata_copy.obsm['X_pca'], cell_types_random)
+            DavBo_bench_all_hvg_random = davies_bouldin_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types_random)
+            DavBo_bench_all_base_random = davies_bouldin_score(adata_copy.X, cell_types_random)
+        else:
+            DavBo_bench_PCA, DavBo_bench_all_hvg, DavBo_bench_all_base = None, None, None
+            DavBo_bench_PCA_random, DavBo_bench_all_hvg_random, DavBo_bench_all_base_random  = None, None, None
         
         DavBo_leiden_PCA = davies_bouldin_score(adata_copy.obsm['X_pca'], adata_copy.obs['leiden'].values)
         DavBo_leiden_all_hvg = davies_bouldin_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], adata_copy.obs['leiden'].values)
         DavBo_leiden_all_base = davies_bouldin_score(adata_copy.X, adata_copy.obs['leiden'].values)
         
-        DavBo_leiden_PCA_random = davies_bouldin_score(adata_copy.obsm['X_pca'], cell_types_random)
-        DavBo_leiden_all_hvg_random = davies_bouldin_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types_random)
-        DavBo_leiden_all_base_random = davies_bouldin_score(adata_copy.X, cell_types_random)
-        
+        if cell_types is not None:
+            DavBo_leiden_PCA_random = davies_bouldin_score(adata_copy.obsm['X_pca'], cell_types_random)
+            DavBo_leiden_all_hvg_random = davies_bouldin_score(adata_copy.X[:, adata_copy.var['highly_variable'].values], cell_types_random)
+            DavBo_leiden_all_base_random = davies_bouldin_score(adata_copy.X, cell_types_random)
+        else:
+            DavBo_leiden_PCA_random, DavBo_leiden_all_hvg_random, DavBo_leiden_all_base_random = None, None, None
         
         df_score.loc['ARI', method], df_score.loc['ARI_random', method] = ARI, ARI_random
         df_score.loc['NMI', method], df_score.loc['NMI_random', method] = NMIs, NMI_random
@@ -345,11 +373,10 @@ def plot_lab_org_comparison_scores(lab, org='-', read_dir='', variables=[], figs
     palette = prism
     
     list_files = [i for i in os.listdir(read_dir) if lab in i and org in i and 'comparison-scores' in i]
-    
     list_libpreps = sorted(list(set([i.split('_')[1] + ' '  + i.split('_')[2]  for i in list_files])))
-        
+    
     for libprep_idx, libprep in enumerate(list_libpreps):
-        files_seeds = [i for i in list_files if libprep.replace(' ', '_') in i]
+        files_seeds = [i for i in list_files if '_' + libprep.replace(' ', '_') in i] # This may fail for mereu and Ding now!
                 
         for seed in range(len(files_seeds)):
             file = [i for i in files_seeds if f'seed-{seed}' in i][0]
