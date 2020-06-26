@@ -24,15 +24,4 @@ build:system:
     - pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
     - pip install -r requirements.txt
 
-build:pages:
-  stage: build
-  script:
-  - pip install sphinx m2r sphinxcontrib-napoleon sphinx_rtd_theme
-  - cd docs
-  - make html
-  - cp -r build/html/ ../public/
-
-  artifacts:
-    paths:
-    - public
 
