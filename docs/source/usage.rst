@@ -24,4 +24,17 @@ example with the ``pbmc3k`` dataset from scanpy::
 This is a basic preprocessing of a dataset. You can run triku either after or before
 ``sc.pp.log1p``. It usually works better after log transformation.
 
+Running triku from CLI
+----------------------
+
+If you don't want to run triku within python, you can run it using the CLI.
+
+Simply run the console command ``triku`` and the name of the file with the counts. This file can be an
+``annData`` object file, or a csv file with **cells as rows** and **genes as columns**.:
+
+    triku NAME_OF_FILE
+
+Run ``triku -h`` to see how to invoke the arguments for CLI.
+
+
 
