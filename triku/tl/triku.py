@@ -141,7 +141,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_features: [None, int]
     if isinstance(object_triku, sc.AnnData):
         if (use_adata_knn is None) or use_adata_knn:
             if 'neighbors' in object_triku.uns:
-                knn = object_triku.uns['neighbors']['params']['n_neighbors']
+                knn = object_triku.uns['neighbors']['params']['n_neighbors'][0]
                 triku_logger.info('We found "neighbors" in the anndata, with knn={}. If you want to calculate the '
                                   'neighbors with triku, set use_adata_knn=False'.format(knn))
 
