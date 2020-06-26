@@ -30,7 +30,7 @@ Running triku from CLI
 If you don't want to run triku within python, you can run it using the CLI.
 
 Simply run the console command ``triku`` and the name of the file with the counts. This file can be an
-``annData`` object file, or a csv file with **cells as rows** and **genes as columns**.:
+``annData`` object file, or a csv file with **cells as rows** and **genes as columns**.::
 
     triku NAME_OF_FILE
 
