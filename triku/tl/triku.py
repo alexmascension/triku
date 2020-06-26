@@ -18,7 +18,7 @@ warnings.filterwarnings('ignore')  # To ignore Numba warnings
 
 def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = None, use_raw=True,
           do_return: [None, bool] = None, use_adata_knn: [None, bool] = None, n_divisions: [None, int] = None,
-          knn: [None, int] = None, s: [None, int, float] = -0.01, apply_background_correction: bool = True,
+          knn: [None, int] = None, s: [None, int, float] = -0.01, apply_background_correction: bool = False,
           n_comps: int = 25, metric: str = 'cosine', n_windows: int = 75, min_knn: int = 6,
           random_state: [None, int] = 0, n_procs: [None, int] = None, verbose: [None, str] = 'warning'):
     """
@@ -39,7 +39,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
         consider the removed genes.
     do_return : bool, None
         If True, returns a dictionary with several features:
-            * `highly_variable`: boolean array. True if gene is selected as highly variabel by triku.
+            * `highly_variable`: boolean array. True if gene is selected as highly variable by triku.
             * `emd_distance`: Distance calculated by triku.
             * `emd_distance_uncorrected`: Distance without randomization correction.
         If verbose level is `triku` or `debug`, there are these additional columns:
@@ -49,17 +49,6 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
             * `y_convolution` and `y_convolution_random`: y values of convolution. Their sum is 1.
             * `array_counts`: count array. It is be equal to `adata.X`.
             * `array_genes`: list of genes. It is equal to `adata.var`.
-        if triku_logger.level < logging.INFO:
-            dict_return['knn_indices'], dict_return['knn_indices_random'] = knn_array, knn_array_random
-            dict_return['knn_expression'], dict_return['knn_expression_random'] = \
-                arr_knn_expression, arr_knn_expression_random
-
-            dict_return['x_convolution'], dict_return['x_convolution_random'] = list_x_conv, list_x_conv_random
-            dict_return['y_convolution'], dict_return['y_convolution_random'] = list_y_conv, list_y_conv_random
-
-            dict_return['array_counts'], dict_return['array_genes'] = arr_counts, arr_genes
-
-
     use_adata_knn :  bool, None
         If object_triku is a scanpy.AnnData object, and sc.pp.neighbors was run, select neighbors and knn from
         adata.uns['neighbors']['connectivities'] and  adata.uns['neighbors']['params']['n_neighbors'].
@@ -84,14 +73,14 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
     metric : str
         Metric for knn selection.
     n_windows : int
-        Number of windows used for median subtraction of EMD.
+        Number of windows used for median subtraction of Wasserstein distance.
     min_knn : int
         minimum number of expressed cells based on the knn to apply thee convolution. If a genes has less than min_knn
-        expressing cells, EMD is set to 0, and the convolution is set as the knn expression.
+        expressing cells, Wasserstein distance is set to 0, and the convolution is set as the knn expression.
     random_state : int
         Seed for random processes
     n_procs : int, None
-        Number of processes for parallel processing.
+        Number of processors for parallel processing.
     verbose : str ['debug', 'triku', 'info', 'warning', 'error', 'critical']
         Logger verbosity output.
     Returns
@@ -101,7 +90,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
     """
     # Todo make functions private if necessary
     # todo: at some point I should make the function compatible with sparse arrays.
-    # todo: make function accept 0 and other values for covolution
+    # todo: make function accept 0 and other values for convolution
 
     # Basic checks of variables
     set_level_logger(verbose)
