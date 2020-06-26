@@ -18,8 +18,8 @@ from triku.genutils import TqdmToLogger
 def get_n_divisions(arr_counts: np.array) -> int:
     if np.sum(arr_counts) == np.sum(arr_counts.astype(int)):
         n_divisions = 1
-    else:  # TODO: Make this more complex if we see that time is an important issue
-        n_divisions = 10
+    else:
+        n_divisions = 15
 
     return n_divisions
 
