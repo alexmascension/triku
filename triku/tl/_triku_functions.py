@@ -9,7 +9,6 @@ from sklearn.decomposition import PCA
 from umap.umap_ import nearest_neighbors
 import scanpy as sc
 
-import ray
 from tqdm import tqdm
 import logging
 import gc
@@ -266,6 +265,13 @@ def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndar
                        for idx_gene in tqdm(range(n_genes), file=tqdm_out)]
 
     else:
+        try:
+            import ray
+        except ImportError:
+            raise ImportError('Ray is not installed in the system. You can install it writing \npip install ray\n '
+                              'in the console. If you are on windows, ray might not be supported. Use n_comps=1 '
+                              'instead.')
+
         ray.shutdown()
         ray.init(num_cpus=n_procs, ignore_reinit_error=True)
 
