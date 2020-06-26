@@ -30,11 +30,15 @@ def save_object_triku(dict_triku, list_genes, path):
 
 
 def get_n_divisions(arr_counts: np.array) -> int:
-    if np.sum(arr_counts) == np.sum(arr_counts.astype(int)):
+    diff = np.abs(np.sum(arr_counts - arr_counts.astype(int)))
+    triku_logger.log(TRIKU_LEVEL, f'Difference between int and float array is  {diff}')
+
+    if diff < 1:
         n_divisions = 1
     else:
         n_divisions = 15
 
+    triku_logger.log(TRIKU_LEVEL, f'Number of divisions set to {n_divisions}')
     return n_divisions
 
 

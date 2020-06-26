@@ -125,7 +125,6 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame, str], n_features: [None, int]
     # Get n_divisions if None:
     if n_divisions is None:
         n_divisions = get_n_divisions(arr_counts)
-        triku_logger.log(TRIKU_LEVEL, f'Number of divisions set to {n_divisions}')
 
     """
     First step is to get the kNN for the expression matrix.
