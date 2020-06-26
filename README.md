@@ -1,12 +1,14 @@
-# Triku - Feature selection for Single Cell Analysis
+# Triku - Feature selection for Single Cell Analysis 🦔
+
+<object data="docs/source/imgs/triku.pdf" type="application/pdf" height="400px">
+    <embed src="docs/source/imgs/triku.pdf">
+        <p>This browser does not support PDFs. Please download the PDF to view it: <a 
+        href="docs/source/imgs/triku.pdf">Download PDF</a>.</p>
+    </embed>
+</object>
+
+Triku (hedgehog in euskera) is a feature selection method prepared for Single Cell Analysis.
+
+Look at [the docs](https://triku.readthedocs.io/en/latest/) to learn more about triku!
 
 
-Triku (hedgehog in euskera) is a feature selection method prepared for Single Cell Analysis, 
-although it can be suitable for other methods.
-This algorithm was inspired in the *Droplet scRNA-seq is not zero-inflated* paper from Valentine Svensson. 
-The paper describes that, when using technical controls in droplet based single cell RNA-seq 
-experiments, the number of zeros in the data based on the mean expression for each gene follows a negative 
-binomial distribution. The paper then states that additional zeros on count matrices from biological 
-samples are due to biological variation.
-
-EXPLAIN THE REST OF THE README
