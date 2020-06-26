@@ -101,6 +101,7 @@ def triku(object_triku: [sc.AnnData, pd.DataFrame], n_features: [None, int] = No
     """
     # Todo make functions private if necessary
     # todo: at some point I should make the function compatible with sparse arrays.
+    # todo: make function accept 0 and other values for covolution
 
     # Basic checks of variables
     set_level_logger(verbose)
