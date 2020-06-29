@@ -36,4 +36,3 @@ in log-transformed matrices, although the results depend on the dataset.
 
    triku-work
    usage
-   api/triku

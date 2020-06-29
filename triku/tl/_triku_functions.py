@@ -137,7 +137,8 @@ def create_random_count_matrix(matrix: np.array, random_state: int, n_divisions:
     return matrix_random
 
 
-def apply_convolution_read_counts(probs: np.ndarray, knn: int, func: [np.convolve, fftconvolve]) -> (np.ndarray, np.ndarray):
+def apply_convolution_read_counts(probs: np.ndarray, knn: int, func: [np.convolve, fftconvolve]) -> (
+np.ndarray, np.ndarray):
     """
     Convolution of functions. The function applies a convolution using np.convolve
     of a probability distribution knn times. The result is an array of N elements (N arises as the convolution
@@ -180,7 +181,7 @@ def compute_conv_idx(counts_gene: np.ndarray, knn: int) -> (np.ndarray, np.ndarr
     Given a GENE x CELL matrix, and an index to select from, calculates the convolution of reads for that gene index.
     The function returns the
     """
-    y_probs = np.bincount(counts_gene.astype(int)) / len(counts_gene) # Important to transform count to probabilities
+    y_probs = np.bincount(counts_gene.astype(int)) / len(counts_gene)  # Important to transform count to probabilities
     # to keep the convolution constant.
 
     if np.sum(counts_gene) > 7000:  # For low counts (< 5000 to < 10000), fttconvolve is 2-3 to 10 times faster.
@@ -287,7 +288,8 @@ def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndar
         return_objs = ray.get(ray_obj_ids)
         triku_logger.log(TRIKU_LEVEL, 'Done.')
 
-        del [array_counts_id, array_knn_counts_id]; gc.collect()
+        del [array_counts_id, array_knn_counts_id];
+        gc.collect()
         ray.shutdown()
 
     list_x_conv, list_y_conv, list_emd = [x[0] for x in return_objs], [x[1] for x in return_objs], [x[2] for x in
@@ -306,7 +308,7 @@ def subtract_median(x, y, n_windows):
     Too many windows can over-normalize, and lose genes that have high emd but are alone in that window."""
 
     # We have to take the distance in logarithm to account for the wide expression ranges
-    linspace = 10**np.linspace(np.min(np.log10(x)), np.max(np.log10(x)), n_windows + 1)
+    linspace = 10 ** np.linspace(np.min(np.log10(x)), np.max(np.log10(x)), n_windows + 1)
     y_adjust = y.copy()
 
     y_median_array = np.zeros(len(y))

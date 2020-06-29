@@ -17,6 +17,9 @@ import sphinx_rtd_theme
 import recommonmark
 from recommonmark.parser import CommonMarkParser
 
+import os
+dir_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
 source_parsers = {
    '.md': CommonMarkParser
 }
@@ -40,7 +43,13 @@ extensions = [
     "sphinx_rtd_theme",
     "sphinx.ext.napoleon",
     "recommonmark",
+    "autoapi.extension"
 ]
+
+# AUTOAPI
+autoapi_type = 'python'
+autoapi_dirs = [f'{dir_path}/triku']
+autoapi_options = {'undoc-members': False, 'private-members': False}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
