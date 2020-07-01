@@ -320,6 +320,7 @@ def triku(
             "min_knn": min_knn,
             "n_procs": n_procs,
             "apply_background_correction": apply_background_correction,
+            "n_divisions": n_divisions
         }
         if array_emd_random is not None:
             object_triku.var["emd_distance_random"] = array_emd_random
