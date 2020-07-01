@@ -2,6 +2,11 @@ image: python:3.7
 
 stages:
   - build
+  - test_prepare_codecov
+  - test_general
+  - test_args
+  - test_internals
+  - codecov
 
 variables:
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
@@ -17,11 +22,26 @@ before_script:
   - virtualenv venv
   - source venv/bin/activate
 
-
 build:system:
   stage: build
   script:
     - pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
     - pip install -r requirements.txt
 
+prepare_codecov:
+  stage: test_prepare_codecov
+  script:
+    - rm .cov*
+    - rm -r htmlcov
+
+codecov_general:
+  stage: test_general
+  script:
+    - pytest -n 1 -m "general" --cov=./triku/  --cov-append
+
+codecov:
+  stage: codecov
+  script:
+    - pytest -n 1 -m "end" --cov=./triku/ --cov-append --cov-report=html
+    - codecov --token=6e1967cb-4cf2-4eee-b32a-82b0ca1725a0
 
