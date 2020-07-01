@@ -106,10 +106,27 @@ def test_bg_correction():
     assert np.abs(np.mean(adata.var['emd_distance_random'].values)) < 0.1
 
 
+@pytest.mark.notrunningyet
+def test_min_knn_genes(getpbmc3k):
+    adata_with_min_knn = getpbmc3k
+    adata_without_min_knn = getpbmc3k
+
+    min_knn = 100
+    tk.tl.triku(adata_with_min_knn, apply_background_correction=False, min_knn=min_knn)
+    tk.tl.triku(adata_without_min_knn, apply_background_correction=False, min_knn=0)
+
+    diff_genes = adata_with_min_knn.var['emd_distance_uncorrected'].values != \
+                 adata_without_min_knn.var['emd_distance_uncorrected'].values
+
+    # Those genes must have less than 20 cells with expression
+    expre_knn = adata_with_min_knn.X[:, diff_genes] > 0
+
+    assert np.max(expre_knn.sum(0)) < min_knn
+
+
 @pytest.mark.var_check
 def test_n_divisions_check(getpbmc3k):
     adata = getpbmc3k
-    adata.X = np.asarray(adata.X.todense())
     assert np.sum(adata.X - adata.X.astype(int)) == 0
 
     adata.X = adata.X.astype(int)
