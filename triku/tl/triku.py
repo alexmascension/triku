@@ -293,7 +293,7 @@ def triku(
         triku_logger.info("Selecting cutoff point")
         dist_cutoff = get_cutoff_curve(y=array_emd_subt_median, s=s)
     else:
-        dist_cutoff = np.sort(array_emd_subt_median)[-n_features]
+        dist_cutoff = np.sort(array_emd_subt_median)[-(n_features + 1)]
     triku_logger.info("Cutoff point set to {}".format(dist_cutoff))
 
     # Returns phase. Return if object is not an adata or if return is set to true.
