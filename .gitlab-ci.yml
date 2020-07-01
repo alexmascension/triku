@@ -50,7 +50,7 @@ codecov_general:
 codecov_ouput_check:
   stage: test_args
   script:
-    - pytest -n 4 -m "ouput_check" --cov=./triku/  --cov-append
+    - pytest -n 4 -m "output_check" --cov=./triku/  --cov-append
     - mv .coverage .coverage.ouput_check
   artifacts:
     paths:

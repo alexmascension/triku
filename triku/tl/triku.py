@@ -14,6 +14,7 @@ from ._triku_functions import (
     get_n_divisions,
     load_object_triku,
     save_object_triku,
+    clean_adata
 )
 from ..utils._triku_tl_utils import (
     return_mean,
@@ -147,6 +148,9 @@ def triku(
 
     if isinstance(object_triku, pd.DataFrame):
         use_adata_knn = False
+
+    if isinstance(object_triku, sc.AnnData):
+        clean_adata(object_triku)
 
     if n_procs is None:
         n_procs = max(1, get_cpu_count() - 1)

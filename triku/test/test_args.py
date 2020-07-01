@@ -55,11 +55,19 @@ def test_use_adata_knn(getpbmc3k):
     tk.tl.triku(adata, n_procs=1)
 
 
-@pytest.mark.output_check
-def test_output_n_procs(run_adata_n_procs):
-    dict_times, dict_results = run_adata_n_procs
-    for n_procs in [2, 4, 8]:
-        assert np.all(dict_results[1] == dict_results[n_procs])
+@pytest.mark.calc_check
+def test_n_windows_1(getpbmc3k):
+    adata = getpbmc3k
+    tk.tl.triku(adata, n_procs=1, n_windows=1, apply_background_correction=True)
+    assert not np.all(adata.var['emd_distance'].values == adata.var['emd_distance_uncorrected'].values)
+
+    # Checks that previous columns are removed
+    tk.tl.triku(adata, n_procs=1, n_windows=1, apply_background_correction=False)
+    assert np.all(adata.var['emd_distance'].values == adata.var['emd_distance_uncorrected'].values -
+                  np.median(adata.var['emd_distance_uncorrected'].values))
+
+    tk.tl.triku(adata, n_procs=1, n_windows=100, apply_background_correction=False)
+    assert np.sum(adata.var['emd_distance'].values - adata.var['emd_distance_uncorrected'].values) < 0
 
 
 @pytest.mark.output_check
@@ -83,6 +91,18 @@ def test_do_return(getpbmc3k):
     assert np.all(adata.var['highly_variable'].values == ret['highly_variable'].values)
     for name_col in ['emd_distance', 'emd_distance_uncorrected']:
         assert np.all(adata.var[name_col] == ret[name_col])
+
+
+@pytest.mark.output_check
+def test_bg_correction():
+    adata = sc.datasets.pbmc3k_processed()
+    tk.tl.triku(adata, apply_background_correction=False)
+    assert 'emd_distance_random' not in adata.var
+
+    tk.tl.triku(adata, apply_background_correction=True)
+    assert 'emd_distance_random' in adata.var
+
+    assert np.abs(np.mean(adata.var['emd_distance_random'].values)) < 0.1
 
 
 @pytest.mark.var_check

@@ -25,6 +25,15 @@ def load_object_triku(object_triku):
     )
 
 
+def clean_adata(adata):
+    for varx in ['emd_distance', 'emd_distance_uncorrected', 'emd_distance_random']:
+        if varx in adata.var:
+            del adata.var[varx]
+
+    if 'triku_params' in adata.uns:
+        del adata.uns['triku_params']
+
+
 def save_object_triku(dict_triku, list_genes, path):
     df = pd.DataFrame(dict_triku)
     df = df.set_index(list_genes, drop=True)
