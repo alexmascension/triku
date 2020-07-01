@@ -120,6 +120,8 @@ def triku(
     # Todo make functions private if necessary
     # todo: at some point I should make the function compatible with sparse arrays.
     # todo: make function accept 0 and other values for convolution
+    # todo: add feature override. If triku has been already run on the adata, do not run it, and only check the number
+    #       of selected genes
 
     # Basic checks of variables
     set_level_logger(verbose)
@@ -183,7 +185,12 @@ def triku(
     if isinstance(object_triku, sc.AnnData):
         if (use_adata_knn is None) or use_adata_knn:
             if "neighbors" in object_triku.uns:
-                knn = object_triku.uns["neighbors"]["params"]["n_neighbors"][0]
+                knn = object_triku.uns["neighbors"]["params"]["n_neighbors"]
+
+                # Sometimes return is an array
+                if isinstance(knn, np.ndarray):
+                    knn = knn[0]
+
                 triku_logger.info(
                     'We found "neighbors" in the anndata, with knn={}. If you want to calculate the '
                     "neighbors with triku, set use_adata_knn=False".format(knn)
