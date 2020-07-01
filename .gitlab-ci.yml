@@ -31,8 +31,8 @@ build:system:
 prepare_codecov:
   stage: test_prepare_codecov
   script:
-    - rm .cov*
-    - rm -r htmlcov
+    - rm -f .cov*
+    - rm -rf htmlcov
 
 codecov_general:
   stage: test_general
