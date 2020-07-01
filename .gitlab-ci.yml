@@ -38,6 +38,9 @@ codecov_general:
   stage: test_general
   script:
     - pytest -n 1 -m "general" --cov=./triku/  --cov-append
+  artifacts:
+    paths:
+      - .coverage
 
 codecov:
   stage: codecov
