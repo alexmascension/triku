@@ -8,7 +8,3 @@ import scanpy as sc
 import triku as tk
 
 import scipy.sparse as sps
-
-
-
-
