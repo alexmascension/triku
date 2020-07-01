@@ -33,7 +33,7 @@ def run_adata_n_procs():
     return dict_times, dict_results
 
 
-@pytest.mark.calc_check
+@pytest.mark.calccheck
 def test_n_features(getpbmc3k):
     adata = getpbmc3k
     for n_feats in [1, 50, 100, 500, 1000]:
@@ -41,21 +41,21 @@ def test_n_features(getpbmc3k):
         assert np.sum(adata.var['highly_variable'].values) == n_feats
 
 
-@pytest.mark.output_check
+@pytest.mark.outputcheck
 def test_output_n_procs(run_adata_n_procs):
     dict_times, dict_results = run_adata_n_procs
     for n_procs in [2, 4, 8]:
         assert np.all(dict_results[1] == dict_results[n_procs])
 
 
-@pytest.mark.calc_check
+@pytest.mark.calccheck
 def test_output_n_procs(run_adata_n_procs):
     dict_times, dict_results = run_adata_n_procs
     for n_procs in [2, 4, 8]:
         assert dict_times[n_procs] < 2 * dict_times[1]
 
 
-@pytest.mark.output_check
+@pytest.mark.outputcheck
 def test_use_raw(getpbmc3k):
     adata = getpbmc3k
     emd_not_raw = adata.var['emd_distance']
@@ -68,7 +68,7 @@ def test_use_raw(getpbmc3k):
     assert np.all(emd_raw.values == emd_not_raw.values)
 
 
-@pytest.mark.output_check
+@pytest.mark.outputcheck
 def test_do_return(getpbmc3k):
     adata = getpbmc3k
     ret = tk.tl.triku(adata, do_return=True, verbose="triku", n_procs=1)
@@ -78,7 +78,7 @@ def test_do_return(getpbmc3k):
         assert np.all(adata.var[name_col] == ret[name_col])
 
 
-@pytest.mark.calc_check
+@pytest.mark.calccheck
 def test_use_adata_knn(getpbmc3k):
     adata = getpbmc3k
     sc.pp.neighbors(adata, n_neighbors=25)

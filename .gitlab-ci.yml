@@ -50,7 +50,7 @@ codecov_general:
 codecov_ouput_check:
   stage: test_args
   script:
-    - pytest -m 4 "ouput_check" --cov=./triku/  --cov-append
+    - pytest -n 4 -m "ouput_check" --cov=./triku/  --cov-append
     - mv .coverage .coverage.ouput_check
   artifacts:
     paths:
@@ -59,7 +59,7 @@ codecov_ouput_check:
 codecov_args_var_check:
   stage: test_args
   script:
-    - pytest -m 4 "var_check" --cov=./triku/  --cov-append
+    - pytest -n 4 -m "var_check" --cov=./triku/  --cov-append
     - mv .coverage .coverage.var_check
   artifacts:
     paths:
@@ -68,7 +68,7 @@ codecov_args_var_check:
 codecov_args_calc_check:
   stage: test_args
   script:
-    - pytest -m 4 "calc_check" --cov=./triku/  --cov-append
+    - pytest -n 4 -m "calc_check" --cov=./triku/  --cov-append
     - mv .coverage .coverage.calc_check
   artifacts:
     paths:

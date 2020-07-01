@@ -7,8 +7,8 @@
 
 Triku - Feature selection for Single Cell Analysis
 ==================================================
-.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
-    :target: https://github.com/psf/black
+.. image:: https://gitlab.com/alexmascension/triku/badges/dev/pipeline.svg
+  :target: https://gitlab.com/alexmascension/triku
 
 .. image:: https://readthedocs.org/projects/triku/badge/?version=latest
     :alt: Documentation Status
@@ -16,7 +16,11 @@ Triku - Feature selection for Single Cell Analysis
     :target: https://triku.readthedocs.io/en/latest/?badge=latest
 
 .. image:: https://codecov.io/gl/alexmascension/triku/branch/dev/graph/badge.svg
-  :target: https://codecov.io/gl/alexmascension/triku
+  :target: https://codecov.io/gl/alexmascension/triku/branch/dev
+
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/psf/black
+
 
 
 Triku (hedgehog in euskera) is a feature selection method prepared for Single Cell Analysis.
