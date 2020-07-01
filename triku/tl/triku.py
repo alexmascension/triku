@@ -103,7 +103,7 @@ def triku(
     n_windows : int
         Number of windows used for median subtraction of Wasserstein distance.
     min_knn : int
-        minimum number of expressed cells based on the knn to apply thee convolution. If a gene has less than min_knn
+        minimum number of expressed cells based on the knn to apply the convolution. If a gene has less than min_knn
         expressing cells, Wasserstein distance is set to 0, and the convolution is set as the knn expression.
     random_state : int
         Seed for random processes
@@ -236,7 +236,7 @@ def triku(
     arr_knn_expression = return_knn_expression(arr_counts, knn_array)
 
     # Apply the convolution, and calculate the EMD. The convolution is quite fast, but we will still paralellize it.
-    triku_logger.info("Parallel emd calculation")
+    triku_logger.info("EMD calculation")
     triku_logger.log(TRIKU_LEVEL, "min_knn set to {}".format(min_knn))
     list_x_conv, list_y_conv, array_emd = parallel_emd_calculation(
         array_counts=arr_counts,

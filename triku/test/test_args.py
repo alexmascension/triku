@@ -12,6 +12,7 @@ def getpbmc3k():
     sc.pp.filter_genes(adata, min_cells=10)
     sc.pp.filter_cells(adata, min_genes=10)
     tk.tl.triku(adata)
+    adata.X = np.asarray(adata.X.todense())
 
     return adata
 
@@ -88,7 +89,7 @@ def test_do_return(getpbmc3k):
     adata = getpbmc3k
     ret = tk.tl.triku(adata, do_return=True, verbose="triku", n_procs=1)
 
-    assert np.all(adata.var['highly_variable'].values == ret['highly_variable'].values)
+    assert np.all(adata.var['highly_variable'] == ret['highly_variable'])
     for name_col in ['emd_distance', 'emd_distance_uncorrected']:
         assert np.all(adata.var[name_col] == ret[name_col])
 
