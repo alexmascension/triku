@@ -12,3 +12,6 @@ sphinx-rtd-theme >= 0.4
 sphinxcontrib-napoleon >= 0.7
 recommonmark
 tqdm >= 4.31.1
+funcargparse
+sphinx-autoapi
+Bottleneck

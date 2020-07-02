@@ -18,20 +18,19 @@ import recommonmark
 from recommonmark.parser import CommonMarkParser
 
 import os
+
 dir_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-source_parsers = {
-   '.md': CommonMarkParser
-}
+source_parsers = {".md": CommonMarkParser}
 
 # -- Project information -----------------------------------------------------
 
-project = 'triku'
-copyright = '2020, Alex M. Ascension'
-author = 'Alex M. Ascension'
+project = "triku"
+copyright = "2020, Alex M. Ascension"
+author = "Alex M. Ascension"
 
 # The full version, including alpha/beta/rc tags
-release = '1.1.0'
+release = "1.1.0"
 
 
 # -- General configuration ---------------------------------------------------
@@ -43,38 +42,38 @@ extensions = [
     "sphinx_rtd_theme",
     "sphinx.ext.napoleon",
     "recommonmark",
-    "autoapi.extension"
+    "autoapi.extension",
 ]
 
 # AUTOAPI
-autoapi_type = 'python'
-autoapi_dirs = [f'{dir_path}/triku']
-autoapi_options = {'undoc-members': False, 'private-members': False}
+autoapi_type = "python"
+autoapi_dirs = [f"{dir_path}/triku"]
+autoapi_options = {"undoc-members": False, "private-members": False}
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
-source_suffix = ['.rst', '.md']
+source_suffix = [".rst", ".md"]
 
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 html_theme_options = {
-    'logo_only': True,
+    "logo_only": True,
     # ...
 }
 html_logo = "imgs/triku.svg"

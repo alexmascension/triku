@@ -2,11 +2,17 @@ image: python:3.7
 
 stages:
   - build
+  - test_prepare_codecov
+  - test_general
+  - test_args
+  - test_internals
+  - codecov
 
 variables:
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 
 cache:
+  key: "dev"
   paths:
     - .cache/pip
     - venv/
@@ -17,11 +23,63 @@ before_script:
   - virtualenv venv
   - source venv/bin/activate
 
-
+# BUILDING THE SYSTEM
 build:system:
   stage: build
   script:
     - pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
     - pip install -r requirements.txt
 
+# CODECOV PREPARATION
+prepare_codecov:
+  stage: test_prepare_codecov
+  script:
+    - rm -f .cov*
+    - rm -rf htmlcov
+
+# CODECOV GENERAL
+codecov_general:
+  stage: test_general
+  script:
+    - pytest -n 1 -m "general" --cov=./triku/  --cov-append
+    - mv .coverage .coverage.general
+  artifacts:
+    paths:
+      - .coverage.general
+
+# CODECOV ARGS
+codecov_ouput_check:
+  stage: test_args
+  script:
+    - pytest -n 4 -m "output_check" --cov=./triku/  --cov-append
+    - mv .coverage .coverage.ouput_check
+  artifacts:
+    paths:
+      - .coverage.ouput_check
+
+codecov_args_var_check:
+  stage: test_args
+  script:
+    - pytest -n 4 -m "var_check" --cov=./triku/  --cov-append
+    - mv .coverage .coverage.var_check
+  artifacts:
+    paths:
+      - .coverage.var_check
+
+codecov_args_calc_check:
+  stage: test_args
+  script:
+    - pytest -n 4 -m "calc_check" --cov=./triku/  --cov-append
+    - mv .coverage .coverage.calc_check
+  artifacts:
+    paths:
+      - .coverage.calc_check
+
+# OUTPUT CODECOV
+codecov:
+  stage: codecov
+  script:
+    - coverage combine .cov*
+    - pytest -n 1 -m "end" --cov=./triku/ --cov-append --cov-report=html
+    - codecov --token=6e1967cb-4cf2-4eee-b32a-82b0ca1725a0
 
