@@ -1,0 +1,5 @@
+sphinx >= 2
+sphinx-rtd-theme >= 0.4
+sphinxcontrib-napoleon >= 0.7
+recommonmark
+sphinx-autoapi
