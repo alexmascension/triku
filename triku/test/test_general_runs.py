@@ -34,8 +34,8 @@ def test_run_defaults_random():
 @pytest.mark.general
 def test_run_defaults_multicore():
     adata = sc.datasets.pbmc3k()
-    sc.pp.filter_cells(adata, min_genes=20)
-    sc.pp.filter_genes(adata, min_cells=20)
+    sc.pp.filter_cells(adata, min_genes=10)
+    sc.pp.filter_genes(adata, min_cells=10)
     tk.tl.triku(adata, n_procs=2)
     print("Contents on adata.var: ", adata.var)
     for pos_gene in selected_markers:
