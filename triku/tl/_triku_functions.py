@@ -37,6 +37,7 @@ def clean_adata(adata):
 def save_object_triku(dict_triku, list_genes, path):
     df = pd.DataFrame(dict_triku)
     df = df.set_index(list_genes, drop=True)
+    triku_logger.info(f"Saving triku return in {path}")
     df.to_csv(path, sep=",")
 
 

@@ -38,8 +38,14 @@ def test_run_cli():
     sc.pp.filter_genes(adata, min_cells=10)
     df = adata.to_df()
     df.to_csv(os.getcwd() + "/sample_df_CLI.csv", sep=",")
-    os.system(f"triku {os.getcwd()}/sample_df_CLI.csv")
-    ret = pd.read_csv(f"{os.getcwd()}/sample_df_CLI.triku_return.csv")
+    os.system(f"triku {os.getcwd()}/sample_df_CLI.csv -verbose triku")
+
+    for ROOT, DIRS, FILES in os.walk(os.path.dirname(os.getcwd())):
+        for file in FILES:
+            if 'triku_return' in file:
+                path = ROOT + '/' + file
+
+    ret = pd.read_csv(path)
     for pos_gene in selected_markers:
         assert ret["highly_variable"][adata.var_names == pos_gene].values[0]
 
