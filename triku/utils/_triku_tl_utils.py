@@ -155,7 +155,7 @@ def return_arr_counts_genes(object_triku, get_from_raw=None):
         else:
             arr_counts, arr_genes = object_triku.X, object_triku.var_names.values
     elif isinstance(object_triku, pd.DataFrame):
-        arr_counts, arr_genes = object_triku.values, object_triku.columns.values.values
+        arr_counts, arr_genes = object_triku.values, object_triku.columns.values
     else:
         msg = "Accepted object types are scanpy annDatas or pandas DataFrames (columns are genes)."
         triku_logger.error(msg)
