@@ -3,8 +3,9 @@ import pytest
 import scanpy as sc
 import triku as tk
 import numpy as np
-import os
+import subprocess
 import pandas as pd
+import os
 
 
 selected_markers = ["CD79A", "CD14", "C3", "GZMB", "HMOX1", "ICAM4", "ITGA2B", "CLU"]
@@ -38,7 +39,7 @@ def test_run_cli():
     sc.pp.filter_genes(adata, min_cells=10)
     df = adata.to_df()
     df.to_csv(os.getcwd() + "/sample_df_CLI.csv", sep=",")
-    os.system(f"triku {os.getcwd()}/sample_df_CLI.csv -verbose triku")
+    subprocess.run(["triku", f"os.getcwd()/sample_df_CLI.csv", "-verbose", "triku"])
 
     for ROOT, DIRS, FILES in os.walk(os.path.dirname(os.getcwd())):
         for file in FILES:
