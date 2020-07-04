@@ -85,18 +85,10 @@ def check_count_mat(mat: [np.ndarray, spr.csr.csr_matrix]):
     triku_logger.info("Checking integrity of matrix.")
 
     if np.min(mat) < 0:
-        error_msg = "The count matrix contains negative values. Triku is supposed to run with raw count matrices."
+        error_msg = "The count matrix contains negative values. Triku is supposed to run with positive matrices."
 
         triku_logger.error(error_msg)
         raise BaseException(error_msg)
-
-    if np.percentile(mat[mat > 0], 99.9) < 17:
-        triku_logger.warning(
-            "The count matrix looks normalized or log-transformed (percentile 99.9: {}). "
-            "Triku is supposed to run with raw count matrices.".format(
-                np.percentile(mat[mat > 0], 99.9)
-            )
-        )
 
     if mat.shape[1] > 20000:
         triku_logger.warning(

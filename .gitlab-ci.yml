@@ -3,9 +3,7 @@ image: python:3.7
 stages:
   - build
   - test_prepare_codecov
-  - test_general
-  - test_args
-  - test_internals
+  - test
   - codecov
 
 variables:
@@ -40,7 +38,7 @@ prepare_codecov:
 
 # CODECOV GENERAL
 codecov_general:
-  stage: test_general
+  stage: test
   script:
     - pytest -n 1 -m "general" --cov=./triku/  --cov-append
     - mv .coverage .coverage.general
@@ -50,7 +48,7 @@ codecov_general:
 
 # CODECOV ARGS
 codecov_ouput_check:
-  stage: test_args
+  stage: test
   script:
     - pytest -n 4 -m "output_check" --cov=./triku/  --cov-append
     - mv .coverage .coverage.ouput_check
@@ -59,7 +57,7 @@ codecov_ouput_check:
       - .coverage.ouput_check
 
 codecov_args_var_check:
-  stage: test_args
+  stage: test
   script:
     - pytest -n 4 -m "var_check" --cov=./triku/  --cov-append
     - mv .coverage .coverage.var_check
@@ -68,13 +66,22 @@ codecov_args_var_check:
       - .coverage.var_check
 
 codecov_args_calc_check:
-  stage: test_args
+  stage: test
   script:
     - pytest -n 4 -m "calc_check" --cov=./triku/  --cov-append
     - mv .coverage .coverage.calc_check
   artifacts:
     paths:
       - .coverage.calc_check
+
+codecov_unit_exception_checks:
+  stage: test
+  script:
+    - pytest -n 4 -m "exception_check" --cov=./triku/  --cov-append
+    - mv .coverage .coverage.exception_check
+  artifacts:
+    paths:
+      - .coverage.exception_check
 
 # OUTPUT CODECOV
 codecov:

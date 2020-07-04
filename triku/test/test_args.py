@@ -117,6 +117,24 @@ def test_bg_correction():
     assert np.abs(np.mean(adata.var["emd_distance_random"].values)) < 0.1
 
 
+@pytest.mark.output_check
+def test_s():
+    n_feats = []
+
+    for s in [
+        0.1,
+        0.05,
+        0,
+        -0.05,
+        -0.1,
+    ]:  # This s order guarantees that the number of selected feats will be increasing
+        adata = sc.datasets.pbmc3k_processed()
+        tk.tl.triku(adata, s=s)
+        n_feats.append(adata.var["highly_variable"].values.sum())
+
+    assert sorted(n_feats) == n_feats
+
+
 @pytest.mark.var_check
 def test_n_divisions_check(getpbmc3k):
     adata = getpbmc3k
