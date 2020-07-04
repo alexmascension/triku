@@ -51,4 +51,5 @@ in log-transformed matrices, although the results depend on the dataset.
    :hidden:
 
    triku-work
+   install
    usage
