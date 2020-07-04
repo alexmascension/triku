@@ -26,8 +26,6 @@ def test_triku_check_count_negative():
     adata = sc.datasets.blobs(
         n_variables=2000, n_centers=3, cluster_std=1, n_observations=500
     )
-    adata.X = np.abs(adata.X).astype(int)
-
     assert np.min(adata.X) < 0
 
     try:

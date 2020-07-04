@@ -37,6 +37,7 @@ def test_run_defaults_multicore():
     sc.pp.filter_cells(adata, min_genes=20)
     sc.pp.filter_genes(adata, min_cells=20)
     tk.tl.triku(adata, n_procs=2)
+    print("Contents on adata.var: ", adata.var)
     for pos_gene in selected_markers:
         assert adata.var["highly_variable"].loc[pos_gene]
 
