@@ -2,7 +2,6 @@ include requirements.txt
 include LICENSE
 include *.yaml
 include *.yml
-include scripts/triku
-exclude notebooks
-exclude data
-
+prune notebooks
+prune data
+prune docs
