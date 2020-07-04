@@ -39,7 +39,8 @@ def test_run_cli():
     sc.pp.filter_genes(adata, min_cells=10)
     df = adata.to_df()
     df.to_csv(os.getcwd() + "/sample_df_CLI.csv", sep=",")
-    subprocess.run(["triku", f"os.getcwd()/sample_df_CLI.csv", "-verbose", "triku"])
+    tk.tl.triku(os.getcwd() + "/sample_df_CLI.csv", verbose='triku')
+    # subprocess.run(["triku", f"os.getcwd()/sample_df_CLI.csv", "-verbose", "triku"])
 
     for ROOT, DIRS, FILES in os.walk(os.path.dirname(os.getcwd())):
         for file in FILES:
