@@ -40,7 +40,7 @@ prepare_codecov:
 codecov_general:
   stage: test
   script:
-    - pytest -n 1 -m "general" --cov=./triku/  --cov-append
+    - pytest -s -m "general" --cov=./triku/  --cov-append
     - mv .coverage .coverage.general
   artifacts:
     paths:
@@ -50,7 +50,7 @@ codecov_general:
 codecov_ouput_check:
   stage: test
   script:
-    - pytest -n 4 -m "output_check" --cov=./triku/  --cov-append
+    - pytest -s -n 4 -m "output_check" --cov=./triku/  --cov-append
     - mv .coverage .coverage.ouput_check
   artifacts:
     paths:
@@ -59,7 +59,7 @@ codecov_ouput_check:
 codecov_args_var_check:
   stage: test
   script:
-    - pytest -n 4 -m "var_check" --cov=./triku/  --cov-append
+    - pytest -s -n 4 -m "var_check" --cov=./triku/  --cov-append
     - mv .coverage .coverage.var_check
   artifacts:
     paths:
@@ -68,7 +68,7 @@ codecov_args_var_check:
 codecov_args_calc_check:
   stage: test
   script:
-    - pytest -n 4 -m "calc_check" --cov=./triku/  --cov-append
+    - pytest -s -n 4 -m "calc_check" --cov=./triku/  --cov-append
     - mv .coverage .coverage.calc_check
   artifacts:
     paths:
@@ -77,7 +77,7 @@ codecov_args_calc_check:
 codecov_unit_exception_checks:
   stage: test
   script:
-    - pytest -n 4 -m "exception_check" --cov=./triku/  --cov-append
+    - pytest -s -n 4 -m "exception_check" --cov=./triku/  --cov-append
     - mv .coverage .coverage.exception_check
   artifacts:
     paths:
@@ -88,6 +88,6 @@ codecov:
   stage: codecov
   script:
     - coverage combine .cov*
-    - pytest -n 1 -m "end" --cov=./triku/ --cov-append --cov-report=html
+    - pytest -s -n 1 -m "end" --cov=./triku/ --cov-append --cov-report=html
     - codecov --token=6e1967cb-4cf2-4eee-b32a-82b0ca1725a0
 
