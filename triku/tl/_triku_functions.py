@@ -26,7 +26,11 @@ def load_object_triku(object_triku):
 
 
 def clean_adata(adata):
-    for varx in ["emd_distance", "emd_distance_uncorrected", "emd_distance_random"]:
+    for varx in [
+        "emd_distance",
+        "emd_distance_uncorrected",
+        "emd_distance_random",
+    ]:
         if varx in adata.var:
             del adata.var[varx]
 
@@ -43,7 +47,9 @@ def save_object_triku(dict_triku, list_genes, path):
 
 def get_n_divisions(arr_counts: np.array) -> int:
     diff = np.abs(np.sum(arr_counts - arr_counts.astype(int)))
-    triku_logger.log(TRIKU_LEVEL, f"Difference between int and float array is  {diff}")
+    triku_logger.log(
+        TRIKU_LEVEL, f"Difference between int and float array is  {diff}"
+    )
 
     if diff < 1:
         n_divisions = 1
@@ -70,15 +76,18 @@ def return_knn_indices(
     """
     triku_logger.log(TRIKU_LEVEL, "Calculating PCA for knn indices")
     pca = PCA(
-        n_components=n_comps, whiten=True, svd_solver="auto", random_state=random_state
+        n_components=n_comps,
+        whiten=True,
+        svd_solver="auto",
+        random_state=random_state,
     ).fit_transform(array)
 
     if return_random:
         triku_logger.log(TRIKU_LEVEL, "Applying knn indices randomly")
         # With this approach it is possible that two knns are the same for a cell. But well, not really that important.
-        knn_indices = np.random.randint(array.shape[0], array.shape[0] * knn).reshape(
-            array.shape[0], knn
-        )
+        knn_indices = np.random.randint(
+            array.shape[0], array.shape[0] * knn
+        ).reshape(array.shape[0], knn)
         knn_indices[:, 0] = np.arange(array.shape[0])
 
     else:
@@ -120,7 +129,9 @@ def return_knn_expression(
     own cell).
     """
 
-    sparse_mask = spr.lil_matrix((arr_expression.shape[0], arr_expression.shape[0]))
+    sparse_mask = spr.lil_matrix(
+        (arr_expression.shape[0], arr_expression.shape[0])
+    )
     # [:, 0] is [0,0,0,0,..., 0, 1, ..., 1, ... ] and [:, 1] are the indices of the rest of cells.
     sparse_mask[
         np.repeat(np.arange(knn_indices.shape[0]), knn_indices.shape[1]),
@@ -128,7 +139,9 @@ def return_knn_expression(
     ] = 1
     triku_logger.log(
         TRIKU_LEVEL,
-        "sparse_mask sum {} / shape: {}".format(sparse_mask.sum(), sparse_mask.shape),
+        "sparse_mask sum {} / shape: {}".format(
+            sparse_mask.sum(), sparse_mask.shape
+        ),
     )
 
     knn_expression = sparse_mask.dot(arr_expression)
@@ -252,7 +265,10 @@ def compute_conv_idx(
 
 
 def calculate_emd(
-    knn_counts: np.ndarray, x_conv: np.ndarray, y_conv: np.ndarray, n_divisions: int
+    knn_counts: np.ndarray,
+    x_conv: np.ndarray,
+    y_conv: np.ndarray,
+    n_divisions: int,
 ) -> (np.ndarray, np.ndarray):
     """
     Returns "normalized" earth movers distance (EMD). The function calculates the x positions and probabilities
@@ -333,13 +349,21 @@ def parallel_emd_calculation(
     """
     n_genes = array_counts.shape[1]
 
+    triku_logger.log(
+        TRIKU_LEVEL, f"Running EMD calulation with {n_procs} processors."
+    )
     # Apply a non_paralellized variant with tqdm
     if n_procs == 1:
         tqdm_out = TqdmToLogger(triku_logger, level=logging.INFO)
 
         return_objs = [
             compute_convolution_and_emd(
-                array_counts.T, array_knn_counts.T, idx_gene, knn, min_knn, n_divisions
+                array_counts.T,
+                array_knn_counts.T,
+                idx_gene,
+                knn,
+                min_knn,
+                n_divisions,
             )
             for idx_gene in tqdm(range(n_genes), file=tqdm_out)
         ]
@@ -357,7 +381,9 @@ def parallel_emd_calculation(
         ray.shutdown()
         ray.init(num_cpus=n_procs, ignore_reinit_error=True)
 
-        compute_convolution_and_emd_remote = ray.remote(compute_convolution_and_emd)
+        compute_convolution_and_emd_remote = ray.remote(
+            compute_convolution_and_emd
+        )
         array_counts_id = ray.put(
             array_counts.T
         )  # IMPORTANT TO TRANSPOSE TO SELECT ROWS (much faster)!!!

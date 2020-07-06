@@ -27,7 +27,7 @@ build:system:
   script:
     - pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
     - pip install -r requirements.txt
-    - pip install ray
+    - pip install ray pre-commit
 
 # CODECOV PREPARATION
 prepare_codecov:
