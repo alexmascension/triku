@@ -7,6 +7,9 @@
 
 Triku - Feature selection for Single Cell Analysis
 ==================================================
+.. image:: https://badge.fury.io/py/triku.svg
+    :target: https://badge.fury.io/py/triku
+
 .. image:: https://gitlab.com/alexmascension/triku/badges/dev/pipeline.svg
   :target: https://gitlab.com/alexmascension/triku
 
