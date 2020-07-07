@@ -30,6 +30,14 @@ build:system:
     - pip install ray pre-commit
   tags:
     - shared
+
+build:system_local:
+  stage: build
+  script:
+    - pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
+    - pip install -r requirements.txt
+    - pip install ray pre-commit
+  tags:
     - local_triku_runner
 
     # CODECOV PREPARATION
