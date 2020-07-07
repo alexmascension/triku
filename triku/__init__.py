@@ -1,3 +1,7 @@
+from . import cli  # noqa
+from . import tl  # noqa
+from . import utils  # noqa
+
 __author__ = ", ".join(["Alex M. Ascensión"])
 __email__ = ", ".join(
     [
