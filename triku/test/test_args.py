@@ -43,7 +43,7 @@ def test_n_features(getpbmc3k):
         assert np.sum(adata.var["highly_variable"].values) == n_feats
 
 
-@pytest.mark.calc_check
+@pytest.mark.calc_check_parallel
 def test_output_n_procs(run_adata_n_procs):
     dict_times, dict_results = run_adata_n_procs
     for n_procs in [2, 4, 8]:

@@ -93,6 +93,17 @@ codecov_args_calc_check:
     paths:
       - .coverage.calc_check
   tags:
+    - shared
+
+codecov_args_calc_check_parallel:
+  stage: test
+  script:
+    - pytest -s -n 4 -m "calc_check_parallel" --cov=./triku/  --cov-append
+    - mv .coverage .coverage.calc_check_parallel
+  artifacts:
+    paths:
+      - .coverage.calc_check_parallel
+  tags:
     - local_triku_runner
 
 codecov_unit_exception_checks:
