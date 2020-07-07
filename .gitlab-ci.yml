@@ -28,13 +28,17 @@ build:system:
     - pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
     - pip install -r requirements.txt
     - pip install ray pre-commit
+  tags:
+    - shared
 
-# CODECOV PREPARATION
+    # CODECOV PREPARATION
 prepare_codecov:
   stage: test_prepare_codecov
   script:
     - rm -f .cov*
     - rm -rf htmlcov
+  tags:
+    - shared
 
 # CODECOV GENERAL
 codecov_general:
@@ -45,6 +49,8 @@ codecov_general:
   artifacts:
     paths:
       - .coverage.general
+  tags:
+    - local_triku_runner
 
 # CODECOV ARGS
 codecov_ouput_check:
@@ -55,6 +61,8 @@ codecov_ouput_check:
   artifacts:
     paths:
       - .coverage.ouput_check
+  tags:
+    - shared
 
 codecov_args_var_check:
   stage: test
@@ -64,6 +72,8 @@ codecov_args_var_check:
   artifacts:
     paths:
       - .coverage.var_check
+  tags:
+    - shared
 
 codecov_args_calc_check:
   stage: test
@@ -73,6 +83,8 @@ codecov_args_calc_check:
   artifacts:
     paths:
       - .coverage.calc_check
+  tags:
+    - local_triku_runner
 
 codecov_unit_exception_checks:
   stage: test
@@ -82,6 +94,8 @@ codecov_unit_exception_checks:
   artifacts:
     paths:
       - .coverage.exception_check
+  tags:
+    - shared
 
 # OUTPUT CODECOV
 codecov:
@@ -90,4 +104,5 @@ codecov:
     - coverage combine .cov*
     - pytest -s -n 1 -m "end" --cov=./triku/ --cov-append --cov-report=html
     - codecov --token=6e1967cb-4cf2-4eee-b32a-82b0ca1725a0
-
+  tags:
+    - shared
