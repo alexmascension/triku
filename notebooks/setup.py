@@ -2,7 +2,6 @@ import sys
 
 if sys.version_info < (3,):
     sys.exit("scanpy requires Python >= 3.6")
-from pathlib import Path
 
 from setuptools import setup, find_packages
 

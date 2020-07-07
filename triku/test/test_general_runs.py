@@ -1,10 +1,11 @@
-import pytest
+import os
 
-import scanpy as sc
-import triku as tk
 import numpy as np
 import pandas as pd
-import os
+import pytest
+import scanpy as sc
+
+import triku as tk
 
 
 selected_markers = [

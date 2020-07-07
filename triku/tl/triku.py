@@ -1,31 +1,27 @@
-import scanpy as sc
-import pandas as pd
+import logging
+import warnings
+
 import numpy as np
-import scipy.sparse as spr
+import pandas as pd
+import scanpy as sc
 
 from ..genutils import get_cpu_count
-from ._triku_functions import (
-    return_knn_indices,
-    return_knn_expression,
-    create_random_count_matrix,
-    parallel_emd_calculation,
-    subtract_median,
-    get_cutoff_curve,
-    get_n_divisions,
-    load_object_triku,
-    save_object_triku,
-    clean_adata,
-)
-from ..utils._triku_tl_utils import (
-    return_mean,
-    return_proportion_zeros,
-    get_arr_counts_and_genes,
-)
+from ..logg import TRIKU_LEVEL
+from ..logg import triku_logger
 from ..utils._general_utils import set_level_logger
-from ..logg import triku_logger, TRIKU_LEVEL
-
-import warnings
-import logging
+from ..utils._triku_tl_utils import get_arr_counts_and_genes
+from ..utils._triku_tl_utils import return_mean
+from ..utils._triku_tl_utils import return_proportion_zeros
+from ._triku_functions import clean_adata
+from ._triku_functions import create_random_count_matrix
+from ._triku_functions import get_cutoff_curve
+from ._triku_functions import get_n_divisions
+from ._triku_functions import load_object_triku
+from ._triku_functions import parallel_emd_calculation
+from ._triku_functions import return_knn_expression
+from ._triku_functions import return_knn_indices
+from ._triku_functions import save_object_triku
+from ._triku_functions import subtract_median
 
 warnings.filterwarnings("ignore")  # To ignore Numba warnings
 
@@ -162,11 +158,15 @@ def triku(
             )
         )
         n_procs = max(1, get_cpu_count() - 1)
-    triku_logger.log(TRIKU_LEVEL, "Number of processors set to {}".format(n_procs))
+    triku_logger.log(
+        TRIKU_LEVEL, "Number of processors set to {}".format(n_procs)
+    )
 
     # Get the array of counts (np.array) and the array of genes.
-    arr_counts, arr_genes = get_arr_counts_and_genes(object_triku, use_raw=use_raw)
-    mean_counts, per_counts = (
+    arr_counts, arr_genes = get_arr_counts_and_genes(
+        object_triku, use_raw=use_raw
+    )
+    mean_counts, _ = (
         return_mean(arr_counts),
         return_proportion_zeros(arr_counts),
     )
@@ -178,10 +178,10 @@ def triku(
     """
     First step is to get the kNN for the expression matrix.
     This is not that time intensive, but for reproducibility, we by default accept the kNN calculated by
-    scanpy (sc.pp.neighbors()), and obtain the info from there. 
-    Otherwise, we calculate the kNNs. 
+    scanpy (sc.pp.neighbors()), and obtain the info from there.
+    Otherwise, we calculate the kNNs.
     The expected output from this step is a matrix of cells x (kNN + 1), where each column includes the neighbor index
-    of the cell number 
+    of the cell number
     """
 
     knn_array = None
@@ -210,7 +210,9 @@ def triku(
                 # Last step is to add a arange of 0 to n_cells in the first column.
                 knn_array = np.concatenate(
                     (
-                        np.arange(knn_array.shape[0]).reshape(knn_array.shape[0], 1),
+                        np.arange(knn_array.shape[0]).reshape(
+                            knn_array.shape[0], 1
+                        ),
                         knn_array,
                     ),
                     axis=1,
@@ -219,7 +221,9 @@ def triku(
     if knn_array is None:
         if knn is None:
             knn = int(0.5 * (arr_counts.shape[0]) ** 0.5)
-            triku_logger.info("The number of neighbours is set to {}".format(knn))
+            triku_logger.info(
+                "The number of neighbours is set to {}".format(knn)
+            )
 
         triku_logger.info("Calculating knn indices")
         knn_array = return_knn_indices(
@@ -345,16 +349,25 @@ def triku(
                 knn_array,
                 knn_array_random,
             )
-            dict_return["knn_expression"], dict_return["knn_expression_random"] = (
+            (
+                dict_return["knn_expression"],
+                dict_return["knn_expression_random"],
+            ) = (
                 arr_knn_expression,
                 arr_knn_expression_random,
             )
 
-            dict_return["x_convolution"], dict_return["x_convolution_random"] = (
+            (
+                dict_return["x_convolution"],
+                dict_return["x_convolution_random"],
+            ) = (
                 list_x_conv,
                 list_x_conv_random,
             )
-            dict_return["y_convolution"], dict_return["y_convolution_random"] = (
+            (
+                dict_return["y_convolution"],
+                dict_return["y_convolution_random"],
+            ) = (
                 list_y_conv,
                 list_y_conv_random,
             )

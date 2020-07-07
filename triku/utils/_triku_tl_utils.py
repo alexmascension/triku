@@ -1,10 +1,11 @@
-import numpy as np
-import scipy.sparse as spr
 import bottleneck as bn
-import scanpy as sc
+import numpy as np
 import pandas as pd
+import scanpy as sc
+import scipy.sparse as spr
 
-from triku.logg import triku_logger, TRIKU_LEVEL
+from triku.logg import TRIKU_LEVEL
+from triku.logg import triku_logger
 
 
 def return_proportion_zeros(mat: [np.ndarray, spr.csr.csr_matrix]):
@@ -145,9 +146,15 @@ def return_arr_counts_genes(object_triku, get_from_raw=None):
             arr_counts = object_triku.raw[:, object_triku.var_names].X
             arr_genes = object_triku.var_names.values
         else:
-            arr_counts, arr_genes = object_triku.X, object_triku.var_names.values
+            arr_counts, arr_genes = (
+                object_triku.X,
+                object_triku.var_names.values,
+            )
     elif isinstance(object_triku, pd.DataFrame):
-        arr_counts, arr_genes = object_triku.values, object_triku.columns.values
+        arr_counts, arr_genes = (
+            object_triku.values,
+            object_triku.columns.values,
+        )
     else:
         msg = "Accepted object types are scanpy annDatas or pandas DataFrames (columns are genes)."
         triku_logger.error(msg)

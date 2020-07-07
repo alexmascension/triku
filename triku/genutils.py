@@ -1,6 +1,6 @@
-import os
 import io
 import logging
+import os
 
 
 def get_cpu_count():

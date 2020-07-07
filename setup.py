@@ -22,7 +22,8 @@ setup(
     license="BSD",
     python_requires=">=3.6",
     install_requires=[
-        l.strip() for l in Path("requirements.txt").read_text("utf-8").splitlines()
+        module.strip()
+        for module in Path("requirements.txt").read_text("utf-8").splitlines()
     ],
     packages=find_packages(),
     # `package_data` does NOT work for source distributions!!!

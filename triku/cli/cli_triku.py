@@ -1,5 +1,6 @@
-from triku.tl import triku
 from funcargparse import FuncArgParser
+
+from triku.tl import triku
 
 
 def main():

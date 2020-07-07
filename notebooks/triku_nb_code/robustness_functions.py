@@ -1,15 +1,17 @@
-from itertools import product
-import pandas as pd
-import triku as tk
-from triku.tl._triku_functions import subtract_median
-from tqdm.notebook import tqdm
+import gc
 import os
+from itertools import product
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.stats as sts
+import pandas as pd
 import scanpy as sc
-import gc
+import scipy.stats as sts
+from tqdm.notebook import tqdm
+
+import triku as tk
+from triku.tl._triku_functions import subtract_median
 
 
 def run_batch(adata, windows, n_comps, knns, seeds, save_dir, dataset_prefix):
@@ -20,7 +22,9 @@ def run_batch(adata, windows, n_comps, knns, seeds, save_dir, dataset_prefix):
     # randomization, for a determined combination of window / n_comp / knn and seed (we will use 3 or 5 seeds
     # for replication purposes).
 
-    for window, n_comp, knn, seed in tqdm(product(*[windows, n_comps, knns, seeds])):
+    for window, n_comp, knn, seed in tqdm(
+        product(*[windows, n_comps, knns, seeds])
+    ):
         print(window, n_comp, knn, seed)
         save_file = "{save_dir}/{pref}-w_{w}-comps_{n_comps}-knn_{knn}-seed_{seed}.csv".format(
             save_dir=save_dir,
@@ -60,10 +64,11 @@ def run_batch(adata, windows, n_comps, knns, seeds, save_dir, dataset_prefix):
                     index=adata.var_names.values,
                 )
 
-            except:
+            except BaseException:
                 df_res = pd.DataFrame(
                     data={
-                        "emd_random_correction": [np.NaN] * len(adata.var_names),
+                        "emd_random_correction": [np.NaN]
+                        * len(adata.var_names),
                         "emd_no_correction": [np.NaN] * len(adata.var_names),
                     },
                     index=adata.var_names.values,
@@ -78,7 +83,11 @@ def run_all_batches(lib_preps, orgs, dataset, read_dir, save_dir):
     for lib_prep, org in tqdm(product(*[lib_preps, orgs])):
         file_in = None
         for file in os.listdir(read_dir):
-            if org in file in file and lib_prep in file and file.endswith(".h5ad"):
+            if (
+                org in file in file
+                and lib_prep in file
+                and file.endswith(".h5ad")
+            ):
                 file_in = file
 
         if file_in is None:
@@ -237,9 +246,9 @@ def return_percentage_overlap(df_1, df_2, min_n_feats, max_n_feats):
     percentage_overlap_non_rand = len(
         np.intersect1d(feats_1_no_cor, feats_2_no_cor)
     ) / (max_n_feats - min_n_feats)
-    percentage_overlap_rand = len(np.intersect1d(feats_1_rand, feats_2_rand)) / (
-        max_n_feats - min_n_feats
-    )
+    percentage_overlap_rand = len(
+        np.intersect1d(feats_1_rand, feats_2_rand)
+    ) / (max_n_feats - min_n_feats)
 
     return [percentage_overlap_rand], [percentage_overlap_non_rand]
 
@@ -282,7 +291,11 @@ def return_correlation(df_1, df_2, min_n_feats, max_n_feats):
 def random_noise_parameter(
     lib_prep, org, dataset, save_dir, min_n_feats, max_n_feats, what, by
 ):
-    list_dists_non_randomized, list_dists_randomized, list_param_value = [], [], []
+    list_dists_non_randomized, list_dists_randomized, list_param_value = (
+        [],
+        [],
+        [],
+    )
 
     knn_list = return_knn_indices(save_dir, org, lib_prep, dataset)
     pca_list = return_pca_indices(save_dir, org, lib_prep, dataset)
@@ -296,7 +309,9 @@ def random_noise_parameter(
         for file in os.listdir(save_dir):
             if by == "knn":
                 static_comp = (
-                    "w_100-" in file and "comps_30-" in file and dataset in file
+                    "w_100-" in file
+                    and "comps_30-" in file
+                    and dataset in file
                 )
                 dyn_comp = "knn_" + str(val) in file
             elif by == "pca":
@@ -388,7 +403,9 @@ def compare_parameter(
 
             if by == "knn":
                 static_comp = (
-                    "w_100-" in file and "comps_30-" in file and dataset in file
+                    "w_100-" in file
+                    and "comps_30-" in file
+                    and dataset in file
                 )
                 dyn_comp = "knn_" + str(val) in file
             elif by == "pca":
@@ -461,14 +478,14 @@ def plot_scatter_parameter(
     # Set params for plot:
     if by == "knn":
         ticks = [
-            "$\sqrt{N}/20$",
-            "$\sqrt{N}/10$",
-            "$\sqrt{N}/5$",
-            "$\sqrt{N}/2$",
-            "$\sqrt{N}$ (%s)" % val_list[4],
-            "$1.5\sqrt{N}$",
-            "$2\sqrt{N}$",
-            "$4\sqrt{N}$",
+            r"$\sqrt{N}/20$",
+            r"$\sqrt{N}/10$",
+            r"$\sqrt{N}/5$",
+            r"$\sqrt{N}/2$",
+            r"$\sqrt{N}$ (%s)" % val_list[4],
+            r"$1.5\sqrt{N}$",
+            r"$2\sqrt{N}$",
+            r"$4\sqrt{N}$",
         ]
         xlabel = "Number of kNN"
     elif by == "pca":
@@ -488,10 +505,12 @@ def plot_scatter_parameter(
             list_colors = ["#faa476", "#f0746e", "#dc3977", "#7c1d6f"]
         for df_idx, sub_df in enumerate(list_dfs):
             sub_df_ran = sub_df["d"][
-                (sub_df[by] == val_list[val_idx]) & (sub_df["randomized"] == "Yes")
+                (sub_df[by] == val_list[val_idx])
+                & (sub_df["randomized"] == "Yes")
             ].values[::step]
             sub_df_no_ran = sub_df["d"][
-                (sub_df[by] == val_list[val_idx]) & (sub_df["randomized"] == "No")
+                (sub_df[by] == val_list[val_idx])
+                & (sub_df["randomized"] == "No")
             ].values[::step]
 
             alpha_idx = np.round(
@@ -527,12 +546,16 @@ def plot_scatter_parameter(
 
     plt.savefig(
         save_dir
-        + "/pdf/{}_{}_{}_{}.pdf".format(title.replace(",", ""), lib_prep, dataset, org),
+        + "/pdf/{}_{}_{}_{}.pdf".format(
+            title.replace(",", ""), lib_prep, dataset, org
+        ),
         format="pdf",
     )
     plt.savefig(
         save_dir
-        + "/png/{}_{}_{}_{}.png".format(title.replace(",", ""), lib_prep, dataset, org),
+        + "/png/{}_{}_{}_{}.png".format(
+            title.replace(",", ""), lib_prep, dataset, org
+        ),
         format="png",
         dpi=350,
     )
@@ -603,7 +626,9 @@ def plot_scatter_datasets(
 
     color_counter = 0
     for technique in list_techniques:
-        val_list = sorted(list(dict.fromkeys(list_dict_dfs[0][technique][by].values)))
+        val_list = sorted(
+            list(dict.fromkeys(list_dict_dfs[0][technique][by].values))
+        )
         y_low, y_mid, y_hi = [], [], []
 
         df_lo, df_mid, df_hi = (
@@ -615,17 +640,20 @@ def plot_scatter_datasets(
         for val_idx in range(len(val_list)):
             y_low.append(
                 df_lo["d"][
-                    (df_lo[by] == val_list[val_idx]) & (df_lo["randomized"] == "Yes")
+                    (df_lo[by] == val_list[val_idx])
+                    & (df_lo["randomized"] == "Yes")
                 ].values.mean()
             )
             y_mid.append(
                 df_mid["d"][
-                    (df_mid[by] == val_list[val_idx]) & (df_mid["randomized"] == "Yes")
+                    (df_mid[by] == val_list[val_idx])
+                    & (df_mid["randomized"] == "Yes")
                 ].values.mean()
             )
             y_hi.append(
                 df_hi["d"][
-                    (df_hi[by] == val_list[val_idx]) & (df_hi["randomized"] == "Yes")
+                    (df_hi[by] == val_list[val_idx])
+                    & (df_hi["randomized"] == "Yes")
                 ].values.mean()
             )
 
@@ -653,13 +681,13 @@ def plot_scatter_datasets(
     # Set params for plot:
     if by == "knn":
         ticks = [
-            "$\sqrt{N}/20$",
-            "$\sqrt{N}/10$",
-            "$\sqrt{N}/5$",
-            "$\sqrt{N}/2$",
-            "$\sqrt{N}$ (%s)" % val_list[4],
-            "$2\sqrt{N}$",
-            "$5\sqrt{N}$",
+            r"$\sqrt{N}/20$",
+            r"$\sqrt{N}/10$",
+            r"$\sqrt{N}/5$",
+            r"$\sqrt{N}/2$",
+            r"$\sqrt{N}$ (%s)" % val_list[4],
+            r"$2\sqrt{N}$",
+            r"$5\sqrt{N}$",
         ]
         xlabel = "Number of kNN"
     elif by == "pca":
@@ -678,12 +706,16 @@ def plot_scatter_datasets(
 
     plt.savefig(
         save_dir
-        + "/pdf/{}_library-comparison_{}.pdf".format(title.replace(",", ""), org),
+        + "/pdf/{}_library-comparison_{}.pdf".format(
+            title.replace(",", ""), org
+        ),
         format="pdf",
     )
     plt.savefig(
         save_dir
-        + "/png/{}_library-comparison_{}.png".format(title.replace(",", ""), org),
+        + "/png/{}_library-comparison_{}.png".format(
+            title.replace(",", ""), org
+        ),
         format="png",
         dpi=350,
     )
@@ -691,13 +723,34 @@ def plot_scatter_datasets(
 
 def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
     df_0_250 = random_noise_parameter(
-        lib_prep, org, dataset, save_dir, 0, 250, what="relative noise", by="knn"
+        lib_prep,
+        org,
+        dataset,
+        save_dir,
+        0,
+        250,
+        what="relative noise",
+        by="knn",
     )
     df_250_1000 = random_noise_parameter(
-        lib_prep, org, dataset, save_dir, 250, 1000, what="relative noise", by="knn"
+        lib_prep,
+        org,
+        dataset,
+        save_dir,
+        250,
+        1000,
+        what="relative noise",
+        by="knn",
     )
     df_1000_5000 = random_noise_parameter(
-        lib_prep, org, dataset, save_dir, 1000, 5000, what="relative noise", by="knn"
+        lib_prep,
+        org,
+        dataset,
+        save_dir,
+        1000,
+        5000,
+        what="relative noise",
+        by="knn",
     )
 
     plot_scatter_parameter(
@@ -712,13 +765,34 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
     )
 
     df_0_250 = random_noise_parameter(
-        lib_prep, org, dataset, save_dir, 0, 250, what="relative noise", by="pca"
+        lib_prep,
+        org,
+        dataset,
+        save_dir,
+        0,
+        250,
+        what="relative noise",
+        by="pca",
     )
     df_250_1000 = random_noise_parameter(
-        lib_prep, org, dataset, save_dir, 250, 1000, what="relative noise", by="pca"
+        lib_prep,
+        org,
+        dataset,
+        save_dir,
+        250,
+        1000,
+        what="relative noise",
+        by="pca",
     )
     df_1000_5000 = random_noise_parameter(
-        lib_prep, org, dataset, save_dir, 1000, 5000, what="relative noise", by="pca"
+        lib_prep,
+        org,
+        dataset,
+        save_dir,
+        1000,
+        5000,
+        what="relative noise",
+        by="pca",
     )
 
     plot_scatter_parameter(
@@ -792,7 +866,12 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
     )
 
     plot_scatter_parameter(
-        [df_violin_0_5000, df_violin_0_2500, df_violin_0_1000, df_violin_0_500],
+        [
+            df_violin_0_5000,
+            df_violin_0_2500,
+            df_violin_0_1000,
+            df_violin_0_500,
+        ],
         ["0 - 5000", "0 - 2500", "0 - 1000", "0 - 500"],
         lib_prep,
         org,
@@ -818,7 +897,12 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
     )
 
     plot_scatter_parameter(
-        [df_violin_0_5000, df_violin_0_2500, df_violin_0_1000, df_violin_0_500],
+        [
+            df_violin_0_5000,
+            df_violin_0_2500,
+            df_violin_0_1000,
+            df_violin_0_500,
+        ],
         ["0 - 5000", "0 - 2500", "0 - 1000", "0 - 500"],
         lib_prep,
         org,
@@ -844,7 +928,12 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
     )
 
     plot_scatter_parameter(
-        [df_violin_0_5000, df_violin_0_2500, df_violin_0_1000, df_violin_0_500],
+        [
+            df_violin_0_5000,
+            df_violin_0_2500,
+            df_violin_0_1000,
+            df_violin_0_500,
+        ],
         ["0 - 5000", "0 - 2500", "0 - 1000", "0 - 500"],
         lib_prep,
         org,
@@ -870,7 +959,12 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
     )
 
     plot_scatter_parameter(
-        [df_violin_0_5000, df_violin_0_2500, df_violin_0_1000, df_violin_0_500],
+        [
+            df_violin_0_5000,
+            df_violin_0_2500,
+            df_violin_0_1000,
+            df_violin_0_500,
+        ],
         ["0 - 5000", "0 - 2500", "0 - 1000", "0 - 500"],
         lib_prep,
         org,
@@ -896,7 +990,12 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
     )
 
     plot_scatter_parameter(
-        [df_violin_0_5000, df_violin_0_2500, df_violin_0_1000, df_violin_0_500],
+        [
+            df_violin_0_5000,
+            df_violin_0_2500,
+            df_violin_0_1000,
+            df_violin_0_500,
+        ],
         ["0 - 5000", "0 - 2500", "0 - 1000", "0 - 500"],
         lib_prep,
         org,
@@ -922,7 +1021,12 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
     )
 
     plot_scatter_parameter(
-        [df_violin_0_5000, df_violin_0_2500, df_violin_0_1000, df_violin_0_500],
+        [
+            df_violin_0_5000,
+            df_violin_0_2500,
+            df_violin_0_1000,
+            df_violin_0_500,
+        ],
         ["0 - 5000", "0 - 2500", "0 - 1000", "0 - 500"],
         lib_prep,
         org,
@@ -948,7 +1052,12 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
     )
 
     plot_scatter_parameter(
-        [df_violin_0_5000, df_violin_0_2500, df_violin_0_1000, df_violin_0_500],
+        [
+            df_violin_0_5000,
+            df_violin_0_2500,
+            df_violin_0_1000,
+            df_violin_0_500,
+        ],
         ["0 - 5000", "0 - 2500", "0 - 1000", "0 - 500"],
         lib_prep,
         org,

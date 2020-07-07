@@ -1,9 +1,10 @@
-import pytest
-
-import scanpy as sc
-import triku as tk
-import numpy as np
 from time import time
+
+import numpy as np
+import pytest
+import scanpy as sc
+
+import triku as tk
 
 
 @pytest.fixture
@@ -59,20 +60,27 @@ def test_use_adata_knn(getpbmc3k):
 @pytest.mark.calc_check
 def test_n_windows_1(getpbmc3k):
     adata = getpbmc3k
-    tk.tl.triku(adata, n_procs=1, n_windows=1, apply_background_correction=True)
+    tk.tl.triku(
+        adata, n_procs=1, n_windows=1, apply_background_correction=True
+    )
     assert not np.all(
-        adata.var["emd_distance"].values == adata.var["emd_distance_uncorrected"].values
+        adata.var["emd_distance"].values
+        == adata.var["emd_distance_uncorrected"].values
     )
 
     # Checks that previous columns are removed
-    tk.tl.triku(adata, n_procs=1, n_windows=1, apply_background_correction=False)
+    tk.tl.triku(
+        adata, n_procs=1, n_windows=1, apply_background_correction=False
+    )
     assert np.all(
         adata.var["emd_distance"].values
         == adata.var["emd_distance_uncorrected"].values
         - np.median(adata.var["emd_distance_uncorrected"].values)
     )
 
-    tk.tl.triku(adata, n_procs=1, n_windows=100, apply_background_correction=False)
+    tk.tl.triku(
+        adata, n_procs=1, n_windows=100, apply_background_correction=False
+    )
     assert (
         np.sum(
             adata.var["emd_distance"].values

@@ -113,5 +113,7 @@ codecov:
     - coverage combine .cov*
     - pytest -s -n 1 -m "end" --cov=./triku/ --cov-append --cov-report=html
     - codecov --token=6e1967cb-4cf2-4eee-b32a-82b0ca1725a0
+    - rm -f .cov*
+    - rm -rf htmlcov
   tags:
     - shared

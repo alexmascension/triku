@@ -1,12 +1,12 @@
+import os
 import warnings
 
-warnings.simplefilter(action="ignore")
-
-import scanpy as sc
 import numpy as np
 import pandas as pd
+import scanpy as sc
 from scipy.io import mmread
-import os
+
+warnings.simplefilter(action="ignore")
 
 
 def ensembl2symbol(adata, root_dir, org, ens_sep):
@@ -98,14 +98,16 @@ def process_ding(root_dir):
         print(f"{len(adata_method)} cells selected")
         sc.pp.filter_genes(adata_method, min_cells=5)
         adata_method.X = np.asarray(adata_method.X.todense())
-        adata_method = ensembl2symbol(adata_method, root_dir[:-1], "human", "_")
+        adata_method = ensembl2symbol(
+            adata_method, root_dir[:-1], "human", "_"
+        )
         adata_method.write_h5ad(root_dir + f"/{method}_human.h5ad")
 
 
 def process_mereu(root_dir):
     """
     In this case, because names are informative, we only need to download the data, read the csv files and output
-    the adatas.   
+    the adatas.
     """
     tsv_dir = root_dir + "/tsv/"
 
@@ -132,7 +134,9 @@ def process_mereu(root_dir):
         for org in ["mouse", "human"]:  # TODO: add mouse when I have the df
             print(technique, org)
 
-            file_select = [f for f in file_list if (technique in f) & (org in f)][0]
+            file_select = [
+                f for f in file_list if (technique in f) & (org in f)
+            ][0]
 
             adata = sc.read_text(tsv_dir + file_select).transpose()
             adata.var_names_make_unique()
@@ -141,15 +145,21 @@ def process_mereu(root_dir):
                 cells_select = np.intersect1d(
                     df_cell_types_human.index.values, adata.obs_names.values
                 )
-                cell_types = df_cell_types_human["cell_types"].loc[cells_select].values
+                cell_types = (
+                    df_cell_types_human["cell_types"].loc[cells_select].values
+                )
             else:
                 cells_select = np.intersect1d(
                     df_cell_types_mouse.index.values, adata.obs_names.values
                 )
-                cell_types = df_cell_types_mouse["cell_types"].loc[cells_select].values
+                cell_types = (
+                    df_cell_types_mouse["cell_types"].loc[cells_select].values
+                )
 
             len_before, len_after = len(adata.obs_names), len(cells_select)
-            print(f"{len_before} before removal, {len_after} after cell removal.")
+            print(
+                f"{len_before} before removal, {len_after} after cell removal."
+            )
             adata = adata[cells_select]
 
             adata.obs["cell_types"] = cell_types

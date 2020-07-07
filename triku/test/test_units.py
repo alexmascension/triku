@@ -1,8 +1,8 @@
-import pytest
-
-import scanpy as sc
-import triku as tk
 import numpy as np
+import pytest
+import scanpy as sc
+
+import triku as tk
 
 
 @pytest.mark.exception_check

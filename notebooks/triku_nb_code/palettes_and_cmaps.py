@@ -87,7 +87,23 @@ bold = [
     "#4b4b8f",
 ]
 # Diverging palettes
-temps = ["#009392", "#39b185", "#9ccb86", "#e9e29c", "#eeb479", "#e88471", "#cf597e"]
+temps = [
+    "#009392",
+    "#39b185",
+    "#9ccb86",
+    "#e9e29c",
+    "#eeb479",
+    "#e88471",
+    "#cf597e",
+]
 
 # Continuous palettes
-teal = ["#d1eeea", "#a8dbd9", "#85c4c9", "#68abb8", "#4f90a6", "#3b738f", "#2a5674"]
+teal = [
+    "#d1eeea",
+    "#a8dbd9",
+    "#85c4c9",
+    "#68abb8",
+    "#4f90a6",
+    "#3b738f",
+    "#2a5674",
+]

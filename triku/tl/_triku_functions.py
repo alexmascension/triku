@@ -1,20 +1,20 @@
+import gc
+import logging
 import os
+
 import numpy as np
 import pandas as pd
-import scipy.stats as sts
-import scipy.sparse as spr
-from scipy.signal import fftconvolve
-
-from sklearn.decomposition import PCA
-from umap.umap_ import nearest_neighbors
 import scanpy as sc
-
+import scipy.sparse as spr
+import scipy.stats as sts
+from scipy.signal import fftconvolve
+from sklearn.decomposition import PCA
 from tqdm import tqdm
-import logging
-import gc
+from umap.umap_ import nearest_neighbors
 
-from triku.logg import triku_logger, TRIKU_LEVEL
 from triku.genutils import TqdmToLogger
+from triku.logg import TRIKU_LEVEL
+from triku.logg import triku_logger
 
 
 def load_object_triku(object_triku):
