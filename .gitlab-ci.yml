@@ -30,6 +30,7 @@ build:system:
     - pip install ray pre-commit
   tags:
     - shared
+    - local_triku_runner
 
     # CODECOV PREPARATION
 prepare_codecov:
