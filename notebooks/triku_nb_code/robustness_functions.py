@@ -48,14 +48,14 @@ def run_batch(adata, windows, n_comps, knns, seeds, save_dir, dataset_prefix):
                     verbose="triku",
                     n_procs=25,
                 )
-                distances_with_random = adata.var["emd_distance"].values
+                distances_with_random = adata.var["triku_distance"].values
                 mean_exp = adata.X.sum(0)
                 distances_without_random = subtract_median(
                     x=mean_exp,
-                    y=adata.var["emd_distance_uncorrected"].values,
+                    y=adata.var["triku_distance_uncorrected"].values,
                     n_windows=window,
                 )
-                print(adata.var["emd_distance_uncorrected"].values[:5])
+                print(adata.var["triku_distance_uncorrected"].values[:5])
                 df_res = pd.DataFrame(
                     data={
                         "emd_random_correction": distances_with_random,

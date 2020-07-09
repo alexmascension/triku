@@ -27,9 +27,9 @@ def load_object_triku(object_triku):
 
 def clean_adata(adata):
     for varx in [
-        "emd_distance",
-        "emd_distance_uncorrected",
-        "emd_distance_random",
+        "triku_distance",
+        "triku_distance_uncorrected",
+        "triku_distance_random",
     ]:
         if varx in adata.var:
             del adata.var[varx]

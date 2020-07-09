@@ -64,8 +64,8 @@ def triku(
     do_return : bool
         If True, returns a dictionary with several features:
             * `highly_variable`: boolean array. True if gene is selected as highly variable by triku.
-            * `emd_distance`: Distance calculated by triku.
-            * `emd_distance_uncorrected`: Distance without randomization correction.
+            * `triku_distance`: Distance calculated by triku.
+            * `triku_distance_uncorrected`: Distance without randomization correction.
         If verbose level is `triku` or `debug`, there are these additional columns:
             * `knn_indices`: indices of kNN algorithm. Each row is a cell, and each column [1:] is the index of a neighbour.
             * `knn_expression` and `knn_expression_random`: expression values in neighbours.
@@ -114,11 +114,11 @@ def triku(
     list_features : list
         list of selected features
     """
-    # Todo make functions private if necessary
     # todo: at some point I should make the function compatible with sparse arrays.
     # todo: make function accept 0 and other values for convolution
     # todo: add feature override. If triku has been already run on the adata, do not run it, and only check the number
     #       of selected genes
+    # todo: add other distances apart form EMD
 
     # Basic checks of variables
     set_level_logger(verbose)
@@ -315,8 +315,8 @@ def triku(
     is_highly_variable = array_emd_subt_median > dist_cutoff
     if isinstance(object_triku, sc.AnnData):
         object_triku.var["highly_variable"] = is_highly_variable
-        object_triku.var["emd_distance"] = array_emd_subt_median
-        object_triku.var["emd_distance_uncorrected"] = array_emd
+        object_triku.var["triku_distance"] = array_emd_subt_median
+        object_triku.var["triku_distance_uncorrected"] = array_emd
         object_triku.uns["triku_params"] = {
             "knn": knn,
             "n_features": n_features,
@@ -331,16 +331,16 @@ def triku(
             "n_divisions": n_divisions,
         }
         if array_emd_random is not None:
-            object_triku.var["emd_distance_random"] = array_emd_random
+            object_triku.var["triku_distance_random"] = array_emd_random
 
     if do_return or (not isinstance(object_triku, sc.AnnData)):
         dict_return = {
             "highly_variable": is_highly_variable,
-            "emd_distance": array_emd_subt_median,
-            "emd_distance_uncorrected": array_emd,
+            "triku_distance": array_emd_subt_median,
+            "triku_distance_uncorrected": array_emd,
         }
         if array_emd_random is not None:
-            dict_return["emd_distance_random"] = array_emd_random
+            dict_return["triku_distance_random"] = array_emd_random
 
         save_object_triku(dict_return, arr_genes, save_return)
 
