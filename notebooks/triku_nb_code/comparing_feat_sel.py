@@ -362,8 +362,13 @@ def biological_silhouette_ARI_table(
     cell_types_col="cell_types",
     n_procs=None,
     res=1,
+    include_all_random=True,
 ):
     list_methods = ["triku"] + [i for i in df_rank.columns if "triku" not in i]
+
+    if include_all_random:
+        list_methods += ["all", "random"]
+
     df_score = pd.DataFrame(
         index=[
             "ARI",
@@ -415,12 +420,24 @@ def biological_silhouette_ARI_table(
         sc.pp.log1p(adata_copy)
 
     for method in list_methods:
-        if method != "triku":
+        if (method != "triku") & (method not in ["all", "random"]):
             adata_copy.var["highly_variable"] = [
                 i in df_rank[method].sort_values().index.values[:n_hvg]
                 for i in adata_copy.var_names
             ]
-        else:
+        elif method == "all":
+            adata_copy.var["highly_variable"] = [True] * len(
+                adata_copy.var_names
+            )
+        elif method == "random":
+            array_selection = [False] * len(adata_copy.var_names)
+            array_selection[
+                np.random.choice(
+                    np.arange(len(adata_copy.var_names)), n_hvg, replace=False
+                )
+            ] = True
+            adata_copy.var["highly_variable"] = array_selection
+        else:  # method is triku_XXX
             adata_copy.var["highly_variable"] = [
                 i in df_rank["triku_0"].sort_values().index.values[:n_hvg]
                 for i in adata_copy.var_names
