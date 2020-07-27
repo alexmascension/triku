@@ -42,7 +42,7 @@ import it and run it in one line::
    tk.tl.triku(adata)
 
 After that, you can find which features are selected ``adata.var['highly_variable']``.
-The scores for each gene are located in ``adata.var['emd_distance']``.
+The scores for each gene are located in ``adata.var['triku_distance']``.
 The higher the score, the better.
 
 If you are using scanpy, you should run triku before running ``sc.pp.pca`` and
