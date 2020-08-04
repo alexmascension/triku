@@ -430,7 +430,7 @@ def biological_silhouette_ARI_table(
                 adata_copy.var_names
             )
         elif method == "random":
-            array_selection = [False] * len(adata_copy.var_names)
+            array_selection = np.array([False] * len(adata_copy.var_names))
             array_selection[
                 np.random.choice(
                     np.arange(len(adata_copy.var_names)), n_hvg, replace=False
@@ -444,7 +444,8 @@ def biological_silhouette_ARI_table(
             ]
 
         features = adata_copy.var[
-            adata_copy.var["highly_variable"] is True
+            adata_copy.var["highly_variable"]
+            is True  # Revert to == True if it fails !!!!!!
         ].index.values
 
         if cell_types is not None:
@@ -751,12 +752,13 @@ def plot_lab_org_comparison_scores(
     ax.set_xticklabels(list_libpreps, rotation=45, ha="right")
 
     l1 = ax.legend(
+        bbox_to_anchor=(1, 0.75),
         handles=[
             Line2D(
                 [0], [0], marker="o", color=palette[method_idx], label=method
             )
             for method_idx, method in enumerate(methods)
-        ]
+        ],
     )
     ax.add_artist(l1)
 
