@@ -9,6 +9,10 @@ import ray
 import scanpy as sc
 import scipy.sparse as spr
 from matplotlib.lines import Line2D
+from scikit_posthocs import (
+    posthoc_quade,
+)  # posthoc_nemenyi, posthoc_nemenyi_friedman
+from scipy.stats import f
 from sklearn.metrics import adjusted_mutual_info_score as NMI
 from sklearn.metrics import adjusted_rand_score as ARS
 from sklearn.metrics import davies_bouldin_score
@@ -703,55 +707,237 @@ def biological_silhouette_ARI_table(
     df_score.to_csv(f"{outdir}/{file_root}_comparison-scores_seed-{seed}.csv")
 
 
+def friedman_test(arr):
+    N, k = arr.shape
+
+    chi = (
+        12
+        * N
+        / (k * (k + 1))
+        * (np.sum(arr.mean(0) ** 2) - k * (k + 1) ** 2 / 4)
+    )
+    F = (N - 1) * chi / (N * (k - 1) - chi)
+
+    df1, df2 = k - 1, (k - 1) * (N - 1)
+
+    return F, f(df1, df2).sf(F)
+
+
+def argsort_line(increasing, list_vals):
+    if increasing == -1:
+        return list_vals
+    elif increasing:
+        return (
+            np.argsort(np.argsort(list_vals)) + 1
+        )  # sort increasing (lower is best
+    else:
+        return (
+            np.argsort(np.argsort(list_vals)[::-1]) + 1
+        )  # sort decreasing (higher is best)
+
+
+def get_ranking_stats(
+    dir_comparisons,
+    list_files,
+    method_selection,
+    increasing=True,
+    mode="normal",
+):
+    dict_df = {}
+
+    for file in list_files:
+        df = pd.read_csv(f"{dir_comparisons}/{file}", index_col=0)
+        columns = df.columns
+
+        if mode == "normal":
+            list_vals = df.loc[method_selection, :].values.tolist()
+            dict_df[file] = argsort_line(increasing, list_vals)
+        else:
+            for i in range(len(df)):
+                list_vals = df.iloc[i, :].values.tolist()
+                dict_df[file] = argsort_line(increasing, list_vals)
+
+    df_ranks = pd.DataFrame.from_dict(dict_df, orient="index", columns=columns)
+
+    F, pval = friedman_test(df_ranks.values)
+
+    # Posthoc tests
+    df_posthoc = posthoc_quade(df_ranks.values)  # First use array
+    df_posthoc = df_posthoc.set_index(columns)  # Then set columns and rows
+    df_posthoc.columns = columns
+    df_posthoc[
+        df_posthoc == -1
+    ] = 1  # Identical elements in comparison matrix are -1 instead of 1
+
+    return df_ranks, F, pval, df_posthoc
+
+
 def plot_lab_org_comparison_scores(
     lab,
     org="-",
     read_dir="",
     variables=[],
-    figsize=(10, 6),
+    increasing=False,
+    list_files=None,
+    alpha=0.1,
+    figsize=(16, 4),
     title="",
     filename="",
+    mode="normal",
 ):
-    fig, ax = plt.subplots(1, 1, figsize=figsize)
 
     if isinstance(variables, str):
         variables = [variables]
 
-    markers = ["o", "v", "s", "1"]
-    palette = prism
+    if list_files is None:
+        list_files = [
+            i
+            for i in os.listdir(read_dir)
+            if lab in i and org in i and "comparison-scores" in i
+        ]
 
-    list_files = [
-        i
-        for i in os.listdir(read_dir)
-        if lab in i and org in i and "comparison-scores" in i
+    # For the plot on the left (test + post-hoc test)
+    df_ranks, F, pval, df_posthoc = get_ranking_stats(
+        read_dir, list_files, variables[0], increasing=increasing, mode=mode
+    )
+    df_ranks_means = df_ranks.mean(0).sort_values()
+
+    methods = df_ranks.columns.tolist()
+    columns_sorted = df_ranks_means.index.values
+
+    df_posthoc = df_posthoc.loc[columns_sorted, columns_sorted]
+
+    list_start_end = []
+    for idx, col in enumerate(columns_sorted):
+        idx_nonsignificant = np.argwhere(
+            df_posthoc.loc[col, :].values > alpha
+        ).ravel()
+        tuple_idx = (idx_nonsignificant[0], idx_nonsignificant[-1])
+
+        if tuple_idx[0] != tuple_idx[1]:
+            if (
+                len(list_start_end) == 0
+            ):  # This part is to remove elements that are inside other elements, and take the biggest one.
+                list_start_end.append(tuple_idx)
+            else:
+                if (tuple_idx[0] >= list_start_end[-1][0]) & (
+                    tuple_idx[1] <= list_start_end[-1][1]
+                ):
+                    pass
+                elif (tuple_idx[0] <= list_start_end[-1][0]) & (
+                    tuple_idx[1] >= list_start_end[-1][1]
+                ):
+                    list_start_end[-1] = tuple_idx
+                else:
+                    list_start_end.append(tuple_idx)
+
+    markers = ["o", "v", "s", "1"]
+    basepalette = [
+        "#E73F74",
+        "#7F3C8D",
+        "#11A579",
+        "#3969AC",
+        "#F2B701",
+        "#80BA5A",
+        "#E68310",
     ]
+    palette = basepalette[: len(methods) - 2] + [
+        "#a0a0a0",
+        "#505050",
+    ]
+    dict_palette = dict(zip(methods, palette[: len(methods)]))
+
+    fig, (axl, axr) = plt.subplots(
+        1, 2, figsize=figsize, gridspec_kw={"width_ratios": [1, 8]}
+    )
+
+    # To do the barplot
     list_libpreps = sorted(
         list({i.split("_")[1] + " " + i.split("_")[2] for i in list_files})
     )
 
-    for libprep_idx, libprep in enumerate(list_libpreps):
-        files_seeds = [
-            i for i in list_files if "_" + libprep.replace(" ", "_") in i
-        ]  # This may fail for mereu and Ding now!
+    if mode == "normal":
+        for libprep_idx, libprep in enumerate(list_libpreps):
+            files_seeds = [
+                i for i in list_files if "_" + libprep.replace(" ", "_") in i
+            ]
 
-        for seed in range(len(files_seeds)):
-            file = [i for i in files_seeds if f"seed-{seed}" in i][0]
-            df = pd.read_csv(read_dir + "/" + file, index_col=0)
-
-            methods = df.columns.tolist()
             for method_idx, method in enumerate(methods):
+                axl.plot(
+                    [0, len(list_start_end) + 1],
+                    [df_ranks.mean(0)[method], df_ranks.mean(0)[method]],
+                    c=dict_palette[method],
+                )
+
                 for variable_idx, variable in enumerate(variables):
-                    ax.scatter(
-                        libprep_idx + (method_idx - len(methods) // 2) * 0.07,
-                        df.loc[variable, method],
-                        marker=markers[variable_idx],
-                        c=palette[method_idx],
+                    list_y = []
+
+                    for seed in range(len(files_seeds)):
+                        file = [i for i in files_seeds if f"seed-{seed}" in i][
+                            0
+                        ]
+                        df = pd.read_csv(read_dir + "/" + file, index_col=0)
+                        list_y.append(df.loc[variable, method])
+
+                    axr.bar(
+                        libprep_idx + (method_idx - len(methods) // 2) * 0.09,
+                        np.mean(list_y),
+                        width=0.09,
+                        yerr=np.std(list_y),
+                        color=dict_palette[method],
+                    )
+    else:
+        for libprep_idx, libprep in enumerate(list_files):
+            for method_idx, method in enumerate(methods):
+                axl.plot(
+                    [0, len(list_start_end) + 1],
+                    [df_ranks.mean(0)[method], df_ranks.mean(0)[method]],
+                    c=dict_palette[method],
+                )
+
+                for variable_idx, variable in enumerate(variables):
+                    df = pd.read_csv(read_dir + "/" + libprep, index_col=0)
+                    list_y = df.loc[:, method]
+
+                    axr.bar(
+                        libprep_idx + (method_idx - len(methods) // 2) * 0.09,
+                        np.mean(list_y),
+                        width=0.09,
+                        yerr=np.std(list_y),
+                        color=dict_palette[method],
                     )
 
-    ax.set_xticks(np.arange(len(list_libpreps)))
-    ax.set_xticklabels(list_libpreps, rotation=45, ha="right")
+    for idx, tuple_list in enumerate(list_start_end):
+        axl.plot(
+            [idx + 1, idx + 1],
+            [
+                df_ranks_means.iloc[tuple_list[0]] - 0.03,
+                df_ranks_means.iloc[tuple_list[1]] + 0.03,
+            ],
+            c="#808080",
+            linewidth=5,
+        )
 
-    l1 = ax.legend(
+    # Axis formatting
+    axr.set_xticks(np.arange(len(list_libpreps)))
+    axr.set_xticklabels(list_libpreps, rotation=45, ha="right")
+    axr.spines["right"].set_visible(False)
+    axr.spines["top"].set_visible(False)
+
+    dict_ylabel = {
+        -1: "Values",
+        1: "Rank (lower is better)",
+        0: "Rank (lower is better)",
+    }
+    axl.set_ylabel(dict_ylabel[increasing])
+    if increasing != -1:
+        axl.invert_yaxis()
+    axl.set_xticks([])
+    axl.spines["right"].set_visible(False)
+    axl.spines["top"].set_visible(False)
+    axl.spines["bottom"].set_visible(False)
+
+    l1 = axr.legend(
         bbox_to_anchor=(1, 0.75),
         handles=[
             Line2D(
@@ -760,16 +946,16 @@ def plot_lab_org_comparison_scores(
             for method_idx, method in enumerate(methods)
         ],
     )
-    ax.add_artist(l1)
+    axr.add_artist(l1)
 
     if len(variables) > 1:
-        l2 = ax.legend(
+        l2 = axr.legend(
             handles=[
                 Line2D([0], [0], marker=markers[variable_idx], label=variable)
                 for variable_idx, variable in enumerate(variables)
             ]
         )
-        ax.add_artist(l2)
+        axr.add_artist(l2)
 
     plt.title(title)
     for fmt in ["png", "pdf"]:
