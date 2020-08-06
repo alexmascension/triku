@@ -449,7 +449,7 @@ def biological_silhouette_ARI_table(
 
         features = adata_copy.var[
             adata_copy.var["highly_variable"]
-            is True  # Revert to == True if it fails !!!!!!
+            == True  # noqa    # Revert to == True if it fails !!!!!!
         ].index.values
 
         if cell_types is not None:
