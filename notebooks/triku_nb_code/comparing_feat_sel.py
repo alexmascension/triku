@@ -8,11 +8,13 @@ import pandas as pd
 import ray
 import scanpy as sc
 import scipy.sparse as spr
+import seaborn as sns
 from matplotlib.lines import Line2D
 from scikit_posthocs import (
     posthoc_quade,
 )  # posthoc_nemenyi, posthoc_nemenyi_friedman
 from scipy.stats import f
+from scipy.stats import wilcoxon
 from sklearn.metrics import adjusted_mutual_info_score as NMI
 from sklearn.metrics import adjusted_rand_score as ARS
 from sklearn.metrics import davies_bouldin_score
@@ -851,16 +853,25 @@ def plot_lab_org_comparison_scores(
         1, 2, figsize=figsize, gridspec_kw={"width_ratios": [1, 8]}
     )
 
-    # To do the barplot
     list_libpreps = sorted(
         list({i.split("_")[1] + " " + i.split("_")[2] for i in list_files})
     )
 
     if mode == "normal":
         for libprep_idx, libprep in enumerate(list_libpreps):
-            files_seeds = [
-                i for i in list_files if "_" + libprep.replace(" ", "_") in i
-            ]
+            if "log" in libprep:
+                files_seeds = [
+                    i
+                    for i in list_files
+                    if ("_" + libprep.replace(" ", "_") in i) & ("log" in i)
+                ]
+            else:
+                files_seeds = [
+                    i
+                    for i in list_files
+                    if ("_" + libprep.replace(" ", "_") in i)
+                    & ("log" not in i)
+                ]
 
             for method_idx, method in enumerate(methods):
                 axl.plot(
@@ -965,8 +976,273 @@ def plot_lab_org_comparison_scores(
         )
 
 
+def compare_rankings(
+    list_files_1,
+    list_files_2,
+    read_dir,
+    title="",
+    title1="",
+    title2="",
+    variables=[],
+    increasing=False,
+    alpha=0.1,
+    figsize=(16, 4),
+    filename="",
+    mode="normal",
+):
+
+    # For the plot on the left (test + post-hoc test) [NONLOG]
+    df_ranks_1, F_1, pval_1, df_posthoc_1 = get_ranking_stats(
+        read_dir, list_files_1, variables[0], increasing=increasing, mode=mode
+    )
+    df_ranks_means_1 = df_ranks_1.mean(0).sort_values()
+
+    methods = df_ranks_1.columns.tolist()
+    columns_sorted_1 = df_ranks_means_1.index.values
+    df_posthoc_1 = df_posthoc_1.loc[columns_sorted_1, columns_sorted_1]
+
+    # For the plot on the right (test + post-hoc test) [LOG]
+    df_ranks_2, F_2, pval_2, df_posthoc_2 = get_ranking_stats(
+        read_dir, list_files_2, variables[0], increasing=increasing, mode=mode
+    )
+    df_ranks_means_2 = df_ranks_2.mean(0).sort_values()
+
+    columns_sorted_2 = df_ranks_means_2.index.values
+    df_posthoc_2 = df_posthoc_2.loc[columns_sorted_2, columns_sorted_2]
+
+    list_start_end_1, list_start_end_2 = [], []
+    for idx, col in enumerate(columns_sorted_1):
+        idx_nonsignificant = np.argwhere(
+            df_posthoc_1.loc[col, :].values > alpha
+        ).ravel()
+        tuple_idx = (idx_nonsignificant[0], idx_nonsignificant[-1])
+
+        if tuple_idx[0] != tuple_idx[1]:
+            if (
+                len(list_start_end_1) == 0
+            ):  # This part is to remove elements that are inside other elements, and take the biggest one.
+                list_start_end_1.append(tuple_idx)
+            else:
+                if (tuple_idx[0] >= list_start_end_1[-1][0]) & (
+                    tuple_idx[1] <= list_start_end_1[-1][1]
+                ):
+                    pass
+                elif (tuple_idx[0] <= list_start_end_1[-1][0]) & (
+                    tuple_idx[1] >= list_start_end_1[-1][1]
+                ):
+                    list_start_end_1[-1] = tuple_idx
+                else:
+                    list_start_end_1.append(tuple_idx)
+
+    for idx, col in enumerate(columns_sorted_2):
+        idx_nonsignificant = np.argwhere(
+            df_posthoc_2.loc[col, :].values > alpha
+        ).ravel()
+        tuple_idx = (idx_nonsignificant[0], idx_nonsignificant[-1])
+
+        if tuple_idx[0] != tuple_idx[1]:
+            if (
+                len(list_start_end_2) == 0
+            ):  # This part is to remove elements that are inside other elements, and take the biggest one.
+                list_start_end_2.append(tuple_idx)
+            else:
+                if (tuple_idx[0] >= list_start_end_2[-1][0]) & (
+                    tuple_idx[1] <= list_start_end_2[-1][1]
+                ):
+                    pass
+                elif (tuple_idx[0] <= list_start_end_2[-1][0]) & (
+                    tuple_idx[1] >= list_start_end_2[-1][1]
+                ):
+                    list_start_end_2[-1] = tuple_idx
+                else:
+                    list_start_end_2.append(tuple_idx)
+
+    basepalette = [
+        "#E73F74",
+        "#7F3C8D",
+        "#11A579",
+        "#3969AC",
+        "#F2B701",
+        "#80BA5A",
+        "#E68310",
+    ]
+    palette = basepalette[: len(methods) - 2] + [
+        "#a0a0a0",
+        "#505050",
+    ]
+    dict_palette = dict(zip(methods, palette[: len(methods)]))
+
+    fig, (axl, axr) = plt.subplots(1, 2, figsize=figsize)
+
+    for method_idx, method in enumerate(methods):
+        axl.plot(
+            [0, len(list_start_end_1) + 1],
+            [df_ranks_1.mean(0)[method], df_ranks_1.mean(0)[method]],
+            c=dict_palette[method],
+        )
+
+        axr.plot(
+            [0, len(list_start_end_2) + 1],
+            [df_ranks_2.mean(0)[method], df_ranks_2.mean(0)[method]],
+            c=dict_palette[method],
+        )
+
+    for idx, tuple_list in enumerate(list_start_end_1):
+        axl.plot(
+            [idx + 1, idx + 1],
+            [
+                df_ranks_means_1.iloc[tuple_list[0]] - 0.03,
+                df_ranks_means_1.iloc[tuple_list[1]] + 0.03,
+            ],
+            c="#808080",
+            linewidth=5,
+        )
+
+    for idx, tuple_list in enumerate(list_start_end_2):
+        axr.plot(
+            [idx + 1, idx + 1],
+            [
+                df_ranks_means_2.iloc[tuple_list[0]] - 0.03,
+                df_ranks_means_2.iloc[tuple_list[1]] + 0.03,
+            ],
+            c="#808080",
+            linewidth=5,
+        )
+
+    # Axis formatting
+    for ax in [axl, axr]:
+        ax.set_ylabel("Rank (lower is better)")
+        ax.set_xticks([])
+        ax.spines["right"].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["bottom"].set_visible(False)
+        ax.set_ylim(
+            min([axl.get_ylim()[0], axr.get_ylim()[0]]),
+            max([axl.get_ylim()[1], axr.get_ylim()[1]]),
+        )
+
+    for ax in [axl, axr]:
+        ax.invert_yaxis()
+
+    l1 = axr.legend(
+        bbox_to_anchor=(1, 0.75),
+        handles=[
+            Line2D(
+                [0], [0], marker="o", color=palette[method_idx], label=method
+            )
+            for method_idx, method in enumerate(methods)
+        ],
+    )
+    ax.add_artist(l1)
+
+    axl.set_title(title1)
+    axr.set_title(title2)
+    plt.suptitle(title, y=1.03)
+
+    plt.tight_layout()
+
+    for fmt in ["png", "pdf"]:
+        fig.savefig(
+            f"{os.getcwd()}/figures/comparison_figs/{fmt}/{filename}.{fmt}",
+            bbox_inches="tight",
+        )
+
+
+def compare_values(
+    list_files_1,
+    list_files_2,
+    read_dir,
+    title="",
+    title1="",
+    title2="",
+    variables=[],
+    increasing=False,
+    alpha=0.1,
+    figsize=(16, 4),
+    filename="",
+    mode="normal",
+):
+
+    list_diffs, list_methods = [], []
+
+    for file_idx in range(len(list_files_1)):
+        df_1, df_2 = (
+            pd.read_csv(read_dir + list_files_1[file_idx], index_col=0),
+            pd.read_csv(read_dir + list_files_2[file_idx], index_col=0),
+        )
+        list_diffs += (
+            df_1.loc[variables[0], :] - df_2.loc[variables[0], :]
+        ).tolist()
+        list_methods += df_1.columns.tolist()
+
+    methods = df_1.columns
+    basepalette = [
+        "#E73F74",
+        "#7F3C8D",
+        "#11A579",
+        "#3969AC",
+        "#F2B701",
+        "#80BA5A",
+        "#E68310",
+    ]
+    palette = basepalette[: len(methods) - 2] + [
+        "#a0a0a0",
+        "#505050",
+    ]
+    #     dict_palette = dict(zip(methods, palette[: len(methods)]))
+
+    df_val_diffs = pd.DataFrame({"diff": list_diffs, "method": list_methods})
+
+    fig, ax = plt.subplots(figsize=figsize)
+    sns.swarmplot(
+        x="method", y="diff", data=df_val_diffs, palette=palette, ax=ax, s=4
+    )
+    fig.suptitle(title)
+
+    for method_idx, method in enumerate(methods):
+        values_method = df_val_diffs["diff"][
+            df_val_diffs["method"] == method
+        ].values
+        if np.sum(values_method) == 0:
+            p = 0.5
+        else:
+            t, p = wilcoxon(values_method)
+
+        if (
+            np.median(values_method) >= 0
+        ):  # THIS IS BECAUSE WE WAN'T A SINGLE-TAILED TEST WITH MU > 0!!!!
+            p = 1 / 2 * p
+        else:
+            p = 1 - 1 / 2 * p
+
+        if np.isnan(p):
+            p = 0.5
+
+        if p < 0.01:
+            pstr = f"{p:.3e}"
+        elif p > 0.9:
+            pstr = "~1"
+        else:
+            pstr = f"{p:.2f}"
+
+        xmov = -0.5 if p < 0.01 else -0.2
+
+        ax.text(method_idx + xmov, 0.1 + max(values_method), f"{pstr}")
+
+    ax.plot([-0.5, len(methods) - 0.2], [0, 0], c="#bcbcbc")
+
+    ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[1] + 0.15)
+    ax.set_xlim(-0.8, len(methods) + 0.1)
+
+    for fmt in ["png", "pdf"]:
+        fig.savefig(
+            f"{os.getcwd()}/figures/comparison_figs/{fmt}/{filename}.{fmt}",
+            bbox_inches="tight",
+        )
+
+
 def create_UMAP_adataset_libprep_org(
-    adata_dir, df_rank_dir, lib_prep, org, lab
+    adata_dir, df_rank_dir, lib_prep, org, lab, log
 ):
     list_methods = [
         "triku",
@@ -982,6 +1258,9 @@ def create_UMAP_adataset_libprep_org(
     df_rank = pd.read_csv(
         f"{df_rank_dir}/{lab}_{lib_prep}_{org}_feature_ranks.csv", index_col=0
     )
+
+    if log:
+        sc.pp.log1p(adata)
 
     tk.tl.triku(
         adata, n_procs=1,
@@ -1031,7 +1310,7 @@ def create_UMAP_adataset_libprep_org(
             seed=0,
             n_target_c=len(set(cell_types)),
             features=adata_copy[
-                :, adata_copy.var["highly_variable"] is True
+                :, adata_copy.var["highly_variable"] == True  # noqa
             ].var_names,
             apply_log=apply_log,
             transform_adata=True,
@@ -1054,14 +1333,19 @@ def create_UMAP_adataset_libprep_org(
 
 
 def create_dict_UMAPs_datasets(
-    adata_dir, df_rank_dir, lab, lib_preps, list_orgs=["human", "mouse"],
+    adata_dir,
+    df_rank_dir,
+    lab,
+    lib_preps,
+    list_orgs=["human", "mouse"],
+    log=False,
 ):
     list_org_preps_all = list(product(*[lib_preps, list_orgs]))
     list_org_preps_exist = []
 
     for lib_prep, org in list_org_preps_all:
         for file in os.listdir(adata_dir):
-            if org in file and lib_prep in file:
+            if org in file and lib_prep in file and "log" in file:
                 list_org_preps_exist.append((lib_prep, org))
                 break
 
@@ -1073,7 +1357,7 @@ def create_dict_UMAPs_datasets(
 
     list_ids = [
         create_UMAP_adataset_libprep_org_remote.remote(
-            adata_dir, df_rank_dir, lib_prep, org, lab
+            adata_dir, df_rank_dir, lib_prep, org, lab, log
         )
         for lib_prep, org in list_org_preps_exist
     ]
