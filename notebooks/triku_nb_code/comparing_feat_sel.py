@@ -781,7 +781,7 @@ def plot_lab_org_comparison_scores(
     variables=[],
     increasing=False,
     list_files=None,
-    alpha=0.1,
+    alpha=0.05,
     figsize=(16, 4),
     title="",
     filename="",
