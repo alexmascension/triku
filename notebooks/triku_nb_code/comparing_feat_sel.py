@@ -1281,7 +1281,7 @@ def create_UMAP_adataset_libprep_org(
     }
     for method in list_methods:
         adata_copy = adata.copy()
-        apply_log = True
+        apply_log = not log
 
         if method == "scanpy":
             sc.pp.log1p(
@@ -1345,7 +1345,7 @@ def create_dict_UMAPs_datasets(
 
     for lib_prep, org in list_org_preps_all:
         for file in os.listdir(adata_dir):
-            if org in file and lib_prep in file and "log" in file:
+            if org in file and lib_prep in file:
                 list_org_preps_exist.append((lib_prep, org))
                 break
 
