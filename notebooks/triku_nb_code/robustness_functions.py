@@ -471,6 +471,7 @@ def plot_scatter_parameter(
     title="",
     ylabel="",
     save_dir="figures/robustness_figs",
+    plot_random=True,
 ):
     fig, ax = plt.subplots(1, 1, figsize=figsize)
     fig.suptitle(title.replace("_", " "))
@@ -516,20 +517,29 @@ def plot_scatter_parameter(
             alpha_idx = np.round(
                 alpha + (1 - alpha) * (1 + df_idx) / (len(list_dfs)), 2
             )  # wild 1.0000000000002 LOL
-            ax.scatter(
-                val_idx + sep + w * np.random.rand(len(sub_df_ran)),
-                sub_df_ran,
-                c=list_colors[df_idx],
-                s=s,
-                alpha=alpha_idx,
-            )
-            ax.scatter(
-                val_idx - sep - w * np.random.rand(len(sub_df_no_ran)),
-                sub_df_no_ran,
-                c=list_colors[df_idx],
-                s=s,
-                alpha=alpha_idx,
-            )
+            if plot_random:
+                ax.scatter(
+                    val_idx + sep + w * np.random.rand(len(sub_df_ran)),
+                    sub_df_ran,
+                    c=list_colors[df_idx],
+                    s=s,
+                    alpha=alpha_idx,
+                )
+                ax.scatter(
+                    val_idx - sep - w * np.random.rand(len(sub_df_no_ran)),
+                    sub_df_no_ran,
+                    c=list_colors[df_idx],
+                    s=s,
+                    alpha=alpha_idx,
+                )
+            else:
+                ax.scatter(
+                    val_idx - 2 * w * np.random.rand(len(sub_df_no_ran)),
+                    sub_df_no_ran,
+                    c=list_colors[df_idx],
+                    s=s,
+                    alpha=alpha_idx,
+                )
 
     plt.xticks(np.arange(len(val_list)), ticks)
     legend_elements = [
@@ -685,9 +695,10 @@ def plot_scatter_datasets(
             r"$\sqrt{N}/10$",
             r"$\sqrt{N}/5$",
             r"$\sqrt{N}/2$",
-            r"$\sqrt{N}$ (%s)" % val_list[4],
+            r"$\sqrt{N}$",
+            r"$1.5\sqrt{N}$",
             r"$2\sqrt{N}$",
-            r"$5\sqrt{N}$",
+            r"$4\sqrt{N}$",
         ]
         xlabel = "Number of kNN"
     elif by == "pca":
@@ -704,6 +715,13 @@ def plot_scatter_datasets(
     os.makedirs(save_dir + "/png", exist_ok=True)
     os.makedirs(save_dir + "/pdf", exist_ok=True)
 
+    print(
+        "Saving to ",
+        save_dir
+        + "/pdf/{}_library-comparison_{}.pdf".format(
+            title.replace(",", ""), org
+        ),
+    )
     plt.savefig(
         save_dir
         + "/pdf/{}_library-comparison_{}.pdf".format(
@@ -721,7 +739,7 @@ def plot_scatter_datasets(
     )
 
 
-def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
+def get_all_pics_dataset(lib_prep, org, dataset, save_dir, plot_random=True):
     df_0_250 = random_noise_parameter(
         lib_prep,
         org,
@@ -762,6 +780,7 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
         by="knn",
         title="Noise_distance_based_on_seed,_kNN",
         ylabel="$\\frac{|d_A-d_B|}{|d_A| + |d_B|}$",
+        plot_random=plot_random,
     )
 
     df_0_250 = random_noise_parameter(
@@ -804,6 +823,7 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
         by="pca",
         title="Noise_distance_based_on_seed,_PCA",
         ylabel="$\\frac{|d_A-d_B|}{|d_A| + |d_B|}$",
+        plot_random=plot_random,
     )
 
     df_0_250 = random_noise_parameter(
@@ -827,6 +847,7 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
         palette="sunsetmid3",
         title="Overlap_of_features_based_on_seed,_kNN",
         ylabel="Overlap",
+        plot_random=plot_random,
     )
 
     df_0_250 = random_noise_parameter(
@@ -850,6 +871,7 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
         by="pca",
         title="Overlap_of_features_based_on_seed,_PCA",
         ylabel="Overlap",
+        plot_random=plot_random,
     )
 
     df_violin_0_500 = compare_parameter(
@@ -881,6 +903,7 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
         by="knn",
         title="kNN_robustness,_overlap",
         ylabel="Overlap",
+        plot_random=plot_random,
     )
 
     df_violin_0_500 = compare_parameter(
@@ -912,6 +935,7 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
         by="knn",
         title="kNN_robustness,_correlation",
         ylabel="Pearson correlation",
+        plot_random=plot_random,
     )
 
     df_violin_0_500 = compare_parameter(
@@ -943,6 +967,7 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
         by="knn",
         title="kNN_robustness,_overlap",
         ylabel="Overlap",
+        plot_random=plot_random,
     )
 
     df_violin_0_500 = compare_parameter(
@@ -974,6 +999,7 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
         by="pca",
         title="PCA_robustness,_overlap",
         ylabel="Overlap",
+        plot_random=plot_random,
     )
 
     df_violin_0_500 = compare_parameter(
@@ -1005,6 +1031,7 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
         by="pca",
         title="PCA_robustness,_correlation",
         ylabel="Pearson correlation",
+        plot_random=plot_random,
     )
 
     df_violin_0_500 = compare_parameter(
@@ -1036,6 +1063,7 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
         by="w",
         title="window_robustness,_overlap",
         ylabel="Overlap",
+        plot_random=plot_random,
     )
 
     df_violin_0_500 = compare_parameter(
@@ -1067,4 +1095,5 @@ def get_all_pics_dataset(lib_prep, org, dataset, save_dir):
         by="w",
         title="window_robustness,_correlation",
         ylabel="Pearson correlation",
+        plot_random=plot_random,
     )
