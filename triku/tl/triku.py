@@ -119,6 +119,7 @@ def triku(
     # todo: add feature override. If triku has been already run on the adata, do not run it, and only check the number
     #       of selected genes
     # todo: add other distances apart form EMD
+    # todo: implement other DR methods for kNN graph
 
     # Basic checks of variables
     set_level_logger(verbose)
