@@ -26,6 +26,9 @@ Triku - Feature selection for Single Cell Analysis
 
 .. image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
     :target: https://github.com/pre-commit/pre-commit
+    
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4016715.svg
+   :target: https://doi.org/10.5281/zenodo.4016715
 
 Triku (hedgehog in euskera) is a feature selection method prepared for Single Cell Analysis.
 Triku has been prepared to work with `scanpy <https://scanpy.readthedocs.io/en/stable/>`_
