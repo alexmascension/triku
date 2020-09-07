@@ -1,5 +1,17 @@
 image: python:3.7
 
+### WHY GITLAB LOCAL RUNNER IS NECESSARY!!!!
+# Parallelized jobs in triku cannot be run on the Gitlab Runner. That is, triku can only be 
+# run on one job, and the coverage of that part will be neglected. To not neglect that part
+# we run triku locally and in the server runners, gather coverage data and 
+# combine coverage reports. 
+
+# To be able to do that, we need to run the gitlab-runner on the local computer with multicore.
+# Install gitlab-runner from the dpkg, not from conda, because you must sudo it!
+
+# Once installed, register a runner and let it run with the command: sudo gitlab-runner run
+
+
 stages:
   - build
   - test_prepare_codecov
@@ -40,7 +52,7 @@ build:system_local:
   tags:
     - local_triku_runner
 
-    # CODECOV PREPARATION
+# CODECOV PREPARATION
 prepare_codecov:
   stage: test_prepare_codecov
   script:
