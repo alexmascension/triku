@@ -70,6 +70,7 @@ codecov_general:
   artifacts:
     paths:
       - .coverage.general
+  retry: 10
   tags:
     - local_triku_runner
 
