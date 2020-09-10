@@ -49,6 +49,7 @@ build:system_local:
     - pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
     - pip install -r requirements.txt
     - pip install ray pre-commit
+  retry: 2
   tags:
     - local_triku_runner
 
@@ -116,6 +117,7 @@ codecov_args_calc_check_parallel:
   artifacts:
     paths:
       - .coverage.calc_check_parallel
+  retry: 2
   tags:
     - local_triku_runner
 
