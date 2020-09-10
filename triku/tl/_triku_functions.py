@@ -86,7 +86,7 @@ def return_knn_indices(
         triku_logger.log(TRIKU_LEVEL, "Applying knn indices randomly")
         # With this approach it is possible that two knns are the same for a cell. But well, not really that important.
         knn_indices = np.random.randint(
-            array.shape[0], array.shape[0] * knn
+            array.shape[0], array.shape[0] * (knn + 1)
         ).reshape(array.shape[0], knn)
         knn_indices[:, 0] = np.arange(array.shape[0])
 
@@ -94,7 +94,7 @@ def return_knn_indices(
         triku_logger.log(TRIKU_LEVEL, "Calculating knn indices")
         knn_indices, knn_dists, forest = nearest_neighbors(
             pca,
-            n_neighbors=knn,
+            n_neighbors=knn + 1,
             metric=metric,
             random_state=np.random.RandomState(random_state),
             angular=False,
@@ -132,7 +132,7 @@ def return_knn_expression(
     sparse_mask = spr.lil_matrix(
         (arr_expression.shape[0], arr_expression.shape[0])
     )
-    # [:, 0] is [0,0,0,0,..., 0, 1, ..., 1, ... ] and [:, 1] are the indices of the rest of cells.
+    # [:, 0] is [0,0,0,0,..., 0, 1, ..., 1, ... ] and [:, 1:k+1] are the indices of the rest of cells.
     sparse_mask[
         np.repeat(np.arange(knn_indices.shape[0]), knn_indices.shape[1]),
         knn_indices.flatten(),
@@ -224,7 +224,7 @@ def apply_convolution_read_counts(
 
     arr_convolve = func(arr_0, arr_base,)
 
-    for knni in range(2, knn):
+    for knni in range(knn):
         arr_convolve = func(arr_convolve, arr_base,)
 
     arr_prob = arr_convolve / arr_convolve.sum()
@@ -421,8 +421,8 @@ def parallel_emd_calculation(
 
 
 def subtract_median(x, y, n_windows):
-    """We working with EMD, we want to find genes with more deviation on emd compared with other genes with similar
-    mean expression. With higher expressions EMD tends to increase. To reduce that basal level we will substract the
+    """When working with EMD, we want to find genes with more deviation on emd compared with other genes with similar
+    mean expression. With higher expressions EMD tends to increase. To reduce that basal level we will subtract the
     median EMD to the genes using a number of windows. The approach is quite reliable between 15 and 80 windows.
 
     Too many windows can over-normalize, and lose genes that have high emd but are alone in that window."""
