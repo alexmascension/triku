@@ -786,17 +786,26 @@ def plot_lab_org_comparison_scores(
     title="",
     filename="",
     mode="normal",
+    lognames=None,  # None: nothing, 0: selects names without log, 1: selects names with log
 ):
 
     if isinstance(variables, str):
         variables = [variables]
 
     if list_files is None:
-        list_files = [
-            i
-            for i in os.listdir(read_dir)
-            if lab in i and org in i and "comparison-scores" in i
-        ]
+        list_files = sorted(
+            [
+                i
+                for i in os.listdir(read_dir)
+                if lab in i and org in i and "comparison-scores" in i
+            ]
+        )
+
+    if lognames is not None:
+        if lognames:
+            list_files = [i for i in list_files if "-log" in i]
+        else:
+            list_files = [i for i in list_files if "-log" not in i]
 
     # For the plot on the left (test + post-hoc test)
     df_ranks, F, pval, df_posthoc = get_ranking_stats(
@@ -853,8 +862,10 @@ def plot_lab_org_comparison_scores(
         1, 2, figsize=figsize, gridspec_kw={"width_ratios": [1, 8]}
     )
 
-    list_libpreps = sorted(
-        list({i.split("_")[1] + " " + i.split("_")[2] for i in list_files})
+    list_libpreps = list(
+        dict.fromkeys(
+            [i.split("_")[1] + " " + i.split("_")[2] for i in list_files]
+        )
     )
 
     if mode == "normal":
