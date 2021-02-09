@@ -1,4 +1,4 @@
-image: python:3.7
+image: python:3.8
 
 ### WHY GITLAB LOCAL RUNNER IS NECESSARY!!!!
 # Parallelized jobs in triku cannot be run on the Gitlab Runner. That is, triku can only be 
