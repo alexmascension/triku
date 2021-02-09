@@ -6,10 +6,16 @@ from pathlib import Path
 
 from setuptools import setup, find_packages
 
-try:
-    from triku import __author__, __email__, __version__
-except ImportError:  # Deps not yet installed
-    __author__ = __email__ = __version__ = ""
+
+__author__ = ", ".join(["Alex M. Ascensión"])
+__email__ = ", ".join(
+    [
+        "alexmascension@gmail.com",
+        # We don’t need all, the main authors are sufficient.
+    ]
+)
+__version__ = "1.3.0"
+
 
 setup(
     name="triku",
