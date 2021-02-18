@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 FROM debian:latest
 
 #  $ docker build . -t continuumio/miniconda:latest -t continuumio/miniconda:4.5.11 -t continuumio/miniconda2:latest -t continuumio/miniconda2:4.5.11
@@ -34,12 +33,3 @@ RUN conda install -y matplotlib
 
 ENTRYPOINT [ "/usr/bin/tini", "--" ]
 CMD [ "/bin/bash" ]
-=======
-FROM gitpod/workspace-full
-
-# Install custom tools, runtimes, etc.
-# For example "bastet", a command-line tetris clone:
-# RUN brew install bastet
-#
-# More information: https://www.gitpod.io/docs/config-docker/
->>>>>>> 4804ebcce6d3298af6355e553cab974d080282ec
