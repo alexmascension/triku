@@ -1,3 +1,5 @@
+[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://gitlab.com/alexmascension/triku)
+
 # Triku - Feature selection for Single Cell Analysis 🦔
 [![PyPI version](https://badge.fury.io/py/triku.svg)](https://badge.fury.io/py/triku)
 [![status](https://gitlab.com/alexmascension/triku/badges/dev/pipeline.svg)](https://gitlab.com/alexmascension/triku)
