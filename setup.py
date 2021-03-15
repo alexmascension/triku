@@ -14,7 +14,7 @@ __email__ = ", ".join(
         # We don’t need all, the main authors are sufficient.
     ]
 )
-__version__ = "1.3.0"
+__version__ = "1.3.1"
 
 
 setup(
@@ -47,6 +47,7 @@ setup(
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
     ],
 )
