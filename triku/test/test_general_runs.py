@@ -80,7 +80,7 @@ def test_run_cli():
             if "triku_return" in file:
                 path = ROOT + "/" + file
 
-    ret = pd.read_csv(path)
+    ret = pd.read_csv(path)  # type: ignore
     for pos_gene in selected_markers:
         assert ret["highly_variable"][adata.var_names == pos_gene].values[0]
 
