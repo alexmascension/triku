@@ -31,3 +31,4 @@ cov*
 .cov*
 htmlcov
 dist
+.vscode

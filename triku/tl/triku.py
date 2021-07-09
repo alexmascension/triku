@@ -45,7 +45,7 @@ def triku(
     n_procs: Union[None, int] = None,
     verbose: Union[None, str] = "warning",
     save_return: Union[None, str] = None,
-):
+) -> dict:  # type:ignore
     """
     This function calls the triku method using python directly. This function expects an
     annData object or a csv / txt matrix of n_cells x n_genes. The function then returns an array / list
