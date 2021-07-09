@@ -1,3 +1,5 @@
+from typing import Union
+
 import bottleneck as bn
 import numpy as np
 import pandas as pd
@@ -8,7 +10,7 @@ from triku.logg import TRIKU_LEVEL
 from triku.logg import triku_logger
 
 
-def return_proportion_zeros(mat: [np.ndarray, spr.csr.csr_matrix]):
+def return_proportion_zeros(mat: Union[np.ndarray, spr.csr.csr_matrix]):
     """
     Returns a 1D array with the percentages. We have to do it using methods both for sparse arrays
     and dense arrays, which limits the options to do it.
@@ -44,7 +46,7 @@ def return_proportion_zeros(mat: [np.ndarray, spr.csr.csr_matrix]):
     return zero_counts / n_cells
 
 
-def return_mean(mat: [np.ndarray, spr.csr.csr_matrix]):
+def return_mean(mat: Union[np.ndarray, spr.csr.csr_matrix]):
     """
     Returns a 1D array with the mean of the array. We have to do it using methods both for sparse arrays
     and dense arrays, which limits the options to do it.
@@ -79,7 +81,7 @@ def return_mean(mat: [np.ndarray, spr.csr.csr_matrix]):
     return mean_per_gene
 
 
-def check_count_mat(mat: [np.ndarray, spr.csr.csr_matrix]):
+def check_count_mat(mat: Union[np.ndarray, spr.csr.csr_matrix]):
     """
     This function outputs a warning if we suspect the matrix is in logarithm value
     """
@@ -169,10 +171,9 @@ def return_arr_counts_genes(object_triku, get_from_raw=None):
     make_genes_unique(arr_genes)
 
     triku_logger.log(
-        TRIKU_LEVEL,
-        "Array of counts\n{}, shape:{}".format(arr_counts, arr_counts.shape),
+        TRIKU_LEVEL, "Array of counts\n{arr_counts}, shape:{arr_counts.shape}",
     )
-    triku_logger.log(TRIKU_LEVEL, "Array of genes\n{}".format(arr_genes))
+    triku_logger.log(TRIKU_LEVEL, "Array of genes\n{arr_genes}")
     return arr_counts, arr_genes
 
 

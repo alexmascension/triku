@@ -24,7 +24,10 @@ notebooks/build
 notebooks/cache
 notebooks/pkgs
 notebooks/alevin_output
+notebooks/figures
+notebooks/Enrichr
 data
 cov*
 .cov*
 htmlcov
+dist

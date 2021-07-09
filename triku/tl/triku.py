@@ -1,5 +1,6 @@
 import logging
 import warnings
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -27,23 +28,23 @@ warnings.filterwarnings("ignore")  # To ignore Numba warnings
 
 
 def triku(
-    object_triku: [sc.AnnData, pd.DataFrame, str],
-    n_features: [None, int] = None,
+    object_triku: Union[sc.AnnData, pd.DataFrame, str],
+    n_features: Union[None, int] = None,
     use_raw=True,
-    do_return: [None, bool] = None,
-    use_adata_knn: [None, bool] = None,
-    n_divisions: [None, int] = None,
-    knn: [None, int] = None,
-    s: [None, int, float] = -0.01,
+    do_return: Union[None, bool] = None,
+    use_adata_knn: Union[None, bool] = None,
+    n_divisions: Union[None, int] = None,
+    knn: int = 0,
+    s: Union[None, int, float] = -0.01,
     apply_background_correction: bool = False,
     n_comps: int = 25,
     metric: str = "cosine",
     n_windows: int = 75,
     min_knn: int = 6,
-    random_state: [None, int] = 0,
-    n_procs: [None, int] = None,
-    verbose: [None, str] = "warning",
-    save_return: [None, str] = None,
+    random_state: int = 0,
+    n_procs: Union[None, int] = None,
+    verbose: Union[None, str] = "warning",
+    save_return: Union[None, str] = None,
 ):
     """
     This function calls the triku method using python directly. This function expects an
@@ -114,12 +115,12 @@ def triku(
     list_features : list
         list of selected features
     """
-    # todo: at some point I should make the function compatible with sparse arrays.
-    # todo: make function accept 0 and other values for convolution
-    # todo: add feature override. If triku has been already run on the adata, do not run it, and only check the number
-    #       of selected genes
-    # todo: add other distances apart form EMD
-    # todo: implement other DR methods for kNN graph
+
+    """
+    TODOS
+    * Make function accept 0 and other values for convolution
+    * Implement other DR methods for kNN graph
+    """
 
     # Basic checks of variables
     set_level_logger(verbose)
@@ -153,10 +154,8 @@ def triku(
         n_procs = max(1, get_cpu_count() - 1)
     elif n_procs > get_cpu_count():
         triku_logger.warning(
-            "The selected number of cpus ({}) is higher than the available number ({}). The number"
-            "of used cores will be set to {}.".format(
-                n_procs, get_cpu_count(), max(1, get_cpu_count() - 1)
-            )
+            f"The selected number of cpus ({n_procs}) is higher than the available number ({get_cpu_count()}). The number"
+            "of used cores will be set to {max(1, get_cpu_count() - 1)}."
         )
         n_procs = max(1, get_cpu_count() - 1)
     triku_logger.log(
@@ -189,23 +188,29 @@ def triku(
 
     if isinstance(object_triku, sc.AnnData):
         if (use_adata_knn is None) or use_adata_knn:
-            if "neighbors" in object_triku.uns:
-                knn = object_triku.uns["neighbors"]["params"]["n_neighbors"]
+            if "neighbors" in object_triku.uns:  # type:ignore
+                knn_adata = object_triku.uns["neighbors"][  # type:ignore
+                    "params"
+                ]["n_neighbors"]
 
                 # Sometimes return is an array
                 if isinstance(knn, np.ndarray):
-                    knn = knn[0]
+                    knn = knn_adata[0]
+                else:
+                    knn = knn_adata
 
                 triku_logger.info(
-                    'We found "neighbors" in the anndata, with knn={}. If you want to calculate the '
-                    "neighbors with triku, set use_adata_knn=False".format(knn)
+                    f'We found "neighbors" in the anndata, with knn={knn}. If you want to calculate the '
+                    "neighbors with triku, set use_adata_knn=False"
                 )
 
                 # Connectivities array contains a pairwise relationship between cells. We want to select, for
                 # each cell, the knn "nearest" cells. We can easily do that with argsort. In the end we obtain a
                 # cells x knn array with the top knn cells.
                 knn_array = np.asarray(
-                    object_triku.uns["neighbors"]["connectivities"].todense()
+                    object_triku.uns["neighbors"][  # type:ignore
+                        "connectivities"
+                    ].todense()
                 ).argsort()[:, -knn::][::, ::-1]
 
                 # Last step is to add a arange of 0 to n_cells in the first column.
@@ -222,9 +227,7 @@ def triku(
     if knn_array is None:
         if knn is None:
             knn = int(0.5 * (arr_counts.shape[0]) ** 0.5)
-            triku_logger.info(
-                "The number of neighbours is set to {}".format(knn)
-            )
+            triku_logger.info(f"The number of neighbours is set to {knn}")
 
         triku_logger.info("Calculating knn indices")
         knn_array = return_knn_indices(
@@ -310,15 +313,19 @@ def triku(
         dist_cutoff = get_cutoff_curve(y=array_emd_subt_median, s=s)
     else:
         dist_cutoff = np.sort(array_emd_subt_median)[-(n_features + 1)]
-    triku_logger.info("Cutoff point set to {}".format(dist_cutoff))
+    triku_logger.info("Cutoff point set to {dist_cutoff}")
 
     # Returns phase. Return if object is not an adata or if return is set to true.
     is_highly_variable = array_emd_subt_median > dist_cutoff
     if isinstance(object_triku, sc.AnnData):
-        object_triku.var["highly_variable"] = is_highly_variable
-        object_triku.var["triku_distance"] = array_emd_subt_median
-        object_triku.var["triku_distance_uncorrected"] = array_emd
-        object_triku.uns["triku_params"] = {
+        object_triku.var["highly_variable"] = is_highly_variable  # type:ignore
+        object_triku.var[  # type:ignore
+            "triku_distance"
+        ] = array_emd_subt_median
+        object_triku.var[  # type:ignore
+            "triku_distance_uncorrected"
+        ] = array_emd
+        object_triku.uns["triku_params"] = {  # type:ignore
             "knn": knn,
             "n_features": n_features,
             "random_state": random_state,
@@ -332,7 +339,9 @@ def triku(
             "n_divisions": n_divisions,
         }
         if array_emd_random is not None:
-            object_triku.var["triku_distance_random"] = array_emd_random
+            object_triku.var[  # type:ignore
+                "triku_distance_random"
+            ] = array_emd_random
 
     if do_return or (not isinstance(object_triku, sc.AnnData)):
         dict_return = {

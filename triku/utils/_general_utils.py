@@ -15,5 +15,3 @@ def set_level_logger(level):
     }
 
     triku_logger.setLevel(dict_levels[level])
-
-    # TODO include ray warning as well

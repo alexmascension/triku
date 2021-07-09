@@ -3,14 +3,14 @@ import logging
 import os
 
 
-def get_cpu_count():
+def get_cpu_count() -> int:
     # adapted from https://stackoverflow.com/questions/1006289
     workers = os.cpu_count()
 
     if "sched_getaffinity" in dir(os):
         workers = len(os.sched_getaffinity(0))
 
-    return workers
+    return workers  # type: ignore
 
 
 class TqdmToLogger(io.StringIO):
@@ -19,12 +19,12 @@ class TqdmToLogger(io.StringIO):
         Output stream for TQDM which will output to logger module instead of
         the StdOut.
     """
-    logger, level, buf = None, None, ""
 
     def __init__(self, logger, level=None):
         super(TqdmToLogger, self).__init__()
         self.logger = logger
         self.level = level or logging.INFO
+        self.buf = ""
 
     def write(self, buf):
         self.buf = buf.strip("\r\n\t ")

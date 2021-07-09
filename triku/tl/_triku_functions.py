@@ -1,6 +1,8 @@
 import gc
 import logging
 import os
+from typing import Tuple
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -37,6 +39,8 @@ def clean_adata(adata):
     if "triku_params" in adata.uns:
         del adata.uns["triku_params"]
 
+    return adata
+
 
 def save_object_triku(dict_triku, list_genes, path):
     df = pd.DataFrame(dict_triku)
@@ -48,7 +52,7 @@ def save_object_triku(dict_triku, list_genes, path):
 def get_n_divisions(arr_counts: np.array) -> int:
     diff = np.abs(np.sum(arr_counts - arr_counts.astype(int)))
     triku_logger.log(
-        TRIKU_LEVEL, f"Difference between int and float array is  {diff}"
+        TRIKU_LEVEL, f"Difference between int and float array is {diff}"
     )
 
     if diff < 1:
@@ -103,9 +107,7 @@ def return_knn_indices(
 
     triku_logger.log(
         TRIKU_LEVEL,
-        "knn indices stats (shape | mean | std): {} | {} | {}".format(
-            knn_indices.shape, np.mean(knn_indices), np.std(knn_indices)
-        ),
+        "knn indices stats (shape | mean | std): {knn_indices.shape} | {np.mean(knn_indices)} | {np.std(knn_indices)}",
     )
     return knn_indices.astype(int)
 
@@ -139,15 +141,13 @@ def return_knn_expression(
     ] = 1
     triku_logger.log(
         TRIKU_LEVEL,
-        "sparse_mask sum {} / shape: {}".format(
-            sparse_mask.sum(), sparse_mask.shape
-        ),
+        "sparse_mask sum {sparse_mask.sum()} / shape: {sparse_mask.shape}",
     )
 
     knn_expression = sparse_mask.dot(arr_expression)
     triku_logger.log(
         TRIKU_LEVEL,
-        "knn_expression: {} | {}".format(knn_expression, knn_expression.shape),
+        "knn_expression: {knn_expression} | {knn_expression.shape}",
     )
 
     # Remember that we want the knn expression of the cells with positive expression! The rest are not interesting,
@@ -199,8 +199,8 @@ def create_random_count_matrix(
 
 
 def apply_convolution_read_counts(
-    probs: np.ndarray, knn: int, func: [np.convolve, fftconvolve]
-) -> (np.ndarray, np.ndarray):
+    probs: np.ndarray, knn: int, func: Union[np.convolve, fftconvolve]
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Convolution of functions. The function applies a convolution using np.convolve
     of a probability distribution knn times. The result is an array of N elements (N arises as the convolution
@@ -224,7 +224,7 @@ def apply_convolution_read_counts(
 
     arr_convolve = func(arr_0, arr_base,)
 
-    for knni in range(knn):
+    for _ in range(knn):
         arr_convolve = func(arr_convolve, arr_base,)
 
     arr_prob = arr_convolve / arr_convolve.sum()
@@ -240,7 +240,7 @@ def nonnegative_fft(arr_a, arr_b):
 
 def compute_conv_idx(
     counts_gene: np.ndarray, knn: int
-) -> (np.ndarray, np.ndarray, np.ndarray):
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Given a GENE x CELL matrix, and an index to select from, calculates the convolution of reads for that gene index.
     The function returns the
@@ -269,7 +269,7 @@ def calculate_emd(
     x_conv: np.ndarray,
     y_conv: np.ndarray,
     n_divisions: int,
-) -> (np.ndarray, np.ndarray):
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Returns "normalized" earth movers distance (EMD). The function calculates the x positions and probabilities
     of the "real" dataset using the knn_counts, and the x positions and probabilities of the convolution as attributes.
@@ -300,7 +300,7 @@ def compute_convolution_and_emd(
     knn: int,
     min_knn: int,
     n_divisions: int,
-) -> (np.ndarray, np.ndarray, np.ndarray):
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     counts_gene = array_counts[
         idx, :
     ].ravel()  # idx is chosen by rows, because it is more effective!
@@ -334,7 +334,7 @@ def parallel_emd_calculation(
     knn: int,
     min_knn: int,
     n_divisions: int,
-) -> (list, list, np.ndarray):
+) -> Tuple[list, list, np.ndarray]:
     """
     Calculation of convolution for each gene, and its emd. To do that we call compute_convolution_and_emd which,
     in turn, calls compute_conv_idx to calculate the convolution of the reads; and calculate_emd, to calculate the
@@ -405,7 +405,8 @@ def parallel_emd_calculation(
         return_objs = ray.get(ray_obj_ids)
         triku_logger.log(TRIKU_LEVEL, "Done.")
 
-        del [array_counts_id, array_knn_counts_id]
+        del array_counts_id
+        del array_knn_counts_id
         gc.collect()
         ray.shutdown()
 
@@ -443,7 +444,7 @@ def subtract_median(x, y, n_windows):
     return y_adjust
 
 
-def get_cutoff_curve(y, s):
+def get_cutoff_curve(y, s) -> float:
     """
     Plots a curve, and finds the best point by joining the extremes of the curve with a line, and selecting
     the point from the curve with the greatest distance.
