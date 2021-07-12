@@ -26,17 +26,9 @@ def test_run_defaults():
     sc.pp.filter_cells(adata, min_genes=10)
     sc.pp.filter_genes(adata, min_cells=10)
     tk.tl.triku(adata)
+    print(adata.var.loc[selected_markers])
     for pos_gene in selected_markers:
-        assert adata.var["highly_variable"].loc[pos_gene]
-
-
-@pytest.mark.general
-def test_run_defaults_random():
-    adata = sc.datasets.pbmc3k()
-    sc.pp.filter_cells(adata, min_genes=10)
-    sc.pp.filter_genes(adata, min_cells=10)
-    tk.tl.triku(adata, apply_background_correction=True)
-    for pos_gene in selected_markers:
+        print(pos_gene)
         assert adata.var["highly_variable"].loc[pos_gene]
 
 
@@ -75,7 +67,7 @@ def test_run_cli():
 
     root_dir = os.path.dirname(os.path.dirname(os.getcwd()))
     print(f"We'll be looking for files at {root_dir}")
-    for ROOT, DIRS, FILES in os.walk(root_dir):
+    for ROOT, _, FILES in os.walk(root_dir):
         for file in FILES:
             if "triku_return" in file:
                 path = ROOT + "/" + file

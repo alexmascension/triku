@@ -32,6 +32,8 @@ def run_adata_n_procs():
         dict_times[n_procs] = time() - t
         dict_results[n_procs] = adata.var["triku_distance"].values
 
+    print(dict_times)
+
     return dict_times, dict_results
 
 
@@ -43,51 +45,11 @@ def test_n_features(getpbmc3k):
         assert np.sum(adata.var["highly_variable"].values) == n_feats
 
 
-@pytest.mark.calc_check_parallel
-def test_output_n_procs(run_adata_n_procs):
-    dict_times, dict_results = run_adata_n_procs
-    for n_procs in [2, 4, 8]:
-        assert dict_times[n_procs] < 2 * dict_times[1]
-
-
 @pytest.mark.calc_check
 def test_use_adata_knn(getpbmc3k):
     adata = getpbmc3k
     sc.pp.neighbors(adata, n_neighbors=25)
     tk.tl.triku(adata, n_procs=1)
-
-
-@pytest.mark.calc_check
-def test_n_windows_1(getpbmc3k):
-    adata = getpbmc3k
-    tk.tl.triku(
-        adata, n_procs=1, n_windows=1, apply_background_correction=True
-    )
-    assert not np.all(
-        adata.var["triku_distance"].values
-        == adata.var["triku_distance_uncorrected"].values
-    )
-
-    # Checks that previous columns are removed
-    tk.tl.triku(
-        adata, n_procs=1, n_windows=1, apply_background_correction=False
-    )
-    assert np.all(
-        adata.var["triku_distance"].values
-        == adata.var["triku_distance_uncorrected"].values
-        - np.median(adata.var["triku_distance_uncorrected"].values)
-    )
-
-    tk.tl.triku(
-        adata, n_procs=1, n_windows=100, apply_background_correction=False
-    )
-    assert (
-        np.sum(
-            adata.var["triku_distance"].values
-            - adata.var["triku_distance_uncorrected"].values
-        )
-        < 0
-    )
 
 
 @pytest.mark.output_check
@@ -111,20 +73,6 @@ def test_do_return(getpbmc3k):
     assert np.all(adata.var["highly_variable"] == ret["highly_variable"])
     for name_col in ["triku_distance", "triku_distance_uncorrected"]:
         assert np.all(adata.var[name_col] == ret[name_col])
-
-
-@pytest.mark.output_check
-def test_bg_correction():
-    adata = sc.datasets.pbmc3k_processed()
-    tk.tl.triku(adata, apply_background_correction=False)
-    assert "triku_distance_random" not in adata.var
-
-    tk.tl.triku(adata, apply_background_correction=True)
-    assert "triku_distance_random" in adata.var
-
-    assert (
-        np.abs(np.mean(adata.var["triku_distance_random"].values)) < 0.4
-    )  # Should be 0.1 but I have no idea
 
 
 @pytest.mark.output_check

@@ -14,7 +14,6 @@ from ..utils._triku_tl_utils import get_arr_counts_and_genes
 from ..utils._triku_tl_utils import return_mean
 from ..utils._triku_tl_utils import return_proportion_zeros
 from ._triku_functions import clean_adata
-from ._triku_functions import create_random_count_matrix
 from ._triku_functions import get_cutoff_curve
 from ._triku_functions import get_n_divisions
 from ._triku_functions import load_object_triku
@@ -36,7 +35,6 @@ def triku(
     n_divisions: Union[None, int] = None,
     knn: int = 0,
     s: Union[None, int, float] = -0.01,
-    apply_background_correction: bool = False,
     n_comps: int = 25,
     metric: str = "cosine",
     n_windows: int = 75,
@@ -89,10 +87,6 @@ def triku(
     s : float
         Correction factor for automatic feature selection. Negative values imply a selction of more genes, and
         positive values imply a selection of fewer genes. We recommend values between -0.1 and 0.1.
-    apply_background_correction : bool
-        Substract the Wasserstein distance from a randomised adata to compensate the inflation of Wasserstein distance
-        of highly expressed genes. If the dataset is too big, this step can be ommited, since those features usually
-        don't get selected.
     n_comps : int
         Number of PCA components for knn selection.
     metric : str
@@ -255,56 +249,9 @@ def triku(
         n_divisions=n_divisions,
     )
 
-    # Randomization!
-    # The same steps must be applied to a randomized expression count matrix if we must
-    list_x_conv_random, list_y_conv_random, array_emd_random = None, None, None
-    arr_knn_expression_random, knn_array_random = None, None
-
-    if apply_background_correction:
-        triku_logger.info("Creating randomized count matrix")
-        arr_counts_random = create_random_count_matrix(
-            arr_counts, random_state=random_state, n_divisions=n_divisions
-        )
-
-        triku_logger.info("Calculating knn indices on randomized matrix")
-        knn_array_random = return_knn_indices(
-            arr_counts,
-            knn=knn,
-            return_random=False,
-            random_state=random_state,
-            metric=metric,
-            n_comps=n_comps,
-        )
-
-        triku_logger.info("Calculating knn expression on randomized matrix")
-        arr_knn_expression_random = return_knn_expression(
-            arr_counts_random, knn_array_random
-        )
-
-        triku_logger.info("Parallel emd calculation on randomized matrix")
-        (
-            list_x_conv_random,
-            list_y_conv_random,
-            array_emd_random,
-        ) = parallel_emd_calculation(
-            array_counts=arr_counts_random,
-            array_knn_counts=arr_knn_expression_random,
-            knn=knn,
-            n_procs=n_procs,
-            min_knn=min_knn,
-            n_divisions=n_divisions,
-        )
-
-    # Apply emd distance correction (substract the emd to the random_emd)
-    if array_emd_random is not None:
-        array_emd_corrected = array_emd - array_emd_random
-        array_emd_corrected[array_emd_corrected < 0] = 0
-    else:
-        array_emd_corrected = array_emd
-
     triku_logger.info("Subtracting median")
     array_emd_subt_median = subtract_median(
-        x=mean_counts, y=array_emd_corrected, n_windows=n_windows
+        x=mean_counts, y=array_emd, n_windows=n_windows
     )
 
     # Selection of best genes, either by the curve method or as the N highest ones.
@@ -335,13 +282,8 @@ def triku(
             "n_windows": n_windows,
             "min_knn": min_knn,
             "n_procs": n_procs,
-            "apply_background_correction": apply_background_correction,
             "n_divisions": n_divisions,
         }
-        if array_emd_random is not None:
-            object_triku.var[  # type:ignore
-                "triku_distance_random"
-            ] = array_emd_random
 
     if do_return or (not isinstance(object_triku, sc.AnnData)):
         dict_return = {
@@ -349,38 +291,15 @@ def triku(
             "triku_distance": array_emd_subt_median,
             "triku_distance_uncorrected": array_emd,
         }
-        if array_emd_random is not None:
-            dict_return["triku_distance_random"] = array_emd_random
 
         save_object_triku(dict_return, arr_genes, save_return)
 
         if triku_logger.level < logging.INFO:
-            dict_return["knn_indices"], dict_return["knn_indices_random"] = (
-                knn_array,
-                knn_array_random,
-            )
-            (
-                dict_return["knn_expression"],
-                dict_return["knn_expression_random"],
-            ) = (
-                arr_knn_expression,
-                arr_knn_expression_random,
-            )
+            dict_return["knn_indices"] = (knn_array,)
+            (dict_return["knn_expression"],) = (arr_knn_expression,)
 
-            (
-                dict_return["x_convolution"],
-                dict_return["x_convolution_random"],
-            ) = (
-                list_x_conv,
-                list_x_conv_random,
-            )
-            (
-                dict_return["y_convolution"],
-                dict_return["y_convolution_random"],
-            ) = (
-                list_y_conv,
-                list_y_conv_random,
-            )
+            (dict_return["x_convolution"],) = (list_x_conv,)
+            (dict_return["y_convolution"],) = (list_y_conv,)
 
             dict_return["array_counts"], dict_return["array_genes"] = (
                 arr_counts,
