@@ -219,7 +219,7 @@ def triku(
                 )
 
     if knn_array is None:
-        if knn is None:
+        if knn == 0:
             knn = int(0.5 * (arr_counts.shape[0]) ** 0.5)
             triku_logger.info(f"The number of neighbours is set to {knn}")
 

@@ -25,7 +25,7 @@ def test_run_defaults():
     adata = sc.datasets.pbmc3k()
     sc.pp.filter_cells(adata, min_genes=10)
     sc.pp.filter_genes(adata, min_cells=10)
-    tk.tl.triku(adata)
+    tk.tl.triku(adata, n_procs=1)
     print(adata.var.loc[selected_markers])
     for pos_gene in selected_markers:
         print(pos_gene)
