@@ -1,12 +1,28 @@
-image: python:3.7
+image: python:3.8
+
+### WHY GITLAB LOCAL RUNNER IS NECESSARY!!!!
+# Parallelized jobs in triku cannot be run on the Gitlab Runner. That is, triku can only be 
+# run on one job, and the coverage of that part will be neglected. To not neglect that part
+# we run triku locally and in the server runners, gather coverage data and 
+# combine coverage reports. 
+
+# To be able to do that, we need to run the gitlab-runner on the local computer with multicore.
+# Install gitlab-runner from the dpkg, not from conda, because you must sudo it!
+
+# Once installed, register a runner and let it run with the command: sudo gitlab-runner run
+
 
 stages:
   - build
+  - test_prepare_codecov
+  - test
+  - codecov
 
 variables:
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 
 cache:
+  key: "dev"
   paths:
     - .cache/pip
     - venv/
@@ -17,11 +33,117 @@ before_script:
   - virtualenv venv
   - source venv/bin/activate
 
-
+# BUILDING THE SYSTEM
 build:system:
   stage: build
   script:
     - pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
     - pip install -r requirements.txt
+    - pip install ray pre-commit
+    - pytest -s -m "import_triku" 
+  retry: 2
+  tags:
+    - shared
 
+build:system_local:
+  stage: build
+  script:
+    - pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
+    - pip install -r requirements.txt
+    - pip install ray pre-commit
+    - pytest -s -m "import_triku" 
 
+  retry: 2
+  tags:
+    - local_triku_runner
+
+# CODECOV PREPARATION
+prepare_codecov:
+  stage: test_prepare_codecov
+  script:
+    - rm -f .cov*
+    - rm -rf htmlcov
+  tags:
+    - shared
+
+# CODECOV GENERAL
+codecov_general:
+  stage: test
+  script:
+    - pytest -s -n 8 -m "general" --cov=./triku/  --cov-append
+    - mv .coverage .coverage.general
+  artifacts:
+    paths:
+      - .coverage.general
+  retry: 2
+  tags:
+    - local_triku_runner
+
+# CODECOV ARGS
+codecov_ouput_check:
+  stage: test
+  script:
+    - pytest -s -n 4 -m "output_check" --cov=./triku/  --cov-append
+    - mv .coverage .coverage.ouput_check
+  artifacts:
+    paths:
+      - .coverage.ouput_check
+  tags:
+    - shared
+
+codecov_args_var_check:
+  stage: test
+  script:
+    - pytest -s -n 4 -m "var_check" --cov=./triku/  --cov-append
+    - mv .coverage .coverage.var_check
+  artifacts:
+    paths:
+      - .coverage.var_check
+  tags:
+    - shared
+
+codecov_args_calc_check:
+  stage: test
+  script:
+    - pytest -s -n 4 -m "calc_check" --cov=./triku/  --cov-append
+    - mv .coverage .coverage.calc_check
+  artifacts:
+    paths:
+      - .coverage.calc_check
+  tags:
+    - shared
+
+codecov_args_calc_check_parallel:
+  stage: test
+  script:
+    - pytest -s -n 4 -m "calc_check_parallel" --cov=./triku/  --cov-append
+    - mv .coverage .coverage.calc_check_parallel
+  artifacts:
+    paths:
+      - .coverage.calc_check_parallel
+  retry: 2
+  tags:
+    - local_triku_runner
+
+codecov_unit_exception_checks:
+  stage: test
+  script:
+    - pytest -s -n 4 -m "exception_check" --cov=./triku/  --cov-append
+    - mv .coverage .coverage.exception_check
+  artifacts:
+    paths:
+      - .coverage.exception_check
+  tags:
+    - shared
+
+# OUTPUT CODECOV
+codecov:
+  stage: codecov
+  script:
+    - coverage combine .cov*
+    - pytest -s -n 1 -m "end" --cov=./triku/ --cov-append --cov-report=html
+    - codecov --token=6e1967cb-4cf2-4eee-b32a-82b0ca1725a0
+    - rm -f .cov*
+    - rm -rf htmlcov
+  tags:
+    - shared

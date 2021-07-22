@@ -1,76 +1,120 @@
+import gc
+import logging
 import os
+from typing import Tuple
+from typing import Union
+
 import numpy as np
 import pandas as pd
-import scipy.stats as sts
-import scipy.sparse as spr
-from scipy.signal import fftconvolve
-
-from sklearn.decomposition import PCA
-from umap.umap_ import nearest_neighbors
 import scanpy as sc
-
+import scipy.sparse as spr
+import scipy.stats as sts
+from scipy.signal import fftconvolve
+from sklearn.decomposition import PCA
 from tqdm import tqdm
-import logging
-import gc
+from umap.umap_ import nearest_neighbors
 
-from triku.logg import triku_logger, TRIKU_LEVEL
 from triku.genutils import TqdmToLogger
+from triku.logg import TRIKU_LEVEL
+from triku.logg import triku_logger
 
 
 def load_object_triku(object_triku):
     assert os.path.exists(object_triku)
-    return sc.read(object_triku), '.'.join(object_triku.split('.')[:-1]) + '.triku_return.csv'
+    return (
+        sc.read(object_triku),
+        ".".join(object_triku.split(".")[:-1]) + ".triku_return.csv",
+    )
+
+
+def clean_adata(adata):
+    for varx in [
+        "triku_distance",
+        "triku_distance_uncorrected",
+        "triku_distance_random",
+    ]:
+        if varx in adata.var:
+            del adata.var[varx]
+
+    if "triku_params" in adata.uns:
+        del adata.uns["triku_params"]
+
+    return adata
 
 
 def save_object_triku(dict_triku, list_genes, path):
     df = pd.DataFrame(dict_triku)
     df = df.set_index(list_genes, drop=True)
-    df.to_csv(path, sep=',')
+    triku_logger.info(f"Saving triku return in {path}")
+    df.to_csv(path, sep=",")
 
 
 def get_n_divisions(arr_counts: np.array) -> int:
     diff = np.abs(np.sum(arr_counts - arr_counts.astype(int)))
-    triku_logger.log(TRIKU_LEVEL, f'Difference between int and float array is  {diff}')
+    triku_logger.log(
+        TRIKU_LEVEL, f"Difference between int and float array is {diff}"
+    )
 
     if diff < 1:
         n_divisions = 1
     else:
         n_divisions = 15
 
-    triku_logger.log(TRIKU_LEVEL, f'Number of divisions set to {n_divisions}')
+    triku_logger.log(TRIKU_LEVEL, f"Number of divisions set to {n_divisions}")
     return n_divisions
 
 
-def return_knn_indices(array: np.ndarray, knn: int, return_random: bool, random_state: int, metric: str,
-                       n_comps: int) -> np.ndarray:
+def return_knn_indices(
+    array: np.ndarray,
+    knn: int,
+    return_random: bool,
+    random_state: int,
+    metric: str,
+    n_comps: int,
+) -> np.ndarray:
     """
     Given a expression array and a number of kNN, returns a n_cells x kNN matrix where each row, col is a
     neighbour of cell X.
 
     return_random attribute is used to assign random neighbours.
     """
-    triku_logger.log(TRIKU_LEVEL, 'Calculating PCA for knn indices')
-    pca = PCA(n_components=n_comps, whiten=True, svd_solver='auto', random_state=random_state).fit_transform(array)
+    triku_logger.log(TRIKU_LEVEL, "Calculating PCA for knn indices")
+    pca = PCA(
+        n_components=n_comps,
+        whiten=True,
+        svd_solver="auto",
+        random_state=random_state,
+    ).fit_transform(array)
 
     if return_random:
-        triku_logger.log(TRIKU_LEVEL, 'Applying knn indices randomly')
+        triku_logger.log(TRIKU_LEVEL, "Applying knn indices randomly")
         # With this approach it is possible that two knns are the same for a cell. But well, not really that important.
-        knn_indices = np.random.randint(array.shape[0], array.shape[0] * knn).reshape(array.shape[0], knn)
+        knn_indices = np.random.randint(
+            array.shape[0], array.shape[0] * (knn + 1)
+        ).reshape(array.shape[0], knn)
         knn_indices[:, 0] = np.arange(array.shape[0])
 
     else:
-        triku_logger.log(TRIKU_LEVEL, 'Calculating knn indices')
-        knn_indices, knn_dists, forest = nearest_neighbors(pca, n_neighbors=knn, metric=metric,
-                                                           random_state=np.random.RandomState(random_state),
-                                                           angular=False, metric_kwds={})
+        triku_logger.log(TRIKU_LEVEL, "Calculating knn indices")
+        knn_indices, knn_dists, forest = nearest_neighbors(
+            pca,
+            n_neighbors=knn + 1,
+            metric=metric,
+            random_state=np.random.RandomState(random_state),
+            angular=False,
+            metric_kwds={},
+        )
 
-    triku_logger.log(TRIKU_LEVEL, 'knn indices stats (shape | mean | std): {} | {} | {}'.format(knn_indices.shape,
-                                                                                                np.mean(knn_indices),
-                                                                                                np.std(knn_indices)))
+    triku_logger.log(
+        TRIKU_LEVEL,
+        "knn indices stats (shape | mean | std): {knn_indices.shape} | {np.mean(knn_indices)} | {np.std(knn_indices)}",
+    )
     return knn_indices.astype(int)
 
 
-def return_knn_expression(arr_expression: np.ndarray, knn_indices: np.ndarray) -> np.ndarray:
+def return_knn_expression(
+    arr_expression: np.ndarray, knn_indices: np.ndarray
+) -> np.ndarray:
     """
     This function returns an array with the knn expression per gene and cell. To calculate the expression per gene
     we are going to apply the following procedure.
@@ -87,13 +131,24 @@ def return_knn_expression(arr_expression: np.ndarray, knn_indices: np.ndarray) -
     own cell).
     """
 
-    sparse_mask = spr.lil_matrix((arr_expression.shape[0], arr_expression.shape[0]))
-    # [:, 0] is [0,0,0,0,..., 0, 1, ..., 1, ... ] and [:, 1] are the indices of the rest of cells.
-    sparse_mask[np.repeat(np.arange(knn_indices.shape[0]), knn_indices.shape[1]), knn_indices.flatten()] = 1
-    triku_logger.log(TRIKU_LEVEL, 'sparse_mask sum {} / shape: {}'.format(sparse_mask.sum(), sparse_mask.shape))
+    sparse_mask = spr.lil_matrix(
+        (arr_expression.shape[0], arr_expression.shape[0])
+    )
+    # [:, 0] is [0,0,0,0,..., 0, 1, ..., 1, ... ] and [:, 1:k+1] are the indices of the rest of cells.
+    sparse_mask[
+        np.repeat(np.arange(knn_indices.shape[0]), knn_indices.shape[1]),
+        knn_indices.flatten(),
+    ] = 1
+    triku_logger.log(
+        TRIKU_LEVEL,
+        "sparse_mask sum {sparse_mask.sum()} / shape: {sparse_mask.shape}",
+    )
 
     knn_expression = sparse_mask.dot(arr_expression)
-    triku_logger.log(TRIKU_LEVEL, 'knn_expression: {} | {}'.format(knn_expression, knn_expression.shape))
+    triku_logger.log(
+        TRIKU_LEVEL,
+        "knn_expression: {knn_expression} | {knn_expression.shape}",
+    )
 
     # Remember that we want the knn expression of the cells with positive expression! The rest are not interesting,
     # and must be discarded. So far
@@ -101,44 +156,9 @@ def return_knn_expression(arr_expression: np.ndarray, knn_indices: np.ndarray) -
     return knn_expression
 
 
-def create_random_count_matrix(matrix: np.array, random_state: int, n_divisions: int) -> np.ndarray:
-    """
-    Given a matrix with cells x genes, returns a randomized cells x genes matrix. This matrix has, for each genes,
-    the counts of the gene from the original matrix dispersed across the cells. E.g., if gene X has 1000 across
-    all cells counts, those counts are distributed randomly.
-    """
-
-    n_reads_per_gene = matrix.sum(0).astype(int)
-    n_cells, n_genes = matrix.shape
-    matrix_random = np.zeros((n_genes, n_cells))
-
-    # The limiting part generally is the random number generation.
-    # Random.choice is rather slow, so to save some time we use random.random, then multiply by the
-    # number of cells, and change to int.
-    np.random.seed(random_state)
-
-    # With that we assign to each cell a count, i.e., 1 count goes to cell 1, one count to cell 5,
-    # 1 count to cell 10, one count to cell 3...
-    # To adjust to the n_divisions, we will assign n_division times more reads, and then later on, on the
-    # bincount, divide it by n_divisions
-    random_counts = np.random.randint(n_cells, size=np.sum(n_reads_per_gene) * n_divisions)
-
-    # Also, assigning values to a matrix is done by rows because it is 2 to 3 times faster than in rows.
-    # Numpy rows are row-based so it will always be more efficient to do a row-wise assignment.
-    idx_counts = 0
-    for gene in range(n_genes):
-        # This array will have n_counts_per_gene * n_division cell asignments, which will be used for the bincount
-        counts_gene = random_counts[idx_counts: idx_counts + n_reads_per_gene[gene] * n_divisions]
-        bincount = np.bincount(counts_gene, minlength=n_cells)
-        matrix_random[gene, :] = bincount / n_divisions
-        idx_counts += n_reads_per_gene[gene] * n_divisions
-
-    matrix_random = matrix_random.T
-    return matrix_random
-
-
-def apply_convolution_read_counts(probs: np.ndarray, knn: int, func: [np.convolve, fftconvolve]) -> (
-np.ndarray, np.ndarray):
+def apply_convolution_read_counts(
+    probs: np.ndarray, knn: int, func: Union[np.convolve, fftconvolve]
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Convolution of functions. The function applies a convolution using np.convolve
     of a probability distribution knn times. The result is an array of N elements (N arises as the convolution
@@ -160,10 +180,10 @@ np.ndarray, np.ndarray):
     # We will use arr_bvase as the array with the read distribution
     arr_base = probs.copy()
 
-    arr_convolve = func(arr_0, arr_base, )
+    arr_convolve = func(arr_0, arr_base,)
 
-    for knni in range(2, knn):
-        arr_convolve = func(arr_convolve, arr_base, )
+    for _ in range(knn):
+        arr_convolve = func(arr_convolve, arr_base,)
 
     arr_prob = arr_convolve / arr_convolve.sum()
 
@@ -176,24 +196,38 @@ def nonnegative_fft(arr_a, arr_b):
     return conv
 
 
-def compute_conv_idx(counts_gene: np.ndarray, knn: int) -> (np.ndarray, np.ndarray, np.ndarray):
+def compute_conv_idx(
+    counts_gene: np.ndarray, knn: int
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Given a GENE x CELL matrix, and an index to select from, calculates the convolution of reads for that gene index.
     The function returns the
     """
-    y_probs = np.bincount(counts_gene.astype(int)) / len(counts_gene)  # Important to transform count to probabilities
+    y_probs = np.bincount(counts_gene.astype(int)) / len(
+        counts_gene
+    )  # Important to transform count to probabilities
     # to keep the convolution constant.
 
-    if np.sum(counts_gene) > 7000:  # For low counts (< 5000 to < 10000), fttconvolve is 2-3 to 10 times faster.
-        x_conv, y_conv = apply_convolution_read_counts(y_probs, knn=knn, func=nonnegative_fft)
+    if (
+        np.sum(counts_gene) > 7000
+    ):  # For low counts (< 5000 to < 10000), fttconvolve is 2-3 to 10 times faster.
+        x_conv, y_conv = apply_convolution_read_counts(
+            y_probs, knn=knn, func=nonnegative_fft
+        )
     else:
-        x_conv, y_conv = apply_convolution_read_counts(y_probs, knn=knn, func=np.convolve)
+        x_conv, y_conv = apply_convolution_read_counts(
+            y_probs, knn=knn, func=np.convolve
+        )
 
     return x_conv, y_conv, y_probs
 
 
-def calculate_emd(knn_counts: np.ndarray, x_conv: np.ndarray, y_conv: np.ndarray, n_divisions: int) -> \
-        (np.ndarray, np.ndarray):
+def calculate_emd(
+    knn_counts: np.ndarray,
+    x_conv: np.ndarray,
+    y_conv: np.ndarray,
+    n_divisions: int,
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Returns "normalized" earth movers distance (EMD). The function calculates the x positions and probabilities
     of the "real" dataset using the knn_counts, and the x positions and probabilities of the convolution as attributes.
@@ -217,11 +251,21 @@ def calculate_emd(knn_counts: np.ndarray, x_conv: np.ndarray, y_conv: np.ndarray
     return x_conv, emd / std
 
 
-def compute_convolution_and_emd(array_counts: np.ndarray, array_knn_counts: np.ndarray, idx: int,
-                                knn: int, min_knn: int, n_divisions: int) -> (np.ndarray, np.ndarray, np.ndarray):
-    counts_gene = array_counts[idx, :].ravel()  # idx is chosen by rows, because it is more effective!
+def compute_convolution_and_emd(
+    array_counts: np.ndarray,
+    array_knn_counts: np.ndarray,
+    idx: int,
+    knn: int,
+    min_knn: int,
+    n_divisions: int,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    counts_gene = array_counts[
+        idx, :
+    ].ravel()  # idx is chosen by rows, because it is more effective!
     knn_counts = array_knn_counts[idx, :].ravel()
-    knn_counts = knn_counts[knn_counts > 0]  # Remember that only knn expression from positively-expressed cells
+    knn_counts = knn_counts[
+        knn_counts > 0
+    ]  # Remember that only knn expression from positively-expressed cells
     # From the previous step at the knn calculation we set knn expression from non-expressing cells to 0
 
     counts_gene = (counts_gene * n_divisions).astype(int)
@@ -241,8 +285,14 @@ def compute_convolution_and_emd(array_counts: np.ndarray, array_knn_counts: np.n
     return x_conv, y_conv, emd
 
 
-def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndarray,
-                             n_procs: int, knn: int, min_knn: int, n_divisions: int) -> (list, list, np.ndarray):
+def parallel_emd_calculation(
+    array_counts: np.ndarray,
+    array_knn_counts: np.ndarray,
+    n_procs: int,
+    knn: int,
+    min_knn: int,
+    n_divisions: int,
+) -> Tuple[list, list, np.ndarray]:
     """
     Calculation of convolution for each gene, and its emd. To do that we call compute_convolution_and_emd which,
     in turn, calls compute_conv_idx to calculate the convolution of the reads; and calculate_emd, to calculate the
@@ -257,43 +307,72 @@ def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndar
     """
     n_genes = array_counts.shape[1]
 
+    triku_logger.log(
+        TRIKU_LEVEL, f"Running EMD calulation with {n_procs} processors."
+    )
     # Apply a non_paralellized variant with tqdm
     if n_procs == 1:
         tqdm_out = TqdmToLogger(triku_logger, level=logging.INFO)
 
-        return_objs = [compute_convolution_and_emd(array_counts.T, array_knn_counts.T, idx_gene, knn, min_knn,
-                                                   n_divisions)
-                       for idx_gene in tqdm(range(n_genes), file=tqdm_out)]
+        return_objs = [
+            compute_convolution_and_emd(
+                array_counts.T,
+                array_knn_counts.T,
+                idx_gene,
+                knn,
+                min_knn,
+                n_divisions,
+            )
+            for idx_gene in tqdm(range(n_genes), file=tqdm_out)
+        ]
 
     else:
         try:
             import ray
         except ImportError:
-            raise ImportError('Ray is not installed in the system. You can install it writing \npip install ray\n '
-                              'in the console. If you are on windows, ray might not be supported. Use n_comps=1 '
-                              'instead.')
+            raise ImportError(
+                "Ray is not installed in the system. You can install it writing \npip install ray\n "
+                "in the console. If you are on windows, ray might not be supported. Use n_comps=1 "
+                "instead."
+            )
 
         ray.shutdown()
         ray.init(num_cpus=n_procs, ignore_reinit_error=True)
 
-        compute_convolution_and_emd_remote = ray.remote(compute_convolution_and_emd)
-        array_counts_id = ray.put(array_counts.T)  # IMPORTANT TO TRANSPOSE TO SELECT ROWS (much faster)!!!
+        compute_convolution_and_emd_remote = ray.remote(
+            compute_convolution_and_emd
+        )
+        array_counts_id = ray.put(
+            array_counts.T
+        )  # IMPORTANT TO TRANSPOSE TO SELECT ROWS (much faster)!!!
         array_knn_counts_id = ray.put(array_knn_counts.T)
 
-        ray_obj_ids = [compute_convolution_and_emd_remote.remote(array_counts_id, array_knn_counts_id, idx_gene,
-                                                                 knn, min_knn, n_divisions)
-                       for idx_gene in range(n_genes)]
+        ray_obj_ids = [
+            compute_convolution_and_emd_remote.remote(
+                array_counts_id,
+                array_knn_counts_id,
+                idx_gene,
+                knn,
+                min_knn,
+                n_divisions,
+            )
+            for idx_gene in range(n_genes)
+        ]
 
-        triku_logger.log(TRIKU_LEVEL, 'Parallel computation of distances.')
+        triku_logger.log(TRIKU_LEVEL, "Parallel computation of distances.")
         return_objs = ray.get(ray_obj_ids)
-        triku_logger.log(TRIKU_LEVEL, 'Done.')
+        triku_logger.log(TRIKU_LEVEL, "Done.")
 
-        del [array_counts_id, array_knn_counts_id];
+        del array_counts_id
+        del array_knn_counts_id
         gc.collect()
         ray.shutdown()
 
-    list_x_conv, list_y_conv, list_emd = [x[0] for x in return_objs], [x[1] for x in return_objs], [x[2] for x in
-                                                                                                    return_objs]
+    list_x_conv, list_y_conv, list_emd = (
+        [x[0] for x in return_objs],
+        [x[1] for x in return_objs],
+        [x[2] for x in return_objs],
+    )
     # list_x_conv and list_y_conv are lists of lists. Each element are the x coordinates and probabilities of the
     # convolution distribution for a gene. list_emd is an array with n_genes elements, where each element is the
     # distance between the convolution and the knn_distribution
@@ -301,14 +380,16 @@ def parallel_emd_calculation(array_counts: np.ndarray, array_knn_counts: np.ndar
 
 
 def subtract_median(x, y, n_windows):
-    """We working with EMD, we want to find genes with more deviation on emd compared with other genes with similar
-    mean expression. With higher expressions EMD tends to increase. To reduce that basal level we will substract the
+    """When working with EMD, we want to find genes with more deviation on emd compared with other genes with similar
+    mean expression. With higher expressions EMD tends to increase. To reduce that basal level we will subtract the
     median EMD to the genes using a number of windows. The approach is quite reliable between 15 and 80 windows.
 
     Too many windows can over-normalize, and lose genes that have high emd but are alone in that window."""
 
     # We have to take the distance in logarithm to account for the wide expression ranges
-    linspace = 10 ** np.linspace(np.min(np.log10(x)), np.max(np.log10(x)), n_windows + 1)
+    linspace = 10 ** np.linspace(
+        np.min(np.log10(x)), np.max(np.log10(x)), n_windows + 1
+    )
     y_adjust = y.copy()
 
     y_median_array = np.zeros(len(y))
@@ -321,7 +402,7 @@ def subtract_median(x, y, n_windows):
     return y_adjust
 
 
-def get_cutoff_curve(y, s):
+def get_cutoff_curve(y, s) -> float:
     """
     Plots a curve, and finds the best point by joining the extremes of the curve with a line, and selecting
     the point from the curve with the greatest distance.

@@ -22,4 +22,13 @@ triku.egg-info
 notebooks/triku_nb_code.egg-info
 notebooks/build
 notebooks/cache
-
+notebooks/pkgs
+notebooks/alevin_output
+notebooks/figures
+notebooks/Enrichr
+data
+cov*
+.cov*
+htmlcov
+dist
+.vscode

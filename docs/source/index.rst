@@ -7,6 +7,29 @@
 
 Triku - Feature selection for Single Cell Analysis
 ==================================================
+.. image:: https://badge.fury.io/py/triku.svg
+    :target: https://badge.fury.io/py/triku
+
+.. image:: https://gitlab.com/alexmascension/triku/badges/dev/pipeline.svg
+  :target: https://gitlab.com/alexmascension/triku
+
+.. image:: https://readthedocs.org/projects/triku/badge/?version=latest
+    :alt: Documentation Status
+    :scale: 100%
+    :target: https://triku.readthedocs.io/en/latest/?badge=latest
+
+.. image:: https://codecov.io/gl/alexmascension/triku/branch/dev/graph/badge.svg
+  :target: https://codecov.io/gl/alexmascension/triku/branch/dev
+
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/psf/black
+
+.. image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
+    :target: https://github.com/pre-commit/pre-commit
+    
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4016715.svg
+   :target: https://doi.org/10.5281/zenodo.4016715
+
 Triku (hedgehog in euskera) is a feature selection method prepared for Single Cell Analysis.
 Triku has been prepared to work with `scanpy <https://scanpy.readthedocs.io/en/stable/>`_
 ``annData`` objects directly, although it also works with pandas DataFrames and can be run via
@@ -22,7 +45,7 @@ import it and run it in one line::
    tk.tl.triku(adata)
 
 After that, you can find which features are selected ``adata.var['highly_variable']``.
-The scores for each gene are located in ``adata.var['emd_distance']``.
+The scores for each gene are located in ``adata.var['triku_distance']``.
 The higher the score, the better.
 
 If you are using scanpy, you should run triku before running ``sc.pp.pca`` and
@@ -35,4 +58,5 @@ in log-transformed matrices, although the results depend on the dataset.
    :hidden:
 
    triku-work
+   install
    usage
