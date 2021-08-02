@@ -1,5 +1,25 @@
-# 1.2.0
-Updated "emd_X" variables to "triku_X" to adapt other distances in the future.
+# 2.0.0 [Predicted]
+## Major changes to the
+- Removed background correction. We saw it was unnecessary and it consumed too much time (in 1.3.X was deactivated by default).
+- Improved operability with dense and sparse matrices. Now big adatas should run with triku.
+- Removed knn/PCA calculation. Now we take information from adata.obsp for kNN matrices, and from adata.var for PCA/related info.
+- CLI interactivity and adata returns are removed to make the code simpler. If the user has to run the CLI specifically for the FS step, 
+  they will surely be able to integrate it into the pipeline directly loading the adata.
+
+## Minor changes
+- Corrected some `None` attributes to their standard `int` value.
+- Get the knn_array from adata.obsp instead of adata.uns
+- Get the knn indices from adata.obs['distances'] instead of adata.obsp['connectivities']. Nonzero components of distances are set to knn 
+  but the number of nonzero components of 'connectivities' can be >= knn. To cut out to knn we did an argsort, which is now unnecessary. 
+  Therefore, this step saves a lot of time and memory.
+- Gene names and count matrix variables are linked to their corresponding adata arrays, and are not independent.
+- Set binning number of n_divisions from 15 to 13
+
+# 1.3.1
+Minor version fixes
 
 # 1.3.0
 Set k to really be k and not k-1, either in convolution and in knn.
+
+# 1.2.0
+Updated "emd_X" variables to "triku_X" to adapt other distances in the future.

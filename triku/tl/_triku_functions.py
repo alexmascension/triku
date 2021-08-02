@@ -1,30 +1,18 @@
 import gc
 import logging
-import os
 from typing import Tuple
 from typing import Union
 
 import numpy as np
 import pandas as pd
-import scanpy as sc
 import scipy.sparse as spr
 import scipy.stats as sts
 from scipy.signal import fftconvolve
-from sklearn.decomposition import PCA
 from tqdm import tqdm
-from umap.umap_ import nearest_neighbors
 
 from triku.genutils import TqdmToLogger
 from triku.logg import TRIKU_LEVEL
 from triku.logg import triku_logger
-
-
-def load_object_triku(object_triku):
-    assert os.path.exists(object_triku)
-    return (
-        sc.read(object_triku),
-        ".".join(object_triku.split(".")[:-1]) + ".triku_return.csv",
-    )
 
 
 def clean_adata(adata):
@@ -49,8 +37,44 @@ def save_object_triku(dict_triku, list_genes, path):
     df.to_csv(path, sep=",")
 
 
-def get_n_divisions(arr_counts: np.array) -> int:
-    diff = np.abs(np.sum(arr_counts - arr_counts.astype(int)))
+def return_knn_array(object_triku):
+    # Distances array contains a pairwise relationship between cells, based on distance.
+    # We will binarize that array to select equally all components with non-zero distance.
+    # We finally add the identity matrix to select as neighbour the own cell.
+    try:
+        knn_array = (
+            object_triku.obsp[  # type:ignore
+                "distances"
+            ]
+            > 0
+        ) + spr.identity(len(object_triku)).astype(
+            bool
+        )  # Saves memory
+
+    except KeyError:
+        triku_logger.warning(
+            """Deprecation issue. Recent versions of scanpy save knn matrices in .obsp.
+        In future versions of triku we will select these matrices from .obsp exclusively."""
+        )
+
+        knn_array = (
+            object_triku.uns[  # type:ignore
+                "neighbors"
+            ][
+                "connectivities"
+            ]
+            > 0
+        ) + spr.identity(len(object_triku)).astype(
+            bool
+        )  # Saves memory
+
+    return knn_array
+
+
+def get_n_divisions(arr_counts: spr.csr.csr_matrix) -> int:
+    diff = np.abs(
+        (arr_counts - arr_counts.floor()).sum()
+    )  # Faster .floor() than X.astype(int) (up to x2 for large arrays)
     triku_logger.log(
         TRIKU_LEVEL, f"Difference between int and float array is {diff}"
     )
@@ -58,69 +82,18 @@ def get_n_divisions(arr_counts: np.array) -> int:
     if diff < 1:
         n_divisions = 1
     else:
-        n_divisions = 15
+        n_divisions = 13  # Arbitrarily chosen. Prime numbers are better because 2, 3, 4 yield strange results during binning.
 
     triku_logger.log(TRIKU_LEVEL, f"Number of divisions set to {n_divisions}")
     return n_divisions
 
 
-def return_knn_indices(
-    array: np.ndarray,
-    knn: int,
-    return_random: bool,
-    random_state: int,
-    metric: str,
-    n_comps: int,
-) -> np.ndarray:
-    """
-    Given a expression array and a number of kNN, returns a n_cells x kNN matrix where each row, col is a
-    neighbour of cell X.
-
-    return_random attribute is used to assign random neighbours.
-    """
-    triku_logger.log(TRIKU_LEVEL, "Calculating PCA for knn indices")
-    pca = PCA(
-        n_components=n_comps,
-        whiten=True,
-        svd_solver="auto",
-        random_state=random_state,
-    ).fit_transform(array)
-
-    if return_random:
-        triku_logger.log(TRIKU_LEVEL, "Applying knn indices randomly")
-        # With this approach it is possible that two knns are the same for a cell. But well, not really that important.
-        knn_indices = np.random.randint(
-            array.shape[0], array.shape[0] * (knn + 1)
-        ).reshape(array.shape[0], knn)
-        knn_indices[:, 0] = np.arange(array.shape[0])
-
-    else:
-        triku_logger.log(TRIKU_LEVEL, "Calculating knn indices")
-        knn_indices, knn_dists, forest = nearest_neighbors(
-            pca,
-            n_neighbors=knn + 1,
-            metric=metric,
-            random_state=np.random.RandomState(random_state),
-            angular=False,
-            metric_kwds={},
-        )
-
-    triku_logger.log(
-        TRIKU_LEVEL,
-        "knn indices stats (shape | mean | std): {knn_indices.shape} | {np.mean(knn_indices)} | {np.std(knn_indices)}",
-    )
-    return knn_indices.astype(int)
-
-
 def return_knn_expression(
-    arr_expression: np.ndarray, knn_indices: np.ndarray
-) -> np.ndarray:
+    arr_expression: spr.csr.csr_matrix, knn_indices: spr.csr.csr_matrix
+) -> spr.csr.csr_matrix:
     """
     This function returns an array with the knn expression per gene and cell. To calculate the expression per gene
-    we are going to apply the following procedure.
-
-    First we create a 2D mask of neighbors. The mask is a translation of the knn_indices into a 2D sparse array,
-    where the index i,j is 1 if cell j is neigbour of cell i and 0 elsewhere.
+    we are going to apply the dot product of the neighbor indices and the expression.
 
     That is, if we have n_g as number of genes, and n_c as number of cells, the matrix product would be:
 
@@ -129,30 +102,24 @@ def return_knn_expression(
 
     Then, the Result matrix would have in each cell, the summed expression of that gene in the knn (and also the
     own cell).
+
+    In this step we do not mask the array. Previously, after the calculation of the expression, we masked the knn expression of the
+    cells that were originally expressing that gene. That is, for any gene, the knn expression of the cells are were originally
+    not expressing that gene was set to zero. We do that because we saw that not doing that produced "dirtier" EMD calculations.
+    The thing is that since the matrices are csr, constructing a masked array requires a new matrix and selecting the elements from
+    the knn matrix, or deleting the existing ones based on the count array, in both cases time consuming.
+
+    To save that time, we will simply in the convolution step select the expression values with the mask for each gene, because that
+    selection has to be done anyways.
     """
 
-    sparse_mask = spr.lil_matrix(
-        (arr_expression.shape[0], arr_expression.shape[0])
-    )
-    # [:, 0] is [0,0,0,0,..., 0, 1, ..., 1, ... ] and [:, 1:k+1] are the indices of the rest of cells.
-    sparse_mask[
-        np.repeat(np.arange(knn_indices.shape[0]), knn_indices.shape[1]),
-        knn_indices.flatten(),
-    ] = 1
-    triku_logger.log(
-        TRIKU_LEVEL,
-        "sparse_mask sum {sparse_mask.sum()} / shape: {sparse_mask.shape}",
-    )
+    knn_expression = knn_indices.dot(arr_expression)
 
-    knn_expression = sparse_mask.dot(arr_expression)
     triku_logger.log(
         TRIKU_LEVEL,
         "knn_expression: {knn_expression} | {knn_expression.shape}",
     )
 
-    # Remember that we want the knn expression of the cells with positive expression! The rest are not interesting,
-    # and must be discarded. So far
-    knn_expression[arr_expression == 0] = 0
     return knn_expression
 
 
@@ -259,6 +226,7 @@ def compute_convolution_and_emd(
     min_knn: int,
     n_divisions: int,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+
     counts_gene = array_counts[
         idx, :
     ].ravel()  # idx is chosen by rows, because it is more effective!
@@ -286,8 +254,8 @@ def compute_convolution_and_emd(
 
 
 def parallel_emd_calculation(
-    array_counts: np.ndarray,
-    array_knn_counts: np.ndarray,
+    array_counts: spr.csr.csr_matrix,
+    array_knn_counts: spr.csr.csr_matrix,
     n_procs: int,
     knn: int,
     min_knn: int,
@@ -298,8 +266,9 @@ def parallel_emd_calculation(
     in turn, calls compute_conv_idx to calculate the convolution of the reads; and calculate_emd, to calculate the
     emd between the convolution and the knn_counts.
 
-    Since we are working with counts, rather than an adata, we transpose the arrays so that the expression of each gene
-    is a row. This makes a difference in time consumption (after 20000 genes, of course).
+    Since we are working with counts of each gene, instead of each cell, we will get the csc forms of array_knn_counts and array_counts.
+    This conversion takes some time and memory, but it does save a lot of time afterwards, when doing the column indexing.
+    e.g. with a 50000 x 10000 matrix, doing csr -> csc and csc indexing takes 8s, whereas doing csr indexing takes 30 mins!!
 
     To make things faster we use ray parallelization. Ray selects the counts and knn counts on each gene, and computes
     the convolution and distance. The output result is, for each gene, the convolution distribution
@@ -310,14 +279,18 @@ def parallel_emd_calculation(
     triku_logger.log(
         TRIKU_LEVEL, f"Running EMD calulation with {n_procs} processors."
     )
+
+    array_counts_csc = array_counts.tocsc()
+    array_knn_counts_csc = array_knn_counts.tocsc()
+
     # Apply a non_paralellized variant with tqdm
     if n_procs == 1:
         tqdm_out = TqdmToLogger(triku_logger, level=logging.INFO)
 
         return_objs = [
             compute_convolution_and_emd(
-                array_counts.T,
-                array_knn_counts.T,
+                array_counts_csc,
+                array_knn_counts_csc,
                 idx_gene,
                 knn,
                 min_knn,
@@ -342,10 +315,8 @@ def parallel_emd_calculation(
         compute_convolution_and_emd_remote = ray.remote(
             compute_convolution_and_emd
         )
-        array_counts_id = ray.put(
-            array_counts.T
-        )  # IMPORTANT TO TRANSPOSE TO SELECT ROWS (much faster)!!!
-        array_knn_counts_id = ray.put(array_knn_counts.T)
+        array_counts_id = ray.put(array_counts_csc)
+        array_knn_counts_id = ray.put(array_knn_counts_csc)
 
         ray_obj_ids = [
             compute_convolution_and_emd_remote.remote(

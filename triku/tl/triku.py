@@ -3,7 +3,6 @@ import warnings
 from typing import Union
 
 import numpy as np
-import pandas as pd
 import scanpy as sc
 
 from ..genutils import get_cpu_count
@@ -16,10 +15,9 @@ from ..utils._triku_tl_utils import return_proportion_zeros
 from ._triku_functions import clean_adata
 from ._triku_functions import get_cutoff_curve
 from ._triku_functions import get_n_divisions
-from ._triku_functions import load_object_triku
 from ._triku_functions import parallel_emd_calculation
+from ._triku_functions import return_knn_array
 from ._triku_functions import return_knn_expression
-from ._triku_functions import return_knn_indices
 from ._triku_functions import save_object_triku
 from ._triku_functions import subtract_median
 
@@ -27,20 +25,16 @@ warnings.filterwarnings("ignore")  # To ignore Numba warnings
 
 
 def triku(
-    object_triku: Union[sc.AnnData, pd.DataFrame, str],
+    object_triku: Union[sc.AnnData, str],
     n_features: Union[None, int] = None,
-    use_raw=True,
+    use_raw: bool = True,
     do_return: Union[None, bool] = None,
-    use_adata_knn: Union[None, bool] = None,
     n_divisions: Union[None, int] = None,
-    knn: int = 0,
-    s: Union[None, int, float] = -0.01,
-    n_comps: int = 25,
-    metric: str = "cosine",
+    s: Union[int, float] = -0.01,
     n_windows: int = 75,
     min_knn: int = 6,
     random_state: int = 0,
-    n_procs: Union[None, int] = None,
+    n_procs: int = -1,
     verbose: Union[None, str] = "warning",
     save_return: Union[None, str] = None,
 ) -> dict:  # type:ignore
@@ -56,7 +50,9 @@ def triku(
     n_features : int
         Number of features to select. If None, the number is chosen automatically.
     use_raw : bool
-        If True, selects the adata.raw matrix, if it exists. This matrix is adjusted to select the genes and cells that
+        If True, selects the adata.raw, if it exists.
+        To set the .raw propety, set as: adata.raw = adata.
+        This matrix is adjusted to select the genes and cells that
         appear in the current adata. E.g. if we are running triku with a subpopulation, triku will select the cells
         from adata.raw of that subpopulation. If certain genes have been removed after saving the raw, triku will not
         consider the removed genes.
@@ -72,25 +68,15 @@ def triku(
             * `y_convolution` and `y_convolution_random`: y values of convolution. Their sum is 1.
             * `array_counts`: count array. It is be equal to `adata.X`.
             * `array_genes`: list of genes. It is equal to `adata.var`.
-    use_adata_knn :  bool, None
-        If object_triku is a scanpy.AnnData object, and sc.pp.neighbors was run, select neighbors and knn from
-        adata.uns['neighbors']['connectivities'] and  adata.uns['neighbors']['params']['n_neighbors'].
     n_divisions : int, None
         If the array of counts is not integer, number of bins in which each unit will be divided to account for
         that effect. For example, if n_divisions is 10, then 0.12 and 0.13 would be in the same bin, and 0.12 and 0.34
         in two different bins. If n_divisions is 2, the two cases would be in the same bin.
         The higher the number of divisions the more precise the calculation of distances will be. It will be more
         time consuming, though. If n_divisions is None, we will adjust it automatically.
-    knn: int
-        If use_adata_knn is False, number of neighbors to choose for feature selection. By default
-        the half the square root of the number of cells is chosen.
     s : float
         Correction factor for automatic feature selection. Negative values imply a selction of more genes, and
         positive values imply a selection of fewer genes. We recommend values between -0.1 and 0.1.
-    n_comps : int
-        Number of PCA components for knn selection.
-    metric : str
-        Metric for knn selection.
     n_windows : int
         Number of windows used for median subtraction of Wasserstein distance.
     min_knn : int
@@ -110,41 +96,24 @@ def triku(
         list of selected features
     """
 
-    """
-    TODOS
-    * Make function accept 0 and other values for convolution
-    * Implement other DR methods for kNN graph
-    """
-
-    # Basic checks of variables
+    # Basic checks of variables and assertions!!!
     set_level_logger(verbose)
 
     for var in [
         n_features,
-        knn,
         n_windows,
         n_procs,
         random_state,
-        n_comps,
         n_divisions,
     ]:
         assert (var is None) | (
             isinstance(var, int)
         ), f"The variable value {var} must be an integer!"
 
-    if isinstance(object_triku, str):
-        object_triku, save_prefix = load_object_triku(object_triku)
-        if save_return is None:
-            save_return = save_prefix
-        do_return = True
-
-    if isinstance(object_triku, pd.DataFrame):
-        use_adata_knn = False
-
     if isinstance(object_triku, sc.AnnData):
         clean_adata(object_triku)
 
-    if n_procs is None:
+    if n_procs == -1:
         n_procs = max(1, get_cpu_count() - 1)
     elif n_procs > get_cpu_count():
         triku_logger.warning(
@@ -156,10 +125,18 @@ def triku(
         TRIKU_LEVEL, "Number of processors set to {}".format(n_procs)
     )
 
-    # Get the array of counts (np.array) and the array of genes.
+    # Check that neighbors are calculated. Else make the user calculate them!!!
+    if "neighbors" not in object_triku.uns:  # type:ignore
+        raise IndexError(
+            "Neighbors not found in adata. Run sc.pp.neighbors() first."
+        )
+
+    # Assert that adata.X is sparse (warning to transform) and assert that gene names are unique.
     arr_counts, arr_genes = get_arr_counts_and_genes(
         object_triku, use_raw=use_raw
     )
+
+    # Get the counts. [NOTE TODO: return_proportion_zeros is unused!!!!!]
     mean_counts, _ = (
         return_mean(arr_counts),
         return_proportion_zeros(arr_counts),
@@ -170,70 +147,17 @@ def triku(
         n_divisions = get_n_divisions(arr_counts)
 
     """
-    First step is to get the kNN for the expression matrix.
-    This is not that time intensive, but for reproducibility, we by default accept the kNN calculated by
-    scanpy (sc.pp.neighbors()), and obtain the info from there.
-    Otherwise, we calculate the kNNs.
-    The expected output from this step is a matrix of cells x (kNN + 1), where each column includes the neighbor index
-    of the cell number
+    First step is to get the kNN for the expression matrix from the annData.
+    The expected matrix from this step is a matrix of cells x kNN, where each column includes the neighbor index
+    of the cell number. The matrix is sparse, so we will work with methods that adapt work with sparse matrices.
     """
 
-    knn_array = None
+    knn = object_triku.uns["neighbors"]["params"]["n_neighbors"]  # type:ignore
 
-    if isinstance(object_triku, sc.AnnData):
-        if (use_adata_knn is None) or use_adata_knn:
-            if "neighbors" in object_triku.uns:  # type:ignore
-                knn_adata = object_triku.uns["neighbors"][  # type:ignore
-                    "params"
-                ]["n_neighbors"]
+    # Boolean array showing the neighbors (including its own)
+    knn_array = return_knn_array(object_triku)
 
-                # Sometimes return is an array
-                if isinstance(knn, np.ndarray):
-                    knn = knn_adata[0]
-                else:
-                    knn = knn_adata
-
-                triku_logger.info(
-                    f'We found "neighbors" in the anndata, with knn={knn}. If you want to calculate the '
-                    "neighbors with triku, set use_adata_knn=False"
-                )
-
-                # Connectivities array contains a pairwise relationship between cells. We want to select, for
-                # each cell, the knn "nearest" cells. We can easily do that with argsort. In the end we obtain a
-                # cells x knn array with the top knn cells.
-                knn_array = np.asarray(
-                    object_triku.uns["neighbors"][  # type:ignore
-                        "connectivities"
-                    ].todense()
-                ).argsort()[:, -knn::][::, ::-1]
-
-                # Last step is to add a arange of 0 to n_cells in the first column.
-                knn_array = np.concatenate(
-                    (
-                        np.arange(knn_array.shape[0]).reshape(
-                            knn_array.shape[0], 1
-                        ),
-                        knn_array,
-                    ),
-                    axis=1,
-                )
-
-    if knn_array is None:
-        if knn == 0:
-            knn = int(0.5 * (arr_counts.shape[0]) ** 0.5)
-            triku_logger.info(f"The number of neighbours is set to {knn}")
-
-        triku_logger.info("Calculating knn indices")
-        knn_array = return_knn_indices(
-            arr_counts,
-            knn=knn,
-            return_random=False,
-            random_state=random_state,
-            metric=metric,
-            n_comps=n_comps,
-        )
-
-    # Calculate the expression in the kNN (+ own cell) for all genes
+    # Calculate the expression in the kNN (+ own cell) for all genes [CAUTION! This array is unmasked!!!! (more explained inside the funcion)]
     triku_logger.info("Calculating knn expression")
     arr_knn_expression = return_knn_expression(arr_counts, knn_array)
 
@@ -277,8 +201,6 @@ def triku(
             "n_features": n_features,
             "random_state": random_state,
             "s": s,
-            "n_comps": n_comps,
-            "metric": metric,
             "n_windows": n_windows,
             "min_knn": min_knn,
             "n_procs": n_procs,
