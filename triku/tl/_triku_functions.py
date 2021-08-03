@@ -1,13 +1,11 @@
 import gc
 import logging
 from typing import Tuple
-from typing import Union
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as spr
 import scipy.stats as sts
-from scipy.signal import fftconvolve
 from tqdm import tqdm
 
 from triku.genutils import TqdmToLogger
@@ -123,70 +121,32 @@ def return_knn_expression(
     return knn_expression
 
 
-def apply_convolution_read_counts(
-    probs: np.ndarray, knn: int, func: Union[np.convolve, fftconvolve]
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Convolution of functions. The function applies a convolution using np.convolve
-    of a probability distribution knn times. The result is an array of N elements (N arises as the convolution
-    of a n-length array knn times) where the element i has the probability of i being observed.
-
-    Parameters
-    ----------
-    probs : np.array
-        Object with count matrix. If `pandas.DataFrame`, rows are cells and columns are genes.
-    knn : int
-        Number of kNN
-    """
-    # We are calculating the convolution of cells with positive expression. Thus, in the first distribution
-    # we have to remove the cells with 0 reads, and rescale the probabilities.
-    arr_0 = probs.copy()
-    arr_0[0] = 0
-    arr_0 /= arr_0.sum()
-
-    # We will use arr_bvase as the array with the read distribution
-    arr_base = probs.copy()
-
-    arr_convolve = func(arr_0, arr_base,)
-
-    for _ in range(knn):
-        arr_convolve = func(arr_convolve, arr_base,)
-
-    arr_prob = arr_convolve / arr_convolve.sum()
-
-    return np.arange(len(arr_prob)), arr_prob
-
-
-def nonnegative_fft(arr_a, arr_b):
-    conv = fftconvolve(arr_a, arr_b)
-    conv[conv < 0] = 0
-    return conv
-
-
 def compute_conv_idx(
     counts_gene: np.ndarray, knn: int
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Given a GENE x CELL matrix, and an index to select from, calculates the convolution of reads for that gene index.
     The function returns the
     """
-    y_probs = np.bincount(counts_gene.astype(int)) / len(
+    y_probs = np.bincount(counts_gene) / len(
         counts_gene
     )  # Important to transform count to probabilities
     # to keep the convolution constant.
 
-    if (
-        np.sum(counts_gene) > 7000
-    ):  # For low counts (< 5000 to < 10000), fttconvolve is 2-3 to 10 times faster.
-        x_conv, y_conv = apply_convolution_read_counts(
-            y_probs, knn=knn, func=nonnegative_fft
-        )
-    else:
-        x_conv, y_conv = apply_convolution_read_counts(
-            y_probs, knn=knn, func=np.convolve
-        )
+    arr_convolve = np.convolve(  # First iteration always with itself
+        y_probs, y_probs
+    )
 
-    return x_conv, y_conv, y_probs
+    for _ in range(knn):
+        arr_convolve = np.convolve(arr_convolve, y_probs,)
+
+    arr_prob = (
+        arr_convolve / arr_convolve.sum()
+    )  # This is just in case the sum is bigger than 1
+
+    x_conv, y_conv = np.arange(len(arr_prob)), arr_prob
+
+    return x_conv, y_conv
 
 
 def calculate_emd(
@@ -202,9 +162,9 @@ def calculate_emd(
     To normalize the distance, it is divided by the standard deviation of the convolution. Since the convolution
     is already given as a distribution, mean and variance have to be calculated "by hand".
     """
-    dist_range = np.arange(max(knn_counts) + 1)
+    dist_range = np.arange(np.max(knn_counts) + 1)
     # np.bincount transforms [3, 3, 4, 1, 2, 9] into [0, 1, 1, 2, 1, 0, 0, 0, 0, 1]
-    real_vals = np.bincount(knn_counts.astype(int)) / len(knn_counts)
+    real_vals = np.bincount(knn_counts) / len(knn_counts)
 
     # IMPORTANT: either for std or emd calculation, all x variables must be scaled back!
     dist_range = dist_range / n_divisions
@@ -213,44 +173,59 @@ def calculate_emd(
     emd = sts.wasserstein_distance(dist_range, x_conv, real_vals, y_conv)
 
     mean = (x_conv * y_conv).sum()
-    std = np.sqrt(np.sum(y_conv * (x_conv - mean) ** 2))
+    std = np.sqrt((y_conv * (x_conv - mean) ** 2).sum())
 
     return x_conv, emd / std
 
 
 def compute_convolution_and_emd(
-    array_counts: np.ndarray,
-    array_knn_counts: np.ndarray,
+    array_counts: spr.csc.csc_matrix,
+    array_knn_counts: spr.csc.csc_matrix,
     idx: int,
     knn: int,
     min_knn: int,
     n_divisions: int,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> np.ndarray:
+    """Calculate the convolution and emd given the array with counts and with knn counts.
+    To do the convolution we will select the gene column from each array.
 
-    counts_gene = array_counts[
-        idx, :
-    ].ravel()  # idx is chosen by rows, because it is more effective!
-    knn_counts = array_knn_counts[idx, :].ravel()
-    knn_counts = knn_counts[
-        knn_counts > 0
-    ]  # Remember that only knn expression from positively-expressed cells
-    # From the previous step at the knn calculation we set knn expression from non-expressing cells to 0
+    From the array of counts we will simply select the values, and from the array of knn counts we will select the values
+    of the indices from the array of counts (arr_counts[:, idx].indices).
+
+    Then, we are going to make the array integer. To do that, we recall the n_divisions argument, that applies
+    binning to the unit. For instance, if the expression of a gene is 5.23 and 5 bins are set, the new expression is
+    int(5.23 * 5) = int(26.15) = 26 -> 26 / 5 = 5.2 (so we lose 0.03 of expression).
+    This is a scaling step
+
+    """
+
+    indices = array_counts[:, idx].indices
+    counts_gene = array_counts[:, idx].T.A[0][indices]
+    knn_counts = array_knn_counts[:, idx].T.A[0][indices]
+
+    """
+    1) We set indices because if we do array_counts[:, idx].T.A[0] we also get the zero elements!!!
+    2) array_counts[:, idx].T.A[0][indices] is 3x faster than array_counts[indices, idx].T.A[0] because it is faster to set the row indexes
+       in a dense array than in a csc array (remember that accesing columns in csr or rows in csc is extremely slow!!)
+    3) .T is because the array is in column, and to get the dense version we transform to row: array([[0], [0], [0]]) -> array([[0, 0, 0]])
+    4) .A makes the csc matrix to a dense array. since the array is 2D, the array has shape (1, X), so we do A[0] to set it to a 1d array
+
+    Remember that ONLY THE KNN EXPRESSION FROM POSITIVELY-EXPRESSED CELLS is done!!!!
+    """
 
     counts_gene = (counts_gene * n_divisions).astype(int)
     knn_counts = (knn_counts * n_divisions).astype(int)
 
-    if np.sum(counts_gene > 0) > min_knn:
+    if len(counts_gene) > min_knn:
         # triku_logger.log(TRIKU_LEVEL, 'Convolution on index {}: counts = {}, per_zero = {}'.format(idx,
         #                 np.sum(counts_gene), np.sum(counts_gene == 0)/len(counts_gene)))
 
-        x_conv, y_conv, y_probs = compute_conv_idx(counts_gene, knn)
+        x_conv, y_conv = compute_conv_idx(counts_gene, knn)
         x_conv, emd = calculate_emd(knn_counts, x_conv, y_conv, n_divisions)
     else:
-        y_conv = np.bincount(knn_counts.astype(int))
-        x_conv = np.arange(len(y_conv))
         emd = 0
 
-    return x_conv, y_conv, emd
+    return emd
 
 
 def parallel_emd_calculation(
