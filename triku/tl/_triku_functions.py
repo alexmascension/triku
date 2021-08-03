@@ -199,9 +199,12 @@ def compute_convolution_and_emd(
 
     """
 
-    indices = array_counts[:, idx].indices
-    counts_gene = array_counts[:, idx].T.A[0][indices]
-    knn_counts = array_knn_counts[:, idx].T.A[0][indices]
+    # counts_gene.indices returns the nonzero entries. To only call counts_gene once, we call it first as an sparse array,
+    # then get the dense knn_counts, and finally, get the dense counts gene. This saves 30% time instead of setting
+    # indices = array_counts[:, idx].indices first!!
+    counts_gene = array_counts[:, idx]
+    knn_counts = array_knn_counts[:, idx].T.A[0][counts_gene.indices]
+    counts_gene = counts_gene.T.A[0][counts_gene.indices]
 
     """
     1) We set indices because if we do array_counts[:, idx].T.A[0] we also get the zero elements!!!
