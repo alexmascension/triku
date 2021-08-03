@@ -1,16 +1,17 @@
 import gc
-import logging
 from typing import Tuple
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as spr
 import scipy.stats as sts
-from tqdm import tqdm
 
-from triku.genutils import TqdmToLogger
 from triku.logg import TRIKU_LEVEL
 from triku.logg import triku_logger
+
+# import logging
+# from tqdm import tqdm
+# from triku.genutils import TqdmToLogger
 
 
 def clean_adata(adata):
@@ -261,11 +262,9 @@ def parallel_emd_calculation(
     array_counts_csc = array_counts.tocsc()
     array_knn_counts_csc = array_knn_counts.tocsc()
 
-    # Apply a non_paralellized variant with tqdm
+    # Apply a non_paralellized variant with tqdm   ### TODO MAYBE REMOVE THE PARALLELIZED VERSION!!!
     if n_procs == 1:
-        tqdm_out = TqdmToLogger(triku_logger, level=logging.INFO)
-
-        return_objs = [
+        list_emd = [
             compute_convolution_and_emd(
                 array_counts_csc,
                 array_knn_counts_csc,
@@ -274,7 +273,7 @@ def parallel_emd_calculation(
                 min_knn,
                 n_divisions,
             )
-            for idx_gene in tqdm(range(n_genes), file=tqdm_out)
+            for idx_gene in range(n_genes)
         ]
 
     else:
@@ -309,7 +308,7 @@ def parallel_emd_calculation(
         ]
 
         triku_logger.log(TRIKU_LEVEL, "Parallel computation of distances.")
-        return_objs = ray.get(ray_obj_ids)
+        list_emd = ray.get(ray_obj_ids)
         triku_logger.log(TRIKU_LEVEL, "Done.")
 
         del array_counts_id
@@ -317,15 +316,7 @@ def parallel_emd_calculation(
         gc.collect()
         ray.shutdown()
 
-    list_x_conv, list_y_conv, list_emd = (
-        [x[0] for x in return_objs],
-        [x[1] for x in return_objs],
-        [x[2] for x in return_objs],
-    )
-    # list_x_conv and list_y_conv are lists of lists. Each element are the x coordinates and probabilities of the
-    # convolution distribution for a gene. list_emd is an array with n_genes elements, where each element is the
-    # distance between the convolution and the knn_distribution
-    return list_x_conv, list_y_conv, np.array(list_emd)
+    return np.array(list_emd)
 
 
 def subtract_median(x, y, n_windows):
