@@ -1,4 +1,4 @@
-import logging
+# import logging
 import warnings
 from typing import Union
 
@@ -18,7 +18,6 @@ from ._triku_functions import get_n_divisions
 from ._triku_functions import parallel_emd_calculation
 from ._triku_functions import return_knn_array
 from ._triku_functions import return_knn_expression
-from ._triku_functions import save_object_triku
 from ._triku_functions import subtract_median
 
 warnings.filterwarnings("ignore")  # To ignore Numba warnings
@@ -28,7 +27,6 @@ def triku(
     object_triku: Union[sc.AnnData, str],
     n_features: Union[None, int] = None,
     use_raw: bool = True,
-    do_return: Union[None, bool] = None,
     n_divisions: Union[None, int] = None,
     s: Union[int, float] = -0.01,
     n_windows: int = 75,
@@ -36,7 +34,6 @@ def triku(
     random_state: int = 0,
     n_procs: int = -1,
     verbose: Union[None, str] = "warning",
-    save_return: Union[None, str] = None,
 ) -> dict:  # type:ignore
     """
     This function calls the triku method using python directly. This function expects an
@@ -56,18 +53,6 @@ def triku(
         appear in the current adata. E.g. if we are running triku with a subpopulation, triku will select the cells
         from adata.raw of that subpopulation. If certain genes have been removed after saving the raw, triku will not
         consider the removed genes.
-    do_return : bool
-        If True, returns a dictionary with several features:
-            * `highly_variable`: boolean array. True if gene is selected as highly variable by triku.
-            * `triku_distance`: Distance calculated by triku.
-            * `triku_distance_uncorrected`: Distance without randomization correction.
-        If verbose level is `triku` or `debug`, there are these additional columns:
-            * `knn_indices`: indices of kNN algorithm. Each row is a cell, and each column [1:] is the index of a neighbour.
-            * `knn_expression` and `knn_expression_random`: expression values in neighbours.
-            * `x_convolution` and `x_convolution_random`: x values of convolution.
-            * `y_convolution` and `y_convolution_random`: y values of convolution. Their sum is 1.
-            * `array_counts`: count array. It is be equal to `adata.X`.
-            * `array_genes`: list of genes. It is equal to `adata.var`.
     n_divisions : int, None
         If the array of counts is not integer, number of bins in which each unit will be divided to account for
         that effect. For example, if n_divisions is 10, then 0.12 and 0.13 would be in the same bin, and 0.12 and 0.34
@@ -88,8 +73,6 @@ def triku(
         Number of processors for parallel processing.
     verbose : str ['debug', 'triku', 'info', 'warning', 'error', 'critical']
         Logger verbosity output.
-    save_return  : str, None
-        File (csv) to save triku returns (selected features, distance, etc.)
     Returns
     -------
     list_features : list
@@ -164,7 +147,7 @@ def triku(
     # Apply the convolution, and calculate the EMD. The convolution is quite fast, but we will still paralellize it.
     triku_logger.info("EMD calculation")
     triku_logger.log(TRIKU_LEVEL, "min_knn set to {}".format(min_knn))
-    list_x_conv, list_y_conv, array_emd = parallel_emd_calculation(
+    array_emd = parallel_emd_calculation(
         array_counts=arr_counts,
         array_knn_counts=arr_knn_expression,
         knn=knn,
@@ -188,43 +171,21 @@ def triku(
 
     # Returns phase. Return if object is not an adata or if return is set to true.
     is_highly_variable = array_emd_subt_median > dist_cutoff
-    if isinstance(object_triku, sc.AnnData):
-        object_triku.var["highly_variable"] = is_highly_variable  # type:ignore
-        object_triku.var[  # type:ignore
-            "triku_distance"
-        ] = array_emd_subt_median
-        object_triku.var[  # type:ignore
-            "triku_distance_uncorrected"
-        ] = array_emd
-        object_triku.uns["triku_params"] = {  # type:ignore
-            "knn": knn,
-            "n_features": n_features,
-            "random_state": random_state,
-            "s": s,
-            "n_windows": n_windows,
-            "min_knn": min_knn,
-            "n_procs": n_procs,
-            "n_divisions": n_divisions,
-        }
 
-    if do_return or (not isinstance(object_triku, sc.AnnData)):
-        dict_return = {
-            "highly_variable": is_highly_variable,
-            "triku_distance": array_emd_subt_median,
-            "triku_distance_uncorrected": array_emd,
-        }
+    # Storing elements
+    object_triku.var["highly_variable"] = is_highly_variable  # type:ignore
 
-        save_object_triku(dict_return, arr_genes, save_return)
+    object_triku.var[  # type:ignore
+        "triku_distance"
+    ] = array_emd_subt_median
 
-        if triku_logger.level < logging.INFO:
-            dict_return["knn_indices"] = (knn_array,)
-            (dict_return["knn_expression"],) = (arr_knn_expression,)
-
-            (dict_return["x_convolution"],) = (list_x_conv,)
-            (dict_return["y_convolution"],) = (list_y_conv,)
-
-            dict_return["array_counts"], dict_return["array_genes"] = (
-                arr_counts,
-                arr_genes,
-            )
-        return dict_return
+    object_triku.uns["triku_params"] = {  # type:ignore
+        "knn": knn,
+        "n_features": n_features,
+        "random_state": random_state,
+        "s": s,
+        "n_windows": n_windows,
+        "min_knn": min_knn,
+        "n_procs": n_procs,
+        "n_divisions": n_divisions,
+    }
