@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as spr
 import scipy.stats as sts
+from scipy.signal import fftconvolve
 
 from triku.logg import TRIKU_LEVEL
 from triku.logg import triku_logger
@@ -142,12 +143,17 @@ def compute_conv_idx(
     arr_0[0] = 0
     arr_0 /= arr_0.sum()
 
-    arr_convolve = np.convolve(  # First iteration always with itself
-        arr_0, y_probs
-    )
+    if (
+        counts_gene.sum() > 7000
+    ):  # This is important. For some genes, if the counts are too big, np.convolve crashes!!
+        func = fftconvolve
+    else:
+        func = np.convolve
+
+    arr_convolve = func(arr_0, y_probs)  # First iteration always with itself
 
     for _ in range(knn):
-        arr_convolve = np.convolve(arr_convolve, y_probs,)
+        arr_convolve = func(arr_convolve, y_probs,)
 
     arr_prob = (
         arr_convolve / arr_convolve.sum()

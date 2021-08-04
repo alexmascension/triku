@@ -151,9 +151,6 @@ def triku(
     triku_logger.info("Subtracting median")
     mean_counts = arr_counts.mean(0).A[0]
 
-    print("mean_counts", mean_counts)
-    print("array_emd", array_emd)
-
     array_emd_subt_median = subtract_median(
         x=mean_counts, y=array_emd, n_windows=n_windows
     )
