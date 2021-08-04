@@ -133,9 +133,17 @@ def compute_conv_idx(
         counts_gene
     )  # Important to transform count to probabilities
     # to keep the convolution constant.
+    # THIS y_probs MUST have the probs of P(X=0) because the
+    # random neighbors might have 0 counts!!!  [TODO: check this!!!]
+
+    # We are calculating the convolution of cells with positive expression. Thus, in the first distribution
+    # we have to remove the cells with 0 reads, and rescale the probabilities.
+    arr_0 = y_probs.copy()
+    arr_0[0] = 0
+    arr_0 /= arr_0.sum()
 
     arr_convolve = np.convolve(  # First iteration always with itself
-        y_probs, y_probs
+        arr_0, y_probs
     )
 
     for _ in range(knn):
@@ -205,7 +213,7 @@ def compute_convolution_and_emd(
     # indices = array_counts[:, idx].indices first!!
     counts_gene = array_counts[:, idx]
     knn_counts = array_knn_counts[:, idx].T.A[0][counts_gene.indices]
-    counts_gene = counts_gene.T.A[0][counts_gene.indices]
+    counts_gene = counts_gene.T.A[0]
 
     """
     1) We set indices because if we do array_counts[:, idx].T.A[0] we also get the zero elements!!!
@@ -220,14 +228,11 @@ def compute_convolution_and_emd(
     counts_gene = (counts_gene * n_divisions).astype(int)
     knn_counts = (knn_counts * n_divisions).astype(int)
 
-    if len(counts_gene) > min_knn:
-        # triku_logger.log(TRIKU_LEVEL, 'Convolution on index {}: counts = {}, per_zero = {}'.format(idx,
-        #                 np.sum(counts_gene), np.sum(counts_gene == 0)/len(counts_gene)))
-
+    if len(counts_gene) < min_knn:
+        emd = 0
+    else:
         x_conv, y_conv = compute_conv_idx(counts_gene, knn)
         x_conv, emd = calculate_emd(knn_counts, x_conv, y_conv, n_divisions)
-    else:
-        emd = 0
 
     return emd
 

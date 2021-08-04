@@ -10,8 +10,6 @@ from ..logg import TRIKU_LEVEL
 from ..logg import triku_logger
 from ..utils._general_utils import set_level_logger
 from ..utils._triku_tl_utils import get_arr_counts_and_genes
-from ..utils._triku_tl_utils import return_mean
-from ..utils._triku_tl_utils import return_proportion_zeros
 from ._triku_functions import clean_adata
 from ._triku_functions import get_cutoff_curve
 from ._triku_functions import get_n_divisions
@@ -119,12 +117,6 @@ def triku(
         object_triku, use_raw=use_raw
     )
 
-    # Get the counts. [NOTE TODO: return_proportion_zeros is unused!!!!!]
-    mean_counts, _ = (
-        return_mean(arr_counts),
-        return_proportion_zeros(arr_counts),
-    )
-
     # Get n_divisions if None:
     if n_divisions is None:
         n_divisions = get_n_divisions(arr_counts)
@@ -157,6 +149,11 @@ def triku(
     )
 
     triku_logger.info("Subtracting median")
+    mean_counts = arr_counts.mean(0).A[0]
+
+    print("mean_counts", mean_counts)
+    print("array_emd", array_emd)
+
     array_emd_subt_median = subtract_median(
         x=mean_counts, y=array_emd, n_windows=n_windows
     )
