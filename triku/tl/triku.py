@@ -5,15 +5,14 @@ from typing import Union
 import numpy as np
 import scanpy as sc
 
-from ..genutils import get_cpu_count
 from ..logg import TRIKU_LEVEL
 from ..logg import triku_logger
 from ..utils._general_utils import set_level_logger
 from ..utils._triku_tl_utils import get_arr_counts_and_genes
 from ._triku_functions import clean_adata
+from ._triku_functions import emd_calculation
 from ._triku_functions import get_cutoff_curve
 from ._triku_functions import get_n_divisions
-from ._triku_functions import parallel_emd_calculation
 from ._triku_functions import return_knn_array
 from ._triku_functions import return_knn_expression
 from ._triku_functions import subtract_median
@@ -30,7 +29,6 @@ def triku(
     n_windows: int = 75,
     min_knn: int = 6,
     random_state: int = 0,
-    n_procs: int = -1,
     verbose: Union[None, str] = "warning",
 ) -> dict:  # type:ignore
     """
@@ -67,8 +65,6 @@ def triku(
         expressing cells, Wasserstein distance is set to 0, and the convolution is set as the knn expression.
     random_state : int
         Seed for random processes
-    n_procs : int
-        Number of processors for parallel processing.
     verbose : str ['debug', 'triku', 'info', 'warning', 'error', 'critical']
         Logger verbosity output.
     Returns
@@ -83,7 +79,6 @@ def triku(
     for var in [
         n_features,
         n_windows,
-        n_procs,
         random_state,
         n_divisions,
     ]:
@@ -93,18 +88,6 @@ def triku(
 
     if isinstance(object_triku, sc.AnnData):
         clean_adata(object_triku)
-
-    if n_procs == -1:
-        n_procs = max(1, get_cpu_count() - 1)
-    elif n_procs > get_cpu_count():
-        triku_logger.warning(
-            f"The selected number of cpus ({n_procs}) is higher than the available number ({get_cpu_count()}). The number"
-            "of used cores will be set to {max(1, get_cpu_count() - 1)}."
-        )
-        n_procs = max(1, get_cpu_count() - 1)
-    triku_logger.log(
-        TRIKU_LEVEL, "Number of processors set to {}".format(n_procs)
-    )
 
     # Check that neighbors are calculated. Else make the user calculate them!!!
     if "neighbors" not in object_triku.uns:  # type:ignore
@@ -136,14 +119,17 @@ def triku(
     triku_logger.info("Calculating knn expression")
     arr_knn_expression = return_knn_expression(arr_counts, knn_array)
 
+    # Set to csc matrix. This allows a faster selection by column, where the genes are located. Accession times improve up to 1000x!!!
+    array_counts_csc = arr_counts.tocsc()
+    array_knn_counts_csc = arr_knn_expression.tocsc()
+
     # Apply the convolution, and calculate the EMD. The convolution is quite fast, but we will still paralellize it.
     triku_logger.info("EMD calculation")
     triku_logger.log(TRIKU_LEVEL, "min_knn set to {}".format(min_knn))
-    array_emd = parallel_emd_calculation(
-        array_counts=arr_counts,
-        array_knn_counts=arr_knn_expression,
+    array_emd = emd_calculation(
+        array_counts_csc=array_counts_csc,
+        array_knn_counts_csc=array_knn_counts_csc,
         knn=knn,
-        n_procs=n_procs,
         min_knn=min_knn,
         n_divisions=n_divisions,
     )
@@ -180,6 +166,5 @@ def triku(
         "s": s,
         "n_windows": n_windows,
         "min_knn": min_knn,
-        "n_procs": n_procs,
         "n_divisions": n_divisions,
     }

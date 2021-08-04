@@ -1,4 +1,4 @@
-import gc
+# import gc
 from typing import Tuple
 
 import numpy as np
@@ -155,6 +155,11 @@ def compute_conv_idx(
     for _ in range(knn):
         arr_convolve = func(arr_convolve, y_probs,)
 
+    if func == fftconvolve:
+        arr_convolve[
+            arr_convolve < 0
+        ] = 0  # Important because sometimes fftconvolve creates negative almost-zero values that crash emd
+
     arr_prob = (
         arr_convolve / arr_convolve.sum()
     )  # This is just in case the sum is bigger than 1
@@ -243,10 +248,9 @@ def compute_convolution_and_emd(
     return emd
 
 
-def parallel_emd_calculation(
-    array_counts: spr.csr.csr_matrix,
-    array_knn_counts: spr.csr.csr_matrix,
-    n_procs: int,
+def emd_calculation(
+    array_counts_csc: spr.csr.csr_matrix,
+    array_knn_counts_csc: spr.csr.csr_matrix,
     knn: int,
     min_knn: int,
     n_divisions: int,
@@ -264,68 +268,21 @@ def parallel_emd_calculation(
     the convolution and distance. The output result is, for each gene, the convolution distribution
     (x, and probabilities), and the distances.
     """
-    n_genes = array_counts.shape[1]
+    n_genes = array_counts_csc.shape[1]
 
-    triku_logger.log(
-        TRIKU_LEVEL, f"Running EMD calulation with {n_procs} processors."
-    )
+    triku_logger.log(TRIKU_LEVEL, "Running EMD calulation.")
 
-    array_counts_csc = array_counts.tocsc()
-    array_knn_counts_csc = array_knn_counts.tocsc()
-
-    # Apply a non_paralellized variant with tqdm   ### TODO MAYBE REMOVE THE PARALLELIZED VERSION!!!
-    if n_procs == 1:
-        list_emd = [
-            compute_convolution_and_emd(
-                array_counts_csc,
-                array_knn_counts_csc,
-                idx_gene,
-                knn,
-                min_knn,
-                n_divisions,
-            )
-            for idx_gene in range(n_genes)
-        ]
-
-    else:
-        try:
-            import ray
-        except ImportError:
-            raise ImportError(
-                "Ray is not installed in the system. You can install it writing \npip install ray\n "
-                "in the console. If you are on windows, ray might not be supported. Use n_comps=1 "
-                "instead."
-            )
-
-        ray.shutdown()
-        ray.init(num_cpus=n_procs, ignore_reinit_error=True)
-
-        compute_convolution_and_emd_remote = ray.remote(
-            compute_convolution_and_emd
+    list_emd = [
+        compute_convolution_and_emd(
+            array_counts_csc,
+            array_knn_counts_csc,
+            idx_gene,
+            knn,
+            min_knn,
+            n_divisions,
         )
-        array_counts_id = ray.put(array_counts_csc)
-        array_knn_counts_id = ray.put(array_knn_counts_csc)
-
-        ray_obj_ids = [
-            compute_convolution_and_emd_remote.remote(
-                array_counts_id,
-                array_knn_counts_id,
-                idx_gene,
-                knn,
-                min_knn,
-                n_divisions,
-            )
-            for idx_gene in range(n_genes)
-        ]
-
-        triku_logger.log(TRIKU_LEVEL, "Parallel computation of distances.")
-        list_emd = ray.get(ray_obj_ids)
-        triku_logger.log(TRIKU_LEVEL, "Done.")
-
-        del array_counts_id
-        del array_knn_counts_id
-        gc.collect()
-        ray.shutdown()
+        for idx_gene in range(n_genes)
+    ]
 
     return np.array(list_emd)
 
