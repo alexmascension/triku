@@ -124,7 +124,7 @@ def return_knn_expression(
 
 
 def compute_conv_idx(
-    counts_gene: np.ndarray, knn: int
+    counts_gene: np.ndarray, knn: int, p_zeros: float,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Given a GENE x CELL matrix, and an index to select from, calculates the convolution of reads for that gene index.
@@ -139,9 +139,9 @@ def compute_conv_idx(
 
     # We are calculating the convolution of cells with positive expression. Thus, in the first distribution
     # we have to remove the cells with 0 reads, and rescale the probabilities.
-    arr_0 = y_probs.copy()
-    arr_0[0] = 0
-    arr_0 /= arr_0.sum()
+    y_probs_0 = np.bincount(counts_gene) / len(counts_gene)
+    y_probs = y_probs_0.copy() * (1 - p_zeros)
+    y_probs[0] = p_zeros
 
     if (
         counts_gene.sum() > 7000
@@ -150,7 +150,9 @@ def compute_conv_idx(
     else:
         func = np.convolve
 
-    arr_convolve = func(arr_0, y_probs)  # First iteration always with itself
+    arr_convolve = func(
+        y_probs_0, y_probs
+    )  # First iteration always with itself
 
     for _ in range(knn):
         arr_convolve = func(arr_convolve, y_probs,)
@@ -199,8 +201,8 @@ def calculate_emd(
 
 
 def compute_convolution_and_emd(
-    array_counts: spr.csc.csc_matrix,
-    array_knn_counts: spr.csc.csc_matrix,
+    array_counts_csc: spr.csc.csc_matrix,
+    array_knn_counts_csc: spr.csc.csc_matrix,
     idx: int,
     knn: int,
     min_knn: int,
@@ -217,32 +219,45 @@ def compute_convolution_and_emd(
     int(5.23 * 5) = int(26.15) = 26 -> 26 / 5 = 5.2 (so we lose 0.03 of expression).
     This is a scaling step
 
+    To do sparse array accession faster we will play with csr_matrix.data, csr_matrix.indptr and csr_matrix.indices attributes.
+    This makes the code a bit obscure, but makes the selection faster (or at least guarantees it is not slower).
     """
 
-    # counts_gene.indices returns the nonzero entries. To only call counts_gene once, we call it first as an sparse array,
-    # then get the dense knn_counts, and finally, get the dense counts gene. This saves 30% time instead of setting
-    # indices = array_counts[:, idx].indices first!!
-    counts_gene = array_counts[:, idx]
-    knn_counts = array_knn_counts[:, idx].T.A[0][counts_gene.indices]
-    counts_gene = counts_gene.T.A[0]
+    # If you don't see this part well, trust it, or see https://stackoverflow.com/questions/52299420/scipy-csr-matrix-understand-indptr
+    # array_counts_csc.indptr[beggining:end] yields the location of array_counts_csc.indices of the column of interest (beginning).
+    start_counts, end_counts = (
+        array_counts_csc.indptr[idx],
+        array_counts_csc.indptr[idx + 1],
+    )
+    start_knn, end_knn = (
+        array_knn_counts_csc.indptr[idx],
+        array_knn_counts_csc.indptr[idx + 1],
+    )
+
+    # array_counts_csc.indices[beggining:end] yields the location of array_counts_csc.data of the column of interest (beginning).
+    indices_counts = array_counts_csc.indices[start_counts:end_counts]
+    indices_counts_knn = array_knn_counts_csc.indices[start_knn:end_knn]
+    # because indices_counts_knn array has the indices from indices_counts + extra, this line extracts the overlapping indices.
+    bool_mask = np.in1d(indices_counts_knn, indices_counts, assume_unique=True)
+
+    counts_gene = array_counts_csc.data[start_counts:end_counts]
+    knn_counts = array_knn_counts_csc.data[start_knn:end_knn][bool_mask]
 
     """
-    1) We set indices because if we do array_counts[:, idx].T.A[0] we also get the zero elements!!!
-    2) array_counts[:, idx].T.A[0][indices] is 3x faster than array_counts[indices, idx].T.A[0] because it is faster to set the row indexes
-       in a dense array than in a csc array (remember that accesing columns in csr or rows in csc is extremely slow!!)
-    3) .T is because the array is in column, and to get the dense version we transform to row: array([[0], [0], [0]]) -> array([[0, 0, 0]])
-    4) .A makes the csc matrix to a dense array. since the array is 2D, the array has shape (1, X), so we do A[0] to set it to a 1d array
-
-    Remember that ONLY THE KNN EXPRESSION FROM POSITIVELY-EXPRESSED CELLS is done!!!!
+    The next step is to multiply the counts and knn_counts by n_divisions, and set it to int because otherwise the convolution fails.
     """
 
     counts_gene = (counts_gene * n_divisions).astype(int)
     knn_counts = (knn_counts * n_divisions).astype(int)
 
+    # This part is necessary for compute_conv_idx, because we don't have zeros in counts_gene, and we need them to create the probability
+    # distribution including zeros.
+    p_zeros = 1 + (start_counts - end_counts) / array_counts_csc.shape[0]
+
     if len(counts_gene) < min_knn:
         emd = 0
     else:
-        x_conv, y_conv = compute_conv_idx(counts_gene, knn)
+        x_conv, y_conv = compute_conv_idx(counts_gene, knn, p_zeros)
         x_conv, emd = calculate_emd(knn_counts, x_conv, y_conv, n_divisions)
 
     return emd
