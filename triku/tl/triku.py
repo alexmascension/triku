@@ -90,10 +90,12 @@ def triku(
         clean_adata(object_triku)
 
     # Check that neighbors are calculated. Else make the user calculate them!!!
-    if "neighbors" not in object_triku.uns:  # type:ignore
-        raise IndexError(
-            "Neighbors not found in adata. Run sc.pp.neighbors() first."
-        )
+    error_ms = "Neighbors not found in adata. Run sc.pp.neighbors() first."
+    try:
+        if "neighbors" not in object_triku.uns:  # type:ignore
+            raise IndexError(error_ms)
+    except AttributeError:
+        raise IndexError(error_ms)
 
     # Assert that adata.X is sparse (warning to transform) and assert that gene names are unique.
     arr_counts, _ = get_arr_counts_and_genes(object_triku, use_raw=use_raw)
