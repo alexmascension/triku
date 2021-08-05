@@ -96,9 +96,7 @@ def triku(
         )
 
     # Assert that adata.X is sparse (warning to transform) and assert that gene names are unique.
-    arr_counts, arr_genes = get_arr_counts_and_genes(
-        object_triku, use_raw=use_raw
-    )
+    arr_counts, _ = get_arr_counts_and_genes(object_triku, use_raw=use_raw)
 
     # Get n_divisions if None:
     if n_divisions is None:
@@ -158,6 +156,10 @@ def triku(
     object_triku.var[  # type:ignore
         "triku_distance"
     ] = array_emd_subt_median
+
+    object_triku.var[  # type:ignore
+        "triku_distance_uncorrected"
+    ] = array_emd
 
     object_triku.uns["triku_params"] = {  # type:ignore
         "knn": knn,
