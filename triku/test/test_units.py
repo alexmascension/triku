@@ -16,6 +16,9 @@ def test_triku_check_count_mat_20000_vars():
     sc.pp.filter_cells(adata, min_genes=10)
     sc.pp.filter_genes(adata, min_cells=1)
 
+    sc.pp.pca(adata)
+    sc.pp.neighbors(adata)
+
     assert adata.X.shape[1] > 20000
 
     tk.tl.triku(adata)

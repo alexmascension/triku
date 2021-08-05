@@ -10,8 +10,9 @@ def getpbmc3k():
     adata = sc.datasets.pbmc3k()
     sc.pp.filter_genes(adata, min_cells=10)
     sc.pp.filter_cells(adata, min_genes=10)
-    tk.tl.triku(adata)
-    adata.X = np.asarray(adata.X.todense())
+    sc.pp.neighbors(adata)
+
+    # tk.tl.triku(adata)
 
     return adata
 
@@ -27,6 +28,7 @@ def test_n_features(getpbmc3k):
 @pytest.mark.output_check
 def test_use_raw(getpbmc3k):
     adata = getpbmc3k
+    tk.tl.triku(adata, use_raw=False)
     emd_not_raw = adata.var["triku_distance"]
 
     adata.raw = adata
@@ -38,7 +40,7 @@ def test_use_raw(getpbmc3k):
 
 
 @pytest.mark.output_check
-def test_s():
+def test_s(getpbmc3k):
     n_feats = []
 
     for s in [
@@ -48,7 +50,7 @@ def test_s():
         -0.05,
         -0.1,
     ]:  # This s order guarantees that the number of selected feats will be increasing
-        adata = sc.datasets.pbmc3k_processed()
+        adata = getpbmc3k
         tk.tl.triku(adata, s=s)
         n_feats.append(adata.var["highly_variable"].values.sum())
 
@@ -71,7 +73,3 @@ def test_n_divisions_check(getpbmc3k):
     sc.pp.log1p(adata)
     tk.tl.triku(adata)
     assert adata.uns["triku_params"]["n_divisions"] > 1
-
-    adata.X = np.ceil(adata.X).astype(int)
-    tk.tl.triku(adata)
-    assert adata.uns["triku_params"]["n_divisions"] == 1
