@@ -16,7 +16,7 @@
 - Set binning number of n_divisions from 15 to 11 by default, if the binning is required. 
   The numbers after making the array integer are smaller, and the number is prime.
 - x_conv / y_conv variables are not stored, to save memory. Also, in some cases their computation is unnecessary, so removing them also saves time. 
-- Convolutions are all done now with np.convolve instead of fft. In initial analyses I found that for small numbers fft was faster, but I don't see it now.
+- Big convolutions fallback to scipy.signal.fftconvolve when the length of the array is bigger than 250. 
 - Other minor fixes during convolution and emd calculation that improved the time comsumption (e.g. max -> np.max)
 
 # 1.3.1

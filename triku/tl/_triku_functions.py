@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as spr
 import scipy.stats as sts
-from scipy.signal import convolve
+from scipy.signal import fftconvolve
 
 from triku.logg import TRIKU_LEVEL
 from triku.logg import triku_logger
@@ -143,10 +143,45 @@ def compute_conv_idx(
     y_probs = y_probs_0.copy() * (1 - p_zeros)
     y_probs[0] = p_zeros
 
+    """
+    Reynolds
+    len(y_probs)        scp.fftconvolve     scp.convolve     np.convolve
+    6783                52                  52.5             2000
+    5129                41                  43               933
+    3072                23.5                23.6             334
+    1783                14.5                15.3             129
+    1202                10.3                13.4             59.4
+    669                 6.6                 22.2             20.8
+    298                 4.19                5.32             5.18
+    237                 3.74                3.48             3.23
+    188                 3.54                2.98             2.78
+    159                 3.11                1.95             1.63
+    117                 2.93                1.41             1.12
+    52                  2.33                0.8              0.63
+    34                  2.77                0.75             0.41
+    19                  1.98                0.61             0.23
+    13                  1.94                0.45             0.27
+    8                   1.83                0.55             0.19
+    PBMC 10k
+    len(y_probs)        scp.fftconvolve     scp.convolve     np.convolve
+    4123                31.4                32.1             604
+    1324                11.1                12.1             45.5
+    885                 7.98                15.1             33.8
+    725                 6.98                13.1             14.9
+    551                 5.8                 15               14.4
+    345                 4.3                 7.1              6.7
+    255                 3.6                 3.9              3.7
+    190                 3.3                 2.7              2.3
+    119                 2.7                 1.7              1.5
+    70                  2.7                 0.9              0.84
+    36                  2.1                 0.6              0.3
+    20                  2.1                 0.5              0.2
+    """
+
     if (
-        counts_gene.sum() > 7000
+        len(y_probs) > 250
     ):  # This is important. For some genes, if the counts are too big, np.convolve crashes!!
-        func = convolve
+        func = fftconvolve
     else:
         func = np.convolve
 
