@@ -8,6 +8,7 @@
 
 ## Minor changes
 - Corrected some `None` attributes to their standard `int` value.
+- Removed seed parameter because not necessary.
 - Get the knn_array from adata.obsp instead of adata.uns
 - Get the knn indices from adata.obs['distances'] instead of adata.obsp['connectivities']. Nonzero components of distances are set to knn 
   but the number of nonzero components of 'connectivities' can be >= knn. To cut out to knn we did an argsort, which is now unnecessary. 
@@ -16,8 +17,9 @@
 - Set binning number of n_divisions from 15 to 11 by default, if the binning is required. 
   The numbers after making the array integer are smaller, and the number is prime.
 - x_conv / y_conv variables are not stored, to save memory. Also, in some cases their computation is unnecessary, so removing them also saves time. 
-- Big convolutions fallback to scipy.signal.fftconvolve when the length of the array is bigger than 250. 
-- Other minor fixes during convolution and emd calculation that improved the time comsumption (e.g. max -> np.max)
+- Big convolutions fallback to scipy.signal.fftconvolve when the length of the array is bigger than 250. This step considerably reduces computation times.
+- Other minor fixes during convolution and emd calculation that improved the time comsumption (e.g. max -> np.max).
+
 
 # 1.3.1
 Minor version fixes

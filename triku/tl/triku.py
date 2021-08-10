@@ -28,7 +28,6 @@ def triku(
     s: Union[int, float] = -0.01,
     n_windows: int = 75,
     min_knn: int = 6,
-    random_state: int = 0,
     verbose: Union[None, str] = "warning",
 ) -> dict:  # type:ignore
     """
@@ -63,8 +62,6 @@ def triku(
     min_knn : int
         minimum number of expressed cells based on the knn to apply the convolution. If a gene has less than min_knn
         expressing cells, Wasserstein distance is set to 0, and the convolution is set as the knn expression.
-    random_state : int
-        Seed for random processes
     verbose : str ['debug', 'triku', 'info', 'warning', 'error', 'critical']
         Logger verbosity output.
     Returns
@@ -79,7 +76,6 @@ def triku(
     for var in [
         n_features,
         n_windows,
-        random_state,
         n_divisions,
     ]:
         assert (var is None) | (
@@ -166,7 +162,6 @@ def triku(
     object_triku.uns["triku_params"] = {  # type:ignore
         "knn": knn,
         "n_features": n_features,
-        "random_state": random_state,
         "s": s,
         "n_windows": n_windows,
         "min_knn": min_knn,
