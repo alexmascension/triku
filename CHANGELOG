@@ -14,8 +14,6 @@
   but the number of nonzero components of 'connectivities' can be >= knn. To cut out to knn we did an argsort, which is now unnecessary. 
   Therefore, this step saves a lot of time and memory.
 - Gene names and count matrix variables are linked to their corresponding adata arrays, and are not independent.
-- Set binning number of n_divisions from 15 to 11 by default, if the binning is required. 
-  The numbers after making the array integer are smaller, and the number is prime.
 - x_conv / y_conv variables are not stored, to save memory. Also, in some cases their computation is unnecessary, so removing them also saves time. 
 - Big convolutions fallback to scipy.signal.fftconvolve when the length of the array is bigger than 250. This step considerably reduces computation times.
 - Other minor fixes during convolution and emd calculation that improved the time comsumption (e.g. max -> np.max).

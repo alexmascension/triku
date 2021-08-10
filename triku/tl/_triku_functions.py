@@ -2,7 +2,6 @@
 from typing import Tuple
 
 import numpy as np
-import pandas as pd
 import scipy.sparse as spr
 import scipy.stats as sts
 from scipy.signal import fftconvolve
@@ -28,13 +27,6 @@ def clean_adata(adata):
         del adata.uns["triku_params"]
 
     return adata
-
-
-def save_object_triku(dict_triku, list_genes, path):
-    df = pd.DataFrame(dict_triku)
-    df = df.set_index(list_genes, drop=True)
-    triku_logger.info(f"Saving triku return in {path}")
-    df.to_csv(path, sep=",")
 
 
 def return_knn_array(object_triku):
@@ -82,7 +74,7 @@ def get_n_divisions(arr_counts: spr.csr.csr_matrix) -> int:
     if diff < 1:
         n_divisions = 1
     else:
-        n_divisions = 13  # Arbitrarily chosen. Prime numbers are better because 2, 3, 4 yield strange results during binning.
+        n_divisions = 15  # Arbitrarily chosen. Prime numbers are better because 2, 3, 4 yield strange results during binning.
 
     triku_logger.log(TRIKU_LEVEL, f"Number of divisions set to {n_divisions}")
     return n_divisions
