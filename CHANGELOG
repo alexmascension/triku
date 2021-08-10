@@ -5,6 +5,7 @@
 - Removed knn/PCA calculation. Now we take information from adata.obsp for kNN matrices, and from adata.var for PCA/related info.
 - CLI interactivity and adata returns are removed to make the code simpler. If the user has to run the CLI specifically for the FS step, 
   they will surely be able to integrate it into the pipeline directly loading the adata.
+- Added 'name' parameter to save different experiments.
 
 ## Minor changes
 - Corrected some `None` attributes to their standard `int` value.

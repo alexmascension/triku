@@ -14,21 +14,6 @@ from triku.logg import triku_logger
 # from triku.genutils import TqdmToLogger
 
 
-def clean_adata(adata):
-    for varx in [
-        "triku_distance",
-        "triku_distance_uncorrected",
-        "triku_distance_random",
-    ]:
-        if varx in adata.var:
-            del adata.var[varx]
-
-    if "triku_params" in adata.uns:
-        del adata.uns["triku_params"]
-
-    return adata
-
-
 def return_knn_array(object_triku):
     # Distances array contains a pairwise relationship between cells, based on distance.
     # We will binarize that array to select equally all components with non-zero distance.
@@ -74,7 +59,7 @@ def get_n_divisions(arr_counts: spr.csr.csr_matrix) -> int:
     if diff < 1:
         n_divisions = 1
     else:
-        n_divisions = 15  # Arbitrarily chosen. Prime numbers are better because 2, 3, 4 yield strange results during binning.
+        n_divisions = 15  # Arbitrarily chosen. Prime/large numbers are better because 2, 3, 4 yield strange results during binning.
 
     triku_logger.log(TRIKU_LEVEL, f"Number of divisions set to {n_divisions}")
     return n_divisions

@@ -73,3 +73,33 @@ def test_n_divisions_check(getpbmc3k):
     sc.pp.log1p(adata)
     tk.tl.triku(adata)
     assert adata.uns["triku_params"]["n_divisions"] > 1
+
+
+@pytest.mark.var_check
+def test_names(getpbmc3k):
+    adata = getpbmc3k
+
+    tk.tl.triku(adata)
+    tk.tl.triku(adata, name="sample")
+
+    for var in [
+        "triku_distance",
+        "triku_distance_sample",
+        "triku_distance_uncorrected",
+        "triku_distance_uncorrected_sample",
+    ]:
+        assert var in adata.var
+
+    assert None in adata.uns["triku_params"]
+    assert "sample" in adata.uns["triku_params"]
+
+    assert (
+        adata.uns["triku_params"][None] == adata.uns["triku_params"]["sample"]
+    )
+    assert np.all(
+        adata.var["triku_distance"] == adata.var["triku_distance_sample"]
+    )
+    assert np.all(
+        adata.var["triku_distance_uncorrected"]
+        == adata.var["triku_distance_uncorrected_sample"]
+    )

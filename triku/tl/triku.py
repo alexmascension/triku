@@ -9,7 +9,6 @@ from ..logg import TRIKU_LEVEL
 from ..logg import triku_logger
 from ..utils._general_utils import set_level_logger
 from ..utils._triku_tl_utils import get_arr_counts_and_genes
-from ._triku_functions import clean_adata
 from ._triku_functions import emd_calculation
 from ._triku_functions import get_cutoff_curve
 from ._triku_functions import get_n_divisions
@@ -28,6 +27,7 @@ def triku(
     s: Union[int, float] = -0.01,
     n_windows: int = 75,
     min_knn: int = 6,
+    name: Union[str, None] = None,
     verbose: Union[None, str] = "warning",
 ) -> dict:  # type:ignore
     """
@@ -62,6 +62,8 @@ def triku(
     min_knn : int
         minimum number of expressed cells based on the knn to apply the convolution. If a gene has less than min_knn
         expressing cells, Wasserstein distance is set to 0, and the convolution is set as the knn expression.
+    name: str
+        Name of the run. If None, stores results in "triku_X". Else, stores it in "triku_X_{name}".
     verbose : str ['debug', 'triku', 'info', 'warning', 'error', 'critical']
         Logger verbosity output.
     Returns
@@ -82,8 +84,10 @@ def triku(
             isinstance(var, int)
         ), f"The variable value {var} must be an integer!"
 
-    if isinstance(object_triku, sc.AnnData):
-        clean_adata(object_triku)
+    if name is None:
+        name_str = ""
+    else:
+        name_str = f"_{name}"
 
     # Check that neighbors are calculated. Else make the user calculate them!!!
     error_ms = "Neighbors not found in adata. Run sc.pp.neighbors() first."
@@ -146,20 +150,28 @@ def triku(
     triku_logger.info("Cutoff point set to {dist_cutoff}")
 
     # Returns phase. Return if object is not an adata or if return is set to true.
-    is_highly_variable = array_emd_subt_median > dist_cutoff
-
-    # Storing elements
-    object_triku.var["highly_variable"] = is_highly_variable  # type:ignore
+    # We set it like that so that scanpy knows which are the hvg.
+    hvg = array_emd_subt_median > dist_cutoff
+    object_triku.var[  # type:ignore
+        "highly_variable"
+    ] = hvg
 
     object_triku.var[  # type:ignore
-        "triku_distance"
+        f"triku_distance{name_str}"
     ] = array_emd_subt_median
 
     object_triku.var[  # type:ignore
-        "triku_distance_uncorrected"
+        f"triku_distance_uncorrected{name_str}"
     ] = array_emd
 
-    object_triku.uns["triku_params"] = {  # type:ignore
+    object_triku.var[  # type:ignore
+        f"triku_highly_variable{name_str}"
+    ] = hvg
+
+    if "triku_params" not in object_triku.uns:  # type:ignore
+        object_triku.uns["triku_params"] = {}  # type:ignore
+
+    object_triku.uns["triku_params"][name] = {  # type:ignore
         "knn": knn,
         "n_features": n_features,
         "s": s,
