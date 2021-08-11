@@ -80,4 +80,4 @@ Wasserstein distance are selected.
 More!
 ~~~~~~~~~
 This is the core on how triku works. If you want to learn more about how triku
-works, you can read our paper!
+works, you can read our `bioRxiv preprint <https://www.biorxiv.org/content/10.1101/2021.02.12.430764v1>`_!

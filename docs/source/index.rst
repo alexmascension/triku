@@ -30,10 +30,13 @@ Triku - Feature selection for Single Cell Analysis
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4016715.svg
    :target: https://doi.org/10.5281/zenodo.4016715
 
+.. image:: https://pepy.tech/badge/triku
+   :target: https://pepy.tech/project/triku
+
+|
 Triku (hedgehog in euskera) is a feature selection method prepared for Single Cell Analysis.
 Triku has been prepared to work with `scanpy <https://scanpy.readthedocs.io/en/stable/>`_
-``annData`` objects directly, although it also works with pandas DataFrames and can be run via
-CLI.
+``annData`` objects directly.
 
 How do I use triku?
 ^^^^^^^^^^^^^^^^^^^
@@ -48,8 +51,14 @@ After that, you can find which features are selected ``adata.var['highly_variabl
 The scores for each gene are located in ``adata.var['triku_distance']``.
 The higher the score, the better.
 
-If you are using scanpy, you should run triku before running ``sc.pp.pca`` and
-``sc.pp.neighbors``.
+If you are using scanpy, you **must** run triku before running ``sc.pp.pca`` and
+``sc.pp.neighbors``. We recommend running these commands with the following settings::
+
+   import scanpy as sc
+
+   sc.pp.pca(adata)
+   sc.pp.neighbors(adata, metric='cosine', n_neighbors=int(0.5 * len(adata) ** 0.5))
+
 You can run triku with raw or log-transformed count matrices. Scores tend to be better
 in log-transformed matrices, although the results depend on the dataset.
 

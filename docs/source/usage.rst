@@ -16,25 +16,24 @@ example with the ``pbmc3k`` dataset from scanpy::
     sc.pp.filter_genes(pbmc, min_cells=10)
     sc.pp.log1p(pbmc)
 
-    tk.tl.triku(pbmc)
-
     sc.pp.pca(pbmc)
     sc.pp.neighbors(pbmc)
+
+    tk.tl.triku(pbmc)
+
 
 This is a basic preprocessing of a dataset. You can run triku either after or before
 ``sc.pp.log1p``. It usually works better after log transformation.
 
-Running triku from CLI
-----------------------
-
-If you don't want to run triku within python, you can run it using the CLI.
-
-Simply run the console command ``triku`` and the name of the file with the counts. This file can be an
-``annData`` object file, or a csv file with **cells as rows** and **genes as columns**.::
-
-    triku NAME_OF_FILE
-
-Run ``triku -h`` to see how to invoke the arguments for CLI.
+After running triku, results are stored in ``adata.var`` (``triku_distance``, ``highly_variable``), and 
+in ``adata.uns['triku_params'][None]``.
 
 
+Advanced usage
+--------------
+When using triku, there are more some parameters that can be changed. All of them can be found at the API Reference.
+
+*  1) ``n_features``: The number of features to be selected. For instance, ``tk.tl.triku(adata, n_features=500)`` would select the first 500 features.
+*  2) ``use_raw``: Uses counts from ``adata.raw``. This, for instance, can be used to select non log-transformed counts. This can be set as ``tk.tl.triku(adata, use_raw=True)``.
+*  3) ``name``: Saves the results with a custom name. For instance, if the name is ``sample``, then the results would be stored in ``adata.var['triku_distance_sample']``, and in ``adata.uns['triku_params']['sample']``.
 

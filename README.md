@@ -7,8 +7,9 @@
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4016715.svg)](https://doi.org/10.5281/zenodo.4016715)
 [![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://gitlab.com/alexmascension/triku)
+[![Downloads](https://pepy.tech/badge/triku)](https://pepy.tech/project/triku)
 
-Triku (hedgehog in euskera) is a feature selection method prepared for Single Cell Analysis.
+Triku (hedgehog in euskera) is a feature selection method prepared for scRNA-seq.
 
 Look at [the docs](https://triku.readthedocs.io/en/latest/) to learn more about triku!
 
