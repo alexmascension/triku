@@ -12,5 +12,6 @@
 Triku (hedgehog in euskera) is a feature selection method prepared for scRNA-seq.
 
 Look at [the docs](https://triku.readthedocs.io/en/latest/) to learn more about triku!
+You can visit the notebooks at out [notebook repo](https://github.com/alexmascension/triku_notebooks)!
 
 

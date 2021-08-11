@@ -38,6 +38,8 @@ Triku (hedgehog in euskera) is a feature selection method prepared for Single Ce
 Triku has been prepared to work with `scanpy <https://scanpy.readthedocs.io/en/stable/>`_
 ``annData`` objects directly.
 
+You can visit the notebooks at out `notebook repo <https://github.com/alexmascension/triku_notebooks>`_
+
 How do I use triku?
 ^^^^^^^^^^^^^^^^^^^
 We suppose you are going to run triku using scanpy. To use triku, simply
