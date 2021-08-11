@@ -64,15 +64,15 @@ def test_n_divisions_check(getpbmc3k):
 
     adata.X = adata.X.astype(int)
     tk.tl.triku(adata)
-    assert adata.uns["triku_params"]["n_divisions"] == 1
+    assert adata.uns["triku_params"][None]["n_divisions"] == 1
 
     adata.X = adata.X.astype(float)
     tk.tl.triku(adata)
-    assert adata.uns["triku_params"]["n_divisions"] == 1
+    assert adata.uns["triku_params"][None]["n_divisions"] == 1
 
     sc.pp.log1p(adata)
     tk.tl.triku(adata)
-    assert adata.uns["triku_params"]["n_divisions"] > 1
+    assert adata.uns["triku_params"][None]["n_divisions"] > 1
 
 
 @pytest.mark.var_check
