@@ -13,13 +13,9 @@
 # sys.path.insert(0, os.path.abspath('.'))
 import os
 
-from recommonmark.parser import CommonMarkParser
-
 dir_path = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 )
-
-source_parsers = {".md": CommonMarkParser}
 
 # -- Project information -----------------------------------------------------
 
@@ -28,7 +24,7 @@ copyright = "2020, Alex M. Ascension"
 author = "Alex M. Ascension"
 
 # The full version, including alpha/beta/rc tags
-release = "1.1.0"
+release = "2.0.0"
 
 
 # -- General configuration ---------------------------------------------------
@@ -39,7 +35,6 @@ release = "1.1.0"
 extensions = [
     "sphinx_rtd_theme",
     "sphinx.ext.napoleon",
-    "recommonmark",
     "autoapi.extension",
 ]
 

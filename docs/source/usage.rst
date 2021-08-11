@@ -33,7 +33,7 @@ Advanced usage
 --------------
 When using triku, there are more some parameters that can be changed. All of them can be found at the API Reference.
 
-*  1) ``n_features``: The number of features to be selected. For instance, ``tk.tl.triku(adata, n_features=500)`` would select the first 500 features.
-*  2) ``use_raw``: Uses counts from ``adata.raw``. This, for instance, can be used to select non log-transformed counts. This can be set as ``tk.tl.triku(adata, use_raw=True)``.
-*  3) ``name``: Saves the results with a custom name. For instance, if the name is ``sample``, then the results would be stored in ``adata.var['triku_distance_sample']``, and in ``adata.uns['triku_params']['sample']``.
+*  ``n_features``: The number of features to be selected. For instance, ``tk.tl.triku(adata, n_features=500)`` would select the first 500 features.
+*  ``use_raw``: Uses counts from ``adata.raw``. This, for instance, can be used to select non log-transformed counts. This can be set as ``tk.tl.triku(adata, use_raw=True)``.
+*  ``name``: Saves the results with a custom name. For instance, if the name is ``sample``, then the results would be stored in ``adata.var['triku_distance_sample']``, and in ``adata.uns['triku_params']['sample']``.
 
