@@ -107,11 +107,6 @@ def check_null_genes(arr_counts: np.ndarray):
         raise BaseException(error_msg)
 
 
-def check_adata_log1p(adata):
-    if "log1p" in adata.uns:
-        triku_logger.warning('We have found ªlop1p" in the ')
-
-
 def assert_genes_unique(arr):
     labels, counts = np.unique(arr, return_counts=True)
     non_unique_labels = labels[counts > 1]
@@ -169,13 +164,11 @@ def get_arr_counts_and_genes(object_triku, use_raw):
                 object_triku, get_from_raw=True
             )
         else:
-            check_adata_log1p(object_triku)
             arr_counts, arr_genes = return_arr_counts_genes(
                 object_triku, get_from_raw=False
             )
 
     else:
-        check_adata_log1p(object_triku)
         arr_counts, arr_genes = return_arr_counts_genes(
             object_triku, get_from_raw=False
         )
