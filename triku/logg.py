@@ -9,8 +9,10 @@ level, TRIKU. The default level will be INFO, but for debugging purposses we wil
 TRIKU_LEVEL = (logging.INFO + logging.DEBUG) // 2
 logging.addLevelName(TRIKU_LEVEL, "TRIKU")
 
-triku_logger = logging.getLogger()
-logging.basicConfig(
-    format="\n%(asctime)s - triku - %(levelname)s - %(message)s"
+triku_logger = logging.getLogger(__name__)
+logger_handler = logging.StreamHandler()  # Handler for the logger
+logger_handler.setFormatter(
+    logging.Formatter("%(levelname)s | %(asctime)s - %(name)s - %(message)s\n")
 )
+triku_logger.addHandler(logger_handler)
 triku_logger.setLevel(logging.INFO)
