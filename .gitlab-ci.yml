@@ -39,7 +39,7 @@ build:system:
   script:
     - pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
     - pip install -r requirements.txt
-    - pip install ray pre-commit
+    - pip install pre-commit
     - pytest -s -m "import_triku" 
   retry: 2
   tags:

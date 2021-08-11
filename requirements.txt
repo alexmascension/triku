@@ -4,6 +4,3 @@ pandas >= 0.24.1
 scanpy >= 1.4.4
 cython >= 0.29
 tqdm >= 4.31.1
-numba>=0.52.0
-funcargparse
-Bottleneck
