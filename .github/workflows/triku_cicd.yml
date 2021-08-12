@@ -17,8 +17,7 @@ jobs:
         uses: actions/cache@v2
         with:
           # This path is specific to Ubuntu
-          path: |
-            ${{ env.pythonLocation }}
+          path: ${{ env.pythonLocation }}
           # Look to see if there is a cache hit for the corresponding requirements file
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
           restore-keys: |
