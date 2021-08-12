@@ -32,103 +32,90 @@ jobs:
           pip install pre-commit
           pytest -s -m "import_triku" 
           which pytest
-
-  test_general:
-    runs-on: ubuntu-latest
-    container: python:3.8
-    needs: [codecov_prepare]
-    steps:
-      - name: Run General Checks
-        run: |
-          pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
-          mv .coverage .coverage/coverage.general
-      - name: Upload General Checks
-        uses: actions/upload-artifact@v2
-        with:
-          name: coverage-general
-          path: .coverage/coverage.general
-
-  test_output_check:
-    runs-on: ubuntu-latest
-    container: python:3.8
-    needs: [codecov_prepare]
-    steps:
-      - name: Run Output Checks
-        run: |
-          pytest -s -n 4 -m "output_check" --cov=./triku/  --cov-append
-          mv .coverage .coverage/coverage.ouput_check
-      - name: Upload Output Checks
-        uses: actions/upload-artifact@v2
-        with:
-          name: coverage-ouput_check
-          path: .coverage/coverage.ouput_check
-
-  test_args_var_check:
-    runs-on: ubuntu-latest
-    container: python:3.8
-    needs: [codecov_prepare]
-    steps:
-      - name: Run Var Checks
-        run: |
-          pytest -s -n 4 -m "var_check" --cov=./triku/  --cov-append
-          mv .coverage .coverage/coverage.var_check
-      - name: Upload Var Checks
-        uses: actions/upload-artifact@v2
-        with:
-          name: coverage-var_check
-          path: .coverage/coverage.var_check
-
-  test_args_calc_check:
-    runs-on: ubuntu-latest
-    container: python:3.8
-    needs: [codecov_prepare]
-    steps:
-      - name: Run Calc Checks
-        run: |
-          pytest -s -n 4 -m "calc_check" --cov=./triku/  --cov-append
-          mv .coverage .coverage/coverage.calc_check
-      - name: Upload Calc Checks
-        uses: actions/upload-artifact@v2
-        with:
-          name: coverage-calc_check
-          path: .coverage/coverage.calc_check
-
-  test_unit_exception_checks:
-    runs-on: ubuntu-latest
-    container: python:3.8
-    needs: [codecov_prepare]
-    steps:
-      - name: Run Exception Checks
-        run: |
-          pytest -s -n 4 -m "exception_check" --cov=./triku/  --cov-append
-          mv .coverage .coverage/coverage.exception_check
-      - name: Upload Exception Checks
-        uses: actions/upload-artifact@v2
-        with:
-          name: coverage-exception_check
-          path: .coverage/coverage.exception_check
-
-  codecov_out:
-    runs-on: ubuntu-latest
-    container: python:3.8
-    needs:
-      [
-        test_general,
-        test_output_check,
-        test_args_var_check,
-        test_args_calc_check,
-        test_unit_exception_checks,
-      ]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Download artifacts
-        uses: actions/download-artifact@v2
-      - name: Merge and upload codecov
-      - uses: codecov/codecov-action@v2
-        with:
-          token: 6e1967cb-4cf2-4eee-b32a-82b0ca1725a0 # not required for public repos
-          files: .coverage/coverage.general,.coverage/coverage.ouput_check.coverage/coverage.var_check,.coverage/coverage.calc_check,.coverage/coverage.exception_check
-          name: codecov-umbrella # optional
-          fail_ci_if_error: true # optional (default = false)
-          verbose: true # optional (default = false)
+  # test_general:
+  #   runs-on: ubuntu-latest
+  #   container: python:3.8
+  #   needs: [codecov_prepare]
+  #   steps:
+  #   - name: Run General Checks
+  #     run: |
+  #       pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
+  #       mv .coverage .coverage/coverage.general
+  #   - name: Upload General Checks
+  #     uses: actions/upload-artifact@v2
+  #     with:
+  #       name: coverage-general
+  #       path: .coverage/coverage.general
+  # test_output_check:
+  #   runs-on: ubuntu-latest
+  #   container: python:3.8
+  #   needs: [codecov_prepare]
+  #   steps:
+  #   - name: Run Output Checks
+  #     run: |
+  #         pytest -s -n 4 -m "output_check" --cov=./triku/  --cov-append
+  #         mv .coverage .coverage/coverage.ouput_check
+  #   - name: Upload Output Checks
+  #     uses: actions/upload-artifact@v2
+  #     with:
+  #       name: coverage-ouput_check
+  #       path: .coverage/coverage.ouput_check
+  # test_args_var_check:
+  #   runs-on: ubuntu-latest
+  #   container: python:3.8
+  #   needs: [codecov_prepare]
+  #   steps:
+  #   - name: Run Var Checks
+  #     run: |
+  #       pytest -s -n 4 -m "var_check" --cov=./triku/  --cov-append
+  #       mv .coverage .coverage/coverage.var_check
+  #   - name: Upload Var Checks
+  #     uses: actions/upload-artifact@v2
+  #     with:
+  #       name: coverage-var_check
+  #       path: .coverage/coverage.var_check
+  # test_args_calc_check:
+  #   runs-on: ubuntu-latest
+  #   container: python:3.8
+  #   needs: [codecov_prepare]
+  #   steps:
+  #   - name: Run Calc Checks
+  #     run: |
+  #       pytest -s -n 4 -m "calc_check" --cov=./triku/  --cov-append
+  #       mv .coverage .coverage/coverage.calc_check
+  #   - name: Upload Calc Checks
+  #     uses: actions/upload-artifact@v2
+  #     with:
+  #       name: coverage-calc_check
+  #       path: .coverage/coverage.calc_check
+  # test_unit_exception_checks:
+  #   runs-on: ubuntu-latest
+  #   container: python:3.8
+  #   needs: [codecov_prepare]
+  #   steps:
+  #   - name: Run Exception Checks
+  #     run: |
+  #       pytest -s -n 4 -m "exception_check" --cov=./triku/  --cov-append
+  #       mv .coverage .coverage/coverage.exception_check
+  #   - name: Upload Exception Checks
+  #     uses: actions/upload-artifact@v2
+  #     with:
+  #       name: coverage-exception_check
+  #       path: .coverage/coverage.exception_check
+  # codecov_out:
+  #   runs-on: ubuntu-latest
+  #   container: python:3.8
+  #   needs: [test_general,test_output_check,test_args_var_check,test_args_calc_check,test_unit_exception_checks]
+  #   steps:
+  #   - name: Checkout
+  #     uses: actions/checkout@v2
+  #   - name: Download artifacts
+  #     uses: actions/download-artifact@v2
+  #   - name: Merge and upload codecov
+  #   - uses: codecov/codecov-action@v2
+  #     with:
+  #       token: 6e1967cb-4cf2-4eee-b32a-82b0ca1725a0 # not required for public repos
+  #       files: .coverage/coverage.general,.coverage/coverage.ouput_check.coverage/coverage.var_check,.coverage/coverage.calc_check,.coverage/coverage.exception_check
+  #       name: codecov-umbrella # optional
+  #       fail_ci_if_error: true # optional (default = false)
+  #       verbose: true # optional (default = false)
