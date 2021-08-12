@@ -26,9 +26,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -V     # Print out python version for debugging
-        pip install virtualenv
-        virtualenv venv
-        source venv/bin/activate
+        pip
+        which pip
         pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
         pip install -r requirements.txt
         pip install pre-commit
