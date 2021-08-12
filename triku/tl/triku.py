@@ -8,7 +8,7 @@ import scanpy as sc
 from ..logg import TRIKU_LEVEL
 from ..logg import triku_logger
 from ..utils._general_utils import set_level_logger
-from ..utils._triku_tl_utils import get_arr_counts_and_genes
+from ..utils._triku_tl_utils import get_arr_counts
 from ._triku_functions import emd_calculation
 from ._triku_functions import get_cutoff_curve
 from ._triku_functions import get_n_divisions
@@ -98,7 +98,7 @@ def triku(
         raise IndexError(error_ms)
 
     # Assert that adata.X is sparse (warning to transform) and assert that gene names are unique.
-    arr_counts, _ = get_arr_counts_and_genes(object_triku, use_raw=use_raw)
+    arr_counts = get_arr_counts(object_triku, use_raw=use_raw)
 
     # Get n_divisions if None:
     if n_divisions is None:

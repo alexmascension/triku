@@ -115,3 +115,54 @@ def test_triku_dense_sparse_matrices(getpbmc3k):
     assert np.all(
         adata_dense.var["triku_distance"] == adata_sparse.var["triku_distance"]
     )
+
+
+@pytest.mark.exception_check
+def test_triku_dense_sparse_matrices_raw(getpbmc3k):
+    adata_dense = getpbmc3k
+    adata_sparse = getpbmc3k.copy()
+
+    adata_dense.X = adata_dense.X.toarray()
+    adata_sparse.X = spr.csr.csr_matrix(adata_sparse.X)
+
+    adata_dense.raw = adata_dense
+    adata_sparse.raw = adata_sparse
+
+    tk.tl.triku(adata_sparse, use_raw=True)
+    tk.tl.triku(adata_dense, use_raw=True)
+
+    assert adata_dense.uns["triku_params"] == adata_sparse.uns["triku_params"]
+    assert np.all(
+        adata_dense.var["triku_distance"] == adata_sparse.var["triku_distance"]
+    )
+
+
+@pytest.mark.exception_check
+def test_check_count_mat_negative(getpbmc3k):
+    adata = getpbmc3k
+
+    adata.X[0, 0] = -1
+
+    try:
+        tk.tl.triku(adata)
+        error = 1
+    except BaseException:
+        error = 0
+
+    if error == 1:
+        raise
+
+
+@pytest.mark.exception_check
+def test_check_zero_counts():
+    adata = sc.datasets.pbmc3k()
+    sc.pp.neighbors(adata)
+
+    try:
+        tk.tl.triku(adata)
+        error = 1
+    except BaseException:
+        error = 0
+
+    if error == 1:
+        raise
