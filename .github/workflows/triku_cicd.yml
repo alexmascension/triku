@@ -36,6 +36,7 @@ jobs:
           echo "Pip location is at $(which pip)"
           echo "Pytest location is at $(which pytest)"
           echo "The selected location is ${{ env.pythonLocation }}"
+
   test_general:
     runs-on: ubuntu-latest
     needs: [build_system]
@@ -49,80 +50,128 @@ jobs:
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
-      - name: Run General Checks
+      - name: Run test_general
         run: |
           pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
           mv .coverage .coverage.general
-      - name: Upload General Checks
+      - name: Upload test_general
         uses: actions/upload-artifact@v2
         with:
           name: coverage-general
           path: .coverage.general
-  # test_output_check:
-  #   runs-on: ubuntu-latest
-  #   needs: [build_system]
-  #   steps:
-  #   - name: Run Output Checks
-  #     run: |
-  #         pytest -s -n 4 -m "output_check" --cov=./triku/  --cov-append
-  #         mv .coverage .coverage/coverage.ouput_check
-  #   - name: Upload Output Checks
-  #     uses: actions/upload-artifact@v2
-  #     with:
-  #       name: coverage-ouput_check
-  #       path: .coverage/coverage.ouput_check
-  # test_args_var_check:
-  #   runs-on: ubuntu-latest
-  #   needs: [build_system]
-  #   steps:
-  #   - name: Run Var Checks
-  #     run: |
-  #       pytest -s -n 4 -m "var_check" --cov=./triku/  --cov-append
-  #       mv .coverage .coverage/coverage.var_check
-  #   - name: Upload Var Checks
-  #     uses: actions/upload-artifact@v2
-  #     with:
-  #       name: coverage-var_check
-  #       path: .coverage/coverage.var_check
-  # test_args_calc_check:
-  #   runs-on: ubuntu-latest
-  #   needs: [build_system]
-  #   steps:
-  #   - name: Run Calc Checks
-  #     run: |
-  #       pytest -s -n 4 -m "calc_check" --cov=./triku/  --cov-append
-  #       mv .coverage .coverage/coverage.calc_check
-  #   - name: Upload Calc Checks
-  #     uses: actions/upload-artifact@v2
-  #     with:
-  #       name: coverage-calc_check
-  #       path: .coverage/coverage.calc_check
-  # test_unit_exception_checks:
-  #   runs-on: ubuntu-latest
-  #   needs: [build_system]
-  #   steps:
-  #   - name: Run Exception Checks
-  #     run: |
-  #       pytest -s -n 4 -m "exception_check" --cov=./triku/  --cov-append
-  #       mv .coverage .coverage/coverage.exception_check
-  #   - name: Upload Exception Checks
-  #     uses: actions/upload-artifact@v2
-  #     with:
-  #       name: coverage-exception_check
-  #       path: .coverage/coverage.exception_check
-  # codecov_out:
-  #   runs-on: ubuntu-latest
-  #   needs: [test_general,test_output_check,test_args_var_check,test_args_calc_check,test_unit_exception_checks]
-  #   steps:
-  #   - name: Checkout
-  #     uses: actions/checkout@v2
-  #   - name: Download artifacts
-  #     uses: actions/download-artifact@v2
-  #   - name: Merge and upload codecov
-  #   - uses: codecov/codecov-action@v2
-  #     with:
-  #       token: 6e1967cb-4cf2-4eee-b32a-82b0ca1725a0 # not required for public repos
-  #       files: .coverage/coverage.general,.coverage/coverage.ouput_check.coverage/coverage.var_check,.coverage/coverage.calc_check,.coverage/coverage.exception_check
-  #       name: codecov-umbrella # optional
-  #       fail_ci_if_error: true # optional (default = false)
-  #       verbose: true # optional (default = false)
+
+  test_output_check:
+    runs-on: ubuntu-latest
+    needs: [build_system]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+      - name: Load cache
+        uses: actions/cache@v2
+        with:
+          path: /opt/hostedtoolcache/Python
+          key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
+      - name: Run test_output_check
+        run: |
+          pytest -s -n 4 -m "output_check" --cov=./triku/  --cov-append
+          mv .coverage .coverage.ouput_check
+      - name: Upload test_output_check
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-ouput_check
+          path: .coverage.ouput_check
+
+  test_args_var_check:
+    runs-on: ubuntu-latest
+    needs: [build_system]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+      - name: Load cache
+        uses: actions/cache@v2
+        with:
+          path: /opt/hostedtoolcache/Python
+          key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
+      - name: Run test_args_var_check
+        run: |
+          pytest -s -n 4 -m "var_check" --cov=./triku/  --cov-append
+          mv .coverage .coverage.var_check
+      - name: Upload test_args_var_check
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-var_check
+          path: .coverage.var_check
+
+  test_args_calc_check:
+    runs-on: ubuntu-latest
+    needs: [build_system]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+      - name: Load cache
+        uses: actions/cache@v2
+        with:
+          path: /opt/hostedtoolcache/Python
+          key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
+      - name: Run test_args_calc_check
+        run: |
+          pytest -s -n 4 -m "calc_check" --cov=./triku/  --cov-append
+          mv .coverage .coverage.calc_check
+      - name: Upload test_args_calc_check
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-calc_check
+          path: .coverage.calc_check
+
+  test_unit_exception_checks:
+    runs-on: ubuntu-latest
+    needs: [build_system]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+      - name: Load cache
+        uses: actions/cache@v2
+        with:
+          path: /opt/hostedtoolcache/Python
+          key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
+      - name: Run test_unit_exception_checks
+        run: |
+          pytest -s -n 4 -m "exception_check" --cov=./triku/  --cov-append
+          mv .coverage .coverage.exception_check
+      - name: Upload test_unit_exception_checks
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-exception_check
+          path: .coverage.exception_check
+
+  codecov_out:
+    runs-on: ubuntu-latest
+    needs:
+      [
+        test_general,
+        test_output_check,
+        test_args_var_check,
+        test_args_calc_check,
+        test_unit_exception_checks,
+      ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+      - name: Merge and upload codecov
+      - uses: codecov/codecov-action@v2
+        with:
+          token: 6e1967cb-4cf2-4eee-b32a-82b0ca1725a0 # not required for public repos
+          files: .coverage/coverage.general,.coverage/coverage.ouput_check.coverage/coverage.var_check,.coverage/coverage.calc_check,.coverage/coverage.exception_check
+          name: codecov-umbrella # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
