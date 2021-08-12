@@ -171,7 +171,7 @@ jobs:
         uses: codecov/codecov-action@v2
         with:
           token: 6e1967cb-4cf2-4eee-b32a-82b0ca1725a0 # not required for public repos
-          files: .coverage/coverage.general,.coverage/coverage.ouput_check.coverage/coverage.var_check,.coverage/coverage.calc_check,.coverage/coverage.exception_check
+          files: .coverage.general,.coverage.ouput_check,.coverage.var_check,.coverage.calc_check,.coverage.exception_check
           name: codecov-umbrella # optional
           fail_ci_if_error: true # optional (default = false)
           verbose: true # optional (default = false)
