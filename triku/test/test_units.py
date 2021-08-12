@@ -38,53 +38,6 @@ def test_triku_check_count_mat_20000_vars():
 
 
 @pytest.mark.exception_check
-def test_triku_check_count_negative():
-    adata = sc.datasets.blobs(
-        n_variables=2000, n_centers=3, cluster_std=1, n_observations=500
-    )
-    assert np.min(adata.X) < 0
-
-    try:
-        tk.tl.triku(adata)
-    except BaseException:
-        pass
-    else:
-        raise BaseException
-
-
-@pytest.mark.exception_check
-def test_triku_check_null_genes():
-    adata = sc.datasets.blobs(
-        n_variables=2000, n_centers=3, cluster_std=1, n_observations=500
-    )
-    adata.X = np.abs(adata.X).astype(int)
-    adata.X[:, 1] = 0
-
-    try:
-        tk.tl.triku(adata)
-    except BaseException:
-        pass
-    else:
-        raise BaseException
-
-
-@pytest.mark.exception_check
-def test_triku_check_nonunique_varnames():
-    adata = sc.datasets.blobs(
-        n_variables=2000, n_centers=3, cluster_std=1, n_observations=500
-    )
-    adata.X = np.abs(adata.X).astype(int)
-    adata.var_names = [0] + list(np.arange(len(adata.var_names) - 1))
-
-    try:
-        tk.tl.triku(adata)
-    except BaseException:
-        pass
-    else:
-        raise BaseException
-
-
-@pytest.mark.exception_check
 def test_triku_check_nonaccepted_type():
     adata = sc.datasets.blobs(
         n_variables=2000, n_centers=3, cluster_std=1, n_observations=500
