@@ -165,8 +165,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Download artifacts
-        uses: actions/download-artifact@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+      - name: Load cache
+        uses: actions/cache@v2
+        with:
+          path: /opt/hostedtoolcache/Python
+          key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
       - name: Merge and upload codecov
         run: |
           coverage combine .cov*
