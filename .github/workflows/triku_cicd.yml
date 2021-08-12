@@ -15,10 +15,13 @@ jobs:
     - name: cache modules
       uses: actions/cache@v2
       with:
+        id: cache-venv
         path: |
+          ./.venv/
           ~/.cache/pip
-          ~/venv
-        key: ${{ github.event.commits[0].id }}
+        key: ${{ hashFiles('setup.py') }}-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ hashFiles('setup.py') }}
 
     - name: Checking out our code 
       uses: actions/checkout@v2
