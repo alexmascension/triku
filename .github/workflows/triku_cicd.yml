@@ -35,7 +35,6 @@ jobs:
   test_general:
     runs-on: ubuntu-latest
     container: python:3.8
-    needs: [codecov_prepare]
     steps:
       - name: Run General Checks
         run: |
@@ -49,7 +48,6 @@ jobs:
   # test_output_check:
   #   runs-on: ubuntu-latest
   #   container: python:3.8
-  #   needs: [codecov_prepare]
   #   steps:
   #   - name: Run Output Checks
   #     run: |
@@ -63,7 +61,6 @@ jobs:
   # test_args_var_check:
   #   runs-on: ubuntu-latest
   #   container: python:3.8
-  #   needs: [codecov_prepare]
   #   steps:
   #   - name: Run Var Checks
   #     run: |
@@ -77,7 +74,6 @@ jobs:
   # test_args_calc_check:
   #   runs-on: ubuntu-latest
   #   container: python:3.8
-  #   needs: [codecov_prepare]
   #   steps:
   #   - name: Run Calc Checks
   #     run: |
@@ -91,7 +87,6 @@ jobs:
   # test_unit_exception_checks:
   #   runs-on: ubuntu-latest
   #   container: python:3.8
-  #   needs: [codecov_prepare]
   #   steps:
   #   - name: Run Exception Checks
   #     run: |
