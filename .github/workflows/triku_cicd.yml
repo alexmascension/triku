@@ -27,13 +27,13 @@ jobs:
           ${{ runner.os }}-
     - name: Install dependencies
       if: steps.cache.outputs.cache-hit != 'true'
-      run: |
-        python -V     # Print out python version for debugging
-        pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
-        pip install -r requirements.txt
-        pip install pre-commit
-        pytest -s -m "import_triku" 
-        which pytest
+        run: |
+          python -V     # Print out python version for debugging
+          pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
+          pip install -r requirements.txt
+          pip install pre-commit
+          pytest -s -m "import_triku" 
+          which pytest
 
   test_general:
     runs-on: ubuntu-latest
