@@ -1,5 +1,6 @@
 # 2.0.1
-Minor import fixes.
+- Minor import fixes.
+- Unnecessary code simplification.
 
 # 2.0.0
 ## Major changes to the
