@@ -35,7 +35,8 @@ jobs:
       - name: Check cache test
         run: |
           pytest -s -m "import_triku" 
-          which pytest
+          echo "Pytest location is at $(which pytest)"
+          echo "The selected location is ${{ env.pythonLocation }}"
   test_general:
     runs-on: ubuntu-latest
     needs: [build_system]
