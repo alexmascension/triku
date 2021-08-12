@@ -168,10 +168,8 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v2
       - name: Merge and upload codecov
-        uses: codecov/codecov-action@v2
-        with:
-          token: fb6873c7-fc57-44b0-808a-b346bc1ced78
-          files: .coverage.general,.coverage.ouput_check,.coverage.var_check,.coverage.calc_check,.coverage.exception_check
-          name: codecov-umbrella # optional
-          fail_ci_if_error: true # optional (default = false)
-          verbose: true # optional (default = false)
+        run: |
+          coverage combine .cov*
+          pytest -s -n 1 -m "end" --cov=./triku/ --cov-append --cov-report=html
+          codecov --token=fb6873c7-fc57-44b0-808a-b346bc1ced78
+          stage: codecov
