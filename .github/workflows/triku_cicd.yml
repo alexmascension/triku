@@ -19,8 +19,9 @@ jobs:
         ~/venv
       key: ${{ github.event.commits[0].id }}
 
+    - name: Checking out our code 
+        uses: actions/checkout@v2
     - name: run 
-      uses: actions/checkout@v2
       run: |
         python -V     # Print out python version for debugging
         pip install virtualenv
