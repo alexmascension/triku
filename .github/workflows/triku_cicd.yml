@@ -20,7 +20,7 @@ jobs:
       key: ${{ github.event.commits[0].id }}
 
     - name: Checking out our code 
-        uses: actions/checkout@v2
+      uses: actions/checkout@v2
     - name: run 
       run: |
         python -V     # Print out python version for debugging
