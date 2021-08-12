@@ -173,6 +173,8 @@ jobs:
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
       - name: Merge and upload codecov
         run: |
           coverage combine .cov*
