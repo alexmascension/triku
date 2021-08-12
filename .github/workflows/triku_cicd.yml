@@ -1,4 +1,4 @@
-name: triku CICD
+name: triku
 
 on:
   push:
@@ -170,6 +170,7 @@ jobs:
       - name: Merge and upload codecov
         uses: codecov/codecov-action@v2
         with:
+          token: fb6873c7-fc57-44b0-808a-b346bc1ced78
           files: .coverage.general,.coverage.ouput_check,.coverage.var_check,.coverage.calc_check,.coverage.exception_check
           name: codecov-umbrella # optional
           fail_ci_if_error: true # optional (default = false)

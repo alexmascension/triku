@@ -10,8 +10,8 @@ Triku - Feature selection for Single Cell Analysis
 .. image:: https://badge.fury.io/py/triku.svg
     :target: https://badge.fury.io/py/triku
 
-.. image:: https://gitlab.com/alexmascension/triku/badges/dev/pipeline.svg
-  :target: https://gitlab.com/alexmascension/triku
+.. image:: https://github.com/alexmascension/triku/actions/workflows/triku_cicd.yml/badge.svg
+  :target: https://github.com/alexmascension/triku
 
 .. image:: https://readthedocs.org/projects/triku/badge/?version=latest
     :alt: Documentation Status
