@@ -32,6 +32,8 @@ jobs:
           pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
           pip install -r requirements.txt
           pip install pre-commit
+      - name: Check cache test
+        run: |
           pytest -s -m "import_triku" 
           which pytest
   test_general:
