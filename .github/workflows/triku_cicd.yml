@@ -44,6 +44,12 @@ jobs:
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
+      - name: Check if pytest exists!!!
+        run: |
+          ls /opt/hostedtoolcache/Python/3.8.11/x64
+          ls /opt/hostedtoolcache/Python/3.8.11/x64/bin
+          echo "python is at $(which python)"
+          echo "pip is at $(which pip)"
       - name: Run General Checks
         run: |
           pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
