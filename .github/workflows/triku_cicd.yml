@@ -32,20 +32,20 @@ jobs:
           pip install pre-commit
           pytest -s -m "import_triku" 
           which pytest
-  # test_general:
-  #   runs-on: ubuntu-latest
-  #   container: python:3.8
-  #   needs: [codecov_prepare]
-  #   steps:
-  #   - name: Run General Checks
-  #     run: |
-  #       pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
-  #       mv .coverage .coverage/coverage.general
-  #   - name: Upload General Checks
-  #     uses: actions/upload-artifact@v2
-  #     with:
-  #       name: coverage-general
-  #       path: .coverage/coverage.general
+  test_general:
+    runs-on: ubuntu-latest
+    container: python:3.8
+    needs: [codecov_prepare]
+    steps:
+      - name: Run General Checks
+        run: |
+          pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
+          mv .coverage .coverage/coverage.general
+      - name: Upload General Checks
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-general
+          path: .coverage/coverage.general
   # test_output_check:
   #   runs-on: ubuntu-latest
   #   container: python:3.8
