@@ -17,29 +17,23 @@ jobs:
       uses: actions/cache@v2
       with:
         # This path is specific to Ubuntu
-        path: ~/.cache/pip
+        path: |
+          ~/.cache/pip
+          ${{ env.pythonLocation}}/lib/python3.8/site-packages/*
         # Look to see if there is a cache hit for the corresponding requirements file
         key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
           ${{ runner.os }}-
     - name: Install dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
       run: |
         python -V     # Print out python version for debugging
         pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
         pip install -r requirements.txt
         pip install pre-commit
         pytest -s -m "import_triku" 
-
-  codecov_prepare:
-    runs-on: ubuntu-latest
-    container: python:3.8
-    needs: [build_system]
-    steps:
-    - run: |
-        rm -f .cov*
-        rm -rf htmlcov
-
+        which pytest
 
   test_general:
     runs-on: ubuntu-latest
@@ -48,7 +42,11 @@ jobs:
     steps:
     - run: |
         pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
-        mv .coverage .coverage.general
+        mv .coverage .coverage/coverage.general
+    - uses: actions/upload-artifact@v2
+      with:
+      name: coverage-general
+      path: .coverage/coverage.general
 
   test_output_check:
     runs-on: ubuntu-latest
@@ -57,7 +55,11 @@ jobs:
     steps:
     - run: |
         pytest -s -n 4 -m "output_check" --cov=./triku/  --cov-append
-        mv .coverage .coverage.ouput_check
+        mv .coverage .coverage/coverage.ouput_check
+    - uses: actions/upload-artifact@v2
+      with:
+      name: coverage-ouput_check
+      path: .coverage/coverage.ouput_check
 
   test_args_var_check:
     runs-on: ubuntu-latest
@@ -66,7 +68,11 @@ jobs:
     steps:
     - run: |
         pytest -s -n 4 -m "var_check" --cov=./triku/  --cov-append
-        mv .coverage .coverage.var_check
+        mv .coverage .coverage/coverage.var_check
+    - uses: actions/upload-artifact@v2
+      with:
+      name: coverage-var_check
+      path: .coverage/coverage.var_check
 
   test_args_calc_check:
     runs-on: ubuntu-latest
@@ -75,7 +81,11 @@ jobs:
     steps:
     - run: |
         pytest -s -n 4 -m "calc_check" --cov=./triku/  --cov-append
-        mv .coverage .coverage.calc_check
+        mv .coverage .coverage/coverage.calc_check
+    - uses: actions/upload-artifact@v2
+      with:
+      name: coverage-calc_check
+      path: .coverage/coverage.calc_check
 
   test_unit_exception_checks:
     runs-on: ubuntu-latest
@@ -84,16 +94,26 @@ jobs:
     steps:
     - run: |
         pytest -s -n 4 -m "exception_check" --cov=./triku/  --cov-append
-        mv .coverage .coverage.exception_check
+        mv .coverage .coverage/coverage.exception_check
+    - uses: actions/upload-artifact@v2
+      with:
+      name: coverage-exception_check
+      path: .coverage/coverage.exception_check
 
   codecov_out:
     runs-on: ubuntu-latest
     container: python:3.8
     needs: [test_general,test_output_check,test_args_var_check,test_args_calc_check,test_unit_exception_checks]
     steps:
-    - run: |
-        coverage combine .cov*
-        pytest -s -n 1 -m "end" --cov=./triku/ --cov-append --cov-report=html
-        codecov --token=6e1967cb-4cf2-4eee-b32a-82b0ca1725a0
-        rm -f .cov*
-        rm -rf htmlcov
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+    - name: Merge and upload codecov
+    - uses: codecov/codecov-action@v2
+      with:
+        token: 6e1967cb-4cf2-4eee-b32a-82b0ca1725a0 # not required for public repos
+        files: .coverage/coverage.general,.coverage/coverage.ouput_check.coverage/coverage.var_check,.coverage/coverage.calc_check,.coverage/coverage.exception_check
+        name: codecov-umbrella # optional
+        fail_ci_if_error: true # optional (default = false)
+        verbose: true # optional (default = false)
