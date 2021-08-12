@@ -9,7 +9,6 @@ on:
 jobs:
   build_system:
     runs-on: ubuntu-latest
-    container: python:3.8
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -39,7 +38,6 @@ jobs:
           which pytest
   test_general:
     runs-on: ubuntu-latest
-    container: python:3.8
     needs: [build_system]
     steps:
       - name: Run General Checks
@@ -53,7 +51,6 @@ jobs:
           path: .coverage/coverage.general
   # test_output_check:
   #   runs-on: ubuntu-latest
-  #   container: python:3.8
   #   needs: [build_system]
   #   steps:
   #   - name: Run Output Checks
@@ -67,7 +64,6 @@ jobs:
   #       path: .coverage/coverage.ouput_check
   # test_args_var_check:
   #   runs-on: ubuntu-latest
-  #   container: python:3.8
   #   needs: [build_system]
   #   steps:
   #   - name: Run Var Checks
@@ -81,7 +77,6 @@ jobs:
   #       path: .coverage/coverage.var_check
   # test_args_calc_check:
   #   runs-on: ubuntu-latest
-  #   container: python:3.8
   #   needs: [build_system]
   #   steps:
   #   - name: Run Calc Checks
@@ -95,7 +90,6 @@ jobs:
   #       path: .coverage/coverage.calc_check
   # test_unit_exception_checks:
   #   runs-on: ubuntu-latest
-  #   container: python:3.8
   #   needs: [build_system]
   #   steps:
   #   - name: Run Exception Checks
@@ -109,7 +103,6 @@ jobs:
   #       path: .coverage/coverage.exception_check
   # codecov_out:
   #   runs-on: ubuntu-latest
-  #   container: python:3.8
   #   needs: [test_general,test_output_check,test_args_var_check,test_args_calc_check,test_unit_exception_checks]
   #   steps:
   #   - name: Checkout
