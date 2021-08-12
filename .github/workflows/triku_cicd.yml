@@ -14,10 +14,10 @@ jobs:
     - name: cache modules
       uses: actions/cache@v2
       with:
-      path: |
-        ~/.cache/pip
-        ~/venv
-      key: ${{ github.event.commits[0].id }}
+        path: |
+          ~/.cache/pip
+          ~/venv
+        key: ${{ github.event.commits[0].id }}
 
     - name: Checking out our code 
       uses: actions/checkout@v2
