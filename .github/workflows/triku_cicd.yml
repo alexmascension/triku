@@ -18,7 +18,7 @@ jobs:
         id: cache-pip
         uses: actions/cache@v2
         with:
-          path: ${{ env.pythonLocation }}
+          path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
           restore-keys: |
             ${{ hashFiles('requirements.txt') }}-
@@ -42,7 +42,7 @@ jobs:
       - name: Load cache
         uses: actions/cache@v2
         with:
-          path: ${{ steps.pip-cache.outputs.dir }}
+          path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
       - name: Run General Checks
         run: |
