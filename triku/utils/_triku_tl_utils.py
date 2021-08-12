@@ -1,4 +1,3 @@
-import bottleneck as bn
 import numpy as np
 import scipy.sparse as spr
 
@@ -40,36 +39,6 @@ def return_proportion_zeros(mat: spr.csr.csr_matrix):
         ),
     )
     return zero_counts / n_cells
-
-
-def return_mean(mat: spr.csr.csr_matrix):
-    """
-    Returns a 1D array with the mean of the array. We have to do it using methods both for sparse arrays
-    and dense arrays, which limits the options to do it.
-
-    Parameters
-    ----------
-    mat : [np.ndarray, scipy.sparse.csr_matrix, other sparse matrices]
-        Array of cells x genes.
-
-    Returns
-    -------
-    prop_zeros: np.1darray
-        Array with mean expression per gene.
-    """
-
-    mean_per_gene = bn.nanmean(mat, axis=0)
-
-    triku_logger.log(
-        TRIKU_LEVEL,
-        "mean stats || min: {} | mean: {} |  max: {} | std: {}]".format(
-            np.min(mean_per_gene),
-            np.mean(mean_per_gene),
-            np.max(mean_per_gene),
-            np.std(mean_per_gene),
-        ),
-    )
-    return mean_per_gene
 
 
 def check_count_mat(mat: spr.csr.csr_matrix):

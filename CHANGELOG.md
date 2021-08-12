@@ -1,4 +1,7 @@
-# 2.0.0 [Predicted]
+# 2.0.1
+Minor import fixes.
+
+# 2.0.0
 ## Major changes to the
 - Removed background correction. We saw it was unnecessary and it consumed too much time (in 1.3.X was deactivated by default).
 - Improved operability with dense and sparse matrices. Now big adatas should run with triku.
