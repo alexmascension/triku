@@ -2,11 +2,10 @@
 [![PyPI version](https://badge.fury.io/py/triku.svg)](https://badge.fury.io/py/triku)
 [![example workflow](https://github.com/alexmascension/triku/actions/workflows/triku_cicd.yml/badge.svg)](https://github.com/alexmascension/triku)
 [![Docs](https://readthedocs.org/projects/triku/badge/?version=latest)](https://triku.readthedocs.io/en/latest/)
-[![codecov](https://codecov.io/gl/alexmascension/triku/branch/dev/graph/badge.svg)](https://codecov.io/gl/alexmascension/triku/branch/dev)
+[![codecov](https://codecov.io/gh/alexmascension/triku/branch/dev/graph/badge.svg)](https://codecov.io/gh/alexmascension/triku/branch/dev)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4016715.svg)](https://doi.org/10.5281/zenodo.4016715)
-[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://gitlab.com/alexmascension/triku)
 [![Downloads](https://pepy.tech/badge/triku)](https://pepy.tech/project/triku)
 
 Triku (hedgehog in euskera) is a feature selection method prepared for scRNA-seq.

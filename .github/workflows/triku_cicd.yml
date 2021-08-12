@@ -31,11 +31,13 @@ jobs:
           pip install pre-commit
       - name: Check cache test
         run: |
-          pytest -s -m "import_triku" 
-          echo "Python location is at $(which python)"
-          echo "Pip location is at $(which pip)"
-          echo "Pytest location is at $(which pytest)"
-          echo "The selected location is ${{ env.pythonLocation }}"
+          pytest -s -m "import_triku"  --cov=./triku/  --cov-append
+          mv .coverage .coverage.imports
+      - name: Upload test_imports
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-imports
+          path: .coverage.imports
 
   test_general:
     runs-on: ubuntu-latest
