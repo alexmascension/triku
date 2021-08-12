@@ -32,6 +32,8 @@ jobs:
       - name: Check cache test
         run: |
           pytest -s -m "import_triku" 
+          echo "Python location is at $(which python)"
+          echo "Pip location is at $(which pip)"
           echo "Pytest location is at $(which pytest)"
           echo "The selected location is ${{ env.pythonLocation }}"
   test_general:
@@ -46,13 +48,66 @@ jobs:
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
       - name: Check if pytest exists!!!
         run: |
-          ls /opt/hostedtoolcache/Python/3.8.11/x64
           ls /opt/hostedtoolcache/Python/3.8.11/x64/bin
           echo "python is at $(which python)"
           echo "pip is at $(which pip)"
       - name: Run General Checks
         run: |
           pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
+          mv .coverage .coverage/coverage.general
+      - name: Upload General Checks
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-general
+          path: .coverage/coverage.general
+  test_general_2:
+    runs-on: ubuntu-latest
+    needs: [build_system]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+      - name: Load cache
+        uses: actions/cache@v2
+        with:
+          path: /opt/hostedtoolcache/Python
+          key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
+      - name: Check if pytest exists!!!
+        run: |
+          ls /opt/hostedtoolcache/Python/3.8.11/x64/bin
+          echo "python is at $(which python)"
+          echo "pip is at $(which pip)"
+      - name: Run General Checks
+        run: |
+          pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
+          mv .coverage .coverage/coverage.general
+      - name: Upload General Checks
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-general
+          path: .coverage/coverage.general
+  test_general_3:
+    runs-on: ubuntu-latest
+    needs: [build_system]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+      - name: Load cache
+        uses: actions/cache@v2
+        with:
+          path: /opt/hostedtoolcache/Python
+          key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
+      - name: Check if pytest exists!!!
+        run: |
+          ls /opt/hostedtoolcache/Python/3.8.11/x64/bin
+          echo "python is at $(which python)"
+          echo "pip is at $(which pip)"
+      - name: Run General Checks
+        run: |
+          /opt/hostedtoolcache/Python/3.8.11/x64/bin/pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
           mv .coverage .coverage/coverage.general
       - name: Upload General Checks
         uses: actions/upload-artifact@v2
