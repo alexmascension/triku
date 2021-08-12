@@ -168,7 +168,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v2
       - name: Merge and upload codecov
-      - uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v2
         with:
           token: 6e1967cb-4cf2-4eee-b32a-82b0ca1725a0 # not required for public repos
           files: .coverage/coverage.general,.coverage/coverage.ouput_check.coverage/coverage.var_check,.coverage/coverage.calc_check,.coverage/coverage.exception_check
