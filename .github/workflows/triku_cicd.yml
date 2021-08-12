@@ -38,11 +38,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_system]
     steps:
+      - uses: actions/checkout@v2
       - name: Load cache
-        id: cache-pip
         uses: actions/cache@v2
         with:
-          path: ${{ env.pythonLocation }}
+          path: ${{ steps.pip-cache.outputs.dir }}
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
       - name: Run General Checks
         run: |
