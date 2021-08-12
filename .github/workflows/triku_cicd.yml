@@ -13,6 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Cache pip
+        id: cache-pip
         uses: actions/cache@v2
         with:
           # This path is specific to Ubuntu
@@ -25,6 +26,7 @@ jobs:
             ${{ runner.os }}-pip-
             ${{ runner.os }}-
       - name: Install dependencies
+        if: steps.cache-pip.outputs.cache-hit != 'true'
         run: |
           python -V     # Print out python version for debugging
           pip install pytest pytest-xdist pytest-cov pytest-sugar pytest-ordering codecov
