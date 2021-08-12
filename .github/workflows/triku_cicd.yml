@@ -91,7 +91,7 @@ jobs:
   codecov_out:
     runs-on: ubuntu-latest
     container: python:3.8
-    needs: [test_general,test_output_checktest_args_var_check,test_args_calc_check,test_unit_exception_checks]
+    needs: [test_general,test_output_check,test_args_var_check,test_args_calc_check,test_unit_exception_checks]
     steps:
     - run: |
         coverage combine .cov*
