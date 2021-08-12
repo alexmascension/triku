@@ -177,7 +177,7 @@ jobs:
         uses: actions/download-artifact@v2
       - name: Merge and upload codecov
         run: |
-          coverage combine .cov*
+          coverage combine /home/runner/work/triku/triku/cov*
           pytest -s -n 1 -m "end" --cov=./triku/ --cov-append --cov-report=html
           codecov --token=fb6873c7-fc57-44b0-808a-b346bc1ced78
           stage: codecov
