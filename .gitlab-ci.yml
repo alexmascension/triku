@@ -4,7 +4,7 @@ image: python:3.8
 # Parallelized jobs in triku cannot be run on the Gitlab Runner. That is, triku can only be 
 # run on one job, and the coverage of that part will be neglected. To not neglect that part
 # we run triku locally and in the server runners, gather coverage data and 
-# combine coverage reports. 
+# combine coverage reports.   <-- THIS IS NOT NECESSARY NOW, BUT I'LL LEAVE IT JUST IN CASE!
 
 # To be able to do that, we need to run the gitlab-runner on the local computer with multicore.
 # Install gitlab-runner from the dpkg, not from conda, because you must sudo it!
