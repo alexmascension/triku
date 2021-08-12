@@ -18,13 +18,10 @@ jobs:
         id: cache-pip
         uses: actions/cache@v2
         with:
-          # This path is specific to Ubuntu
           path: ${{ env.pythonLocation }}
-          # Look to see if there is a cache hit for the corresponding requirements file
-          key: ${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
+          key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
-            ${{ runner.os }}-
+            ${{ hashFiles('requirements.txt') }}-
       - name: Install dependencies
         if: steps.cache-pip.outputs.cache-hit != 'true'
         run: |
@@ -41,6 +38,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_system]
     steps:
+      - name: Load cache
+        id: cache-pip
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.pythonLocation }}
+          key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
       - name: Run General Checks
         run: |
           pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
