@@ -14,19 +14,54 @@ from triku.logg import triku_logger
 # from triku.genutils import TqdmToLogger
 
 
-def return_knn_array(object_triku):
+def return_knn_array(object_triku, dist_conn):
     # Distances array contains a pairwise relationship between cells, based on distance.
     # We will binarize that array to select equally all components with non-zero distance.
     # We finally add the identity matrix to select as neighbour the own cell.
     try:
-        knn_array = (
-            object_triku.obsp[  # type:ignore
-                "distances"
-            ]
-            > 0
-        ) + spr.identity(len(object_triku)).astype(
-            bool
-        )  # Saves memory
+        if dist_conn == "dist":
+            knn_array = (
+                object_triku.obsp[  # type:ignore
+                    "distances"
+                ]
+                > 0
+            ) + spr.identity(len(object_triku)).astype(
+                bool
+            )  # Saves memory
+
+        elif dist_conn == "conn":
+            knn = object_triku.uns["neighbors"]["params"]["n_neighbors"] - 1
+            knn_array_conn_indices = []
+            knn_array_conn_data = np.ones(
+                len(object_triku) * (knn + 1), dtype=bool
+            )
+            knn_array_conn_indptr = np.arange(
+                0, (len(object_triku) + 1) * (knn + 1), knn + 1
+            )
+
+            for row in range(len(object_triku)):
+                start_counts, end_counts = (
+                    object_triku.obsp["connectivities"].indptr[row],
+                    object_triku.obsp["connectivities"].indptr[row + 1],
+                )
+                data_row = object_triku.obsp["connectivities"].data[
+                    start_counts:end_counts
+                ]
+                idx_row = object_triku.obsp["connectivities"].indices[
+                    start_counts:end_counts
+                ]
+
+                idx_pos = idx_row[np.argsort(data_row)[::-1]][:knn]
+                knn_array_conn_indices += [row] + list(idx_pos)
+
+            knn_array = spr.csr.csr_matrix(
+                (
+                    knn_array_conn_data,
+                    knn_array_conn_indices,
+                    knn_array_conn_indptr,
+                ),
+                shape=(len(object_triku), len(object_triku)),
+            )
 
     except KeyError:
         triku_logger.warning(
@@ -166,7 +201,7 @@ def compute_conv_idx(
         y_probs_0, y_probs
     )  # First iteration always with itself
 
-    for _ in range(knn):
+    for _ in range(knn - 1):
         arr_convolve = func(arr_convolve, y_probs,)
 
     # Important because some convolutions yield negative close-to-zero values that break emd

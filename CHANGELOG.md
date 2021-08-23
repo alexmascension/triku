@@ -1,3 +1,6 @@
+# 2.1.0
+- Fixed convolution from knn to knn - 1 times.
+
 # 2.0.1
 - Minor import fixes.
 - Unnecessary code simplification.

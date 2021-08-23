@@ -14,7 +14,7 @@ __email__ = ", ".join(
         # We don’t need all, the main authors are sufficient.
     ]
 )
-__version__ = "2.0.1"
+__version__ = "2.1.0"
 
 
 setup(

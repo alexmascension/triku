@@ -29,6 +29,7 @@ def triku(
     min_knn: int = 6,
     name: Union[str, None] = None,
     verbose: Union[None, str] = "warning",
+    dist_conn="dist",
 ) -> dict:  # type:ignore
     """
     This function calls the triku method using python directly. This function expects an
@@ -113,7 +114,7 @@ def triku(
     knn = object_triku.uns["neighbors"]["params"]["n_neighbors"]  # type:ignore
 
     # Boolean array showing the neighbors (including its own)
-    knn_array = return_knn_array(object_triku)
+    knn_array = return_knn_array(object_triku, dist_conn)
 
     # Calculate the expression in the kNN (+ own cell) for all genes [CAUTION! This array is unmasked!!!! (more explained inside the funcion)]
     triku_logger.info("Calculating knn expression")
