@@ -32,7 +32,7 @@ def check_null_genes(arr_counts: np.ndarray):
 
     if np.any(np.array(arr_counts.sum(0))[0] == 0):
         error_msg = (
-            "There are genes with no counts. Remove those genes first. "
+            "There are genes with no counts. Remove those genes first."
             "You can use sc.pp.filter_genes(adata, min_cells=5)."
         )
 
