@@ -29,7 +29,7 @@ def triku(
     min_knn: int = 6,
     name: Union[str, None] = None,
     verbose: Union[None, str] = "warning",
-    dist_conn="dist",
+    dist_conn: Union[str] = "dist",
 ) -> dict:  # type:ignore
     """
     This function calls the triku method using python directly. This function expects an
@@ -65,6 +65,9 @@ def triku(
         expressing cells, Wasserstein distance is set to 0, and the convolution is set as the knn expression.
     name: str
         Name of the run. If None, stores results in "triku_X". Else, stores it in "triku_X_{name}".
+    dist_conn: str
+        Uses adata.obsp["distances"] or adata.obsp["connectivities"] for knn array construction. From empirical analysis,
+        "conn" shows slightly better results, but is slower.
     verbose : str ['debug', 'triku', 'info', 'warning', 'error', 'critical']
         Logger verbosity output.
     Returns
@@ -114,7 +117,7 @@ def triku(
     knn = object_triku.uns["neighbors"]["params"]["n_neighbors"]  # type:ignore
 
     # Boolean array showing the neighbors (including its own)
-    knn_array = return_knn_array(object_triku, dist_conn)
+    knn_array = return_knn_array(object_triku, dist_conn, knn)
 
     # Calculate the expression in the kNN (+ own cell) for all genes [CAUTION! This array is unmasked!!!! (more explained inside the funcion)]
     triku_logger.info("Calculating knn expression")
@@ -179,4 +182,6 @@ def triku(
         "n_windows": n_windows,
         "min_knn": min_knn,
         "n_divisions": n_divisions,
+        "dist_conn": dist_conn,
+        "knn_array": knn_array,
     }

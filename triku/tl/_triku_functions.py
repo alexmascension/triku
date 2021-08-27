@@ -1,6 +1,7 @@
 # import gc
 from typing import Tuple
 
+import bottleneck
 import numpy as np
 import scipy.sparse as spr
 import scipy.stats as sts
@@ -14,11 +15,14 @@ from triku.logg import triku_logger
 # from triku.genutils import TqdmToLogger
 
 
-def return_knn_array(object_triku, dist_conn):
+def return_knn_array(object_triku, dist_conn, knn):
     # Distances array contains a pairwise relationship between cells, based on distance.
     # We will binarize that array to select equally all components with non-zero distance.
     # We finally add the identity matrix to select as neighbour the own cell.
     try:
+        # Dist array shows indices of neighbors, but not the own cell.
+        # To add the own cell we use spr.identity.
+
         if dist_conn == "dist":
             knn_array = (
                 object_triku.obsp[  # type:ignore
@@ -30,13 +34,20 @@ def return_knn_array(object_triku, dist_conn):
             )  # Saves memory
 
         elif dist_conn == "conn":
-            knn = object_triku.uns["neighbors"]["params"]["n_neighbors"] - 1
-            knn_array_conn_indices = []
-            knn_array_conn_data = np.ones(
-                len(object_triku) * (knn + 1), dtype=bool
+            # Connectivities adds an extra layer of neighbours that I don't know how it happens. https://github.com/theislab/scanpy/issues/1984
+            # The problem with connectivities it that nonzero elements are not always knn, but it changes.
+            # In the dense version of triku we selected the knn indexes with highest connectivities. To do that in sparse, we will do it row by row.
+            # To make the process faster we construct the array from zero by setting indptr, indexes and data.
+            # 1) Indptr are 0, knn, 2*knn, 3*knn, 4*knn, ...
+            # 2) Data are 1 throughout the array.
+            # 3) The indices of the best connectivities are selected via argsort of the best values (selected in object_triku.obsp["connectivities"].data)
+
+            knn_array_conn_indices = np.ones(
+                len(object_triku) * knn, dtype=int
             )
+            knn_array_conn_data = np.ones(len(object_triku) * knn, dtype=bool)
             knn_array_conn_indptr = np.arange(
-                0, (len(object_triku) + 1) * (knn + 1), knn + 1
+                0, (len(object_triku) + 1) * knn, knn
             )
 
             for row in range(len(object_triku)):
@@ -51,8 +62,19 @@ def return_knn_array(object_triku, dist_conn):
                     start_counts:end_counts
                 ]
 
-                idx_pos = idx_row[np.argsort(data_row)[::-1]][:knn]
-                knn_array_conn_indices += [row] + list(idx_pos)
+                try:  # bottleneck works much faster, but it requires that the number of connected features be >= knn.
+                    # If not (because there are some), it fails. Then, it goes to the classical argsort, which is slower but effective.
+                    argidx = bottleneck.argpartition(-data_row, knn - 1)
+                    idx_pos = idx_row[
+                        argidx[: knn - 1]
+                    ]  # knn - 1 because the own index is not within the best
+                except ValueError:
+                    idx_pos = idx_row[np.argsort(data_row)[::-1]][: knn - 1]
+
+                knn_array_conn_indices[row * knn] = row
+                knn_array_conn_indices[
+                    row * knn + 1 : (row + 1) * knn
+                ] = idx_pos
 
             knn_array = spr.csr.csr_matrix(
                 (
@@ -61,6 +83,10 @@ def return_knn_array(object_triku, dist_conn):
                     knn_array_conn_indptr,
                 ),
                 shape=(len(object_triku), len(object_triku)),
+            )
+        else:
+            raise SyntaxError(
+                "dist_conn can only take 'dist' and 'conn' values."
             )
 
     except KeyError:

@@ -1,5 +1,6 @@
 # 2.1.0
 - Fixed convolution from knn to knn - 1 times.
+- Implemented distances and connectivities to create knn_array (temporary). 
 
 # 2.0.1
 - Minor import fixes.

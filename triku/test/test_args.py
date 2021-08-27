@@ -103,3 +103,20 @@ def test_names(getpbmc3k):
         adata.var["triku_distance_uncorrected"]
         == adata.var["triku_distance_uncorrected_sample"]
     )
+
+
+@pytest.mark.output_check
+def test_dist_conn(getpbmc3k):
+    adata_dist = getpbmc3k.copy()
+    tk.tl.triku(adata_dist, use_raw=False, dist_conn="dist")
+
+    adata_conn = getpbmc3k.copy()
+    tk.tl.triku(adata_conn, use_raw=False, dist_conn="conn")
+
+    try:
+        tk.tl.triku(adata_conn, use_raw=False, dist_conn="other")
+        error = 0
+    except SyntaxError:
+        error = 1
+
+    assert error == 1
