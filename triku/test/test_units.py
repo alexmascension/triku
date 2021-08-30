@@ -147,37 +147,3 @@ def test_check_zero_counts():
     sc.pp.neighbors(adata_nonzero)
 
     tk.tl.triku(adata_nonzero)
-
-
-@pytest.mark.exception_check
-def test_check_zero_counts_2():
-    import pandas as pd
-
-    adata_tabib = sc.read(
-        "/home/seth/Downloads/Skin_6Control_rawUMI.csv",
-        backup_url="https://dom.pitt.edu/wp-content/uploads/2018/10/Skin_6Control_rawUMI.zip",
-    )
-    adata_tabib = adata_tabib.transpose()
-
-    df_metadata_tabib = pd.read_csv(
-        "/home/seth/Downloads/Skin_6Control_Metadata.csv", index_col=0
-    )
-
-    adata_tabib.obs["res.0.6"] = df_metadata_tabib["res.0.6"].astype(str)
-    adata_tabib_fb = adata_tabib[
-        adata_tabib.obs["res.0.6"].isin(["0", "3", "4"]), :
-    ].copy()
-
-    sc.pp.filter_genes(adata_tabib_fb, min_counts=1)
-    sc.pp.normalize_total(adata_tabib_fb)
-    sc.pp.log1p(adata_tabib_fb)
-
-    sc.pp.pca(adata_tabib_fb, random_state=0, n_comps=30)
-    sc.pp.neighbors(
-        adata_tabib_fb,
-        random_state=0,
-        n_neighbors=int(len(adata_tabib_fb) ** 0.5),
-        metric="cosine",
-    )
-
-    tk.tl.triku(adata_tabib_fb)
