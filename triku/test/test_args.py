@@ -93,9 +93,17 @@ def test_names(getpbmc3k):
     assert None in adata.uns["triku_params"]
     assert "sample" in adata.uns["triku_params"]
 
+    for key in ["knn", "n_features", "s", "n_windows", "min_knn", "dist_conn"]:
+        assert (
+            adata.uns["triku_params"][None][key]
+            == adata.uns["triku_params"]["sample"][key]
+        )
+
     assert (
-        adata.uns["triku_params"][None] == adata.uns["triku_params"]["sample"]
-    )
+        adata.uns["triku_params"][None]["knn_array"]
+        != adata.uns["triku_params"]["sample"]["knn_array"]
+    ).nnz == 0
+
     assert np.all(
         adata.var["triku_distance"] == adata.var["triku_distance_sample"]
     )

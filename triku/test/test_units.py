@@ -64,7 +64,17 @@ def test_triku_dense_sparse_matrices(getpbmc3k):
     tk.tl.triku(adata_sparse)
     tk.tl.triku(adata_dense)
 
-    assert adata_dense.uns["triku_params"] == adata_sparse.uns["triku_params"]
+    for key in ["knn", "n_features", "s", "n_windows", "min_knn", "dist_conn"]:
+        assert (
+            adata_sparse.uns["triku_params"][None][key]
+            == adata_dense.uns["triku_params"][None][key]
+        )
+
+    assert (
+        adata_sparse.uns["triku_params"][None]["knn_array"]
+        != adata_dense.uns["triku_params"][None]["knn_array"]
+    ).nnz == 0
+
     assert np.all(
         adata_dense.var["triku_distance"] == adata_sparse.var["triku_distance"]
     )
@@ -84,7 +94,17 @@ def test_triku_dense_sparse_matrices_raw(getpbmc3k):
     tk.tl.triku(adata_sparse, use_raw=True)
     tk.tl.triku(adata_dense, use_raw=True)
 
-    assert adata_dense.uns["triku_params"] == adata_sparse.uns["triku_params"]
+    for key in ["knn", "n_features", "s", "n_windows", "min_knn", "dist_conn"]:
+        assert (
+            adata_sparse.uns["triku_params"][None][key]
+            == adata_dense.uns["triku_params"][None][key]
+        )
+
+    assert (
+        adata_sparse.uns["triku_params"][None]["knn_array"]
+        != adata_dense.uns["triku_params"][None]["knn_array"]
+    ).nnz == 0
+
     assert np.all(
         adata_dense.var["triku_distance"] == adata_sparse.var["triku_distance"]
     )
@@ -112,7 +132,9 @@ def test_check_zero_counts():
     sc.pp.neighbors(adata)
 
     try:
-        tk.tl.triku(adata)
+        tk.tl.triku(
+            adata
+        )  # There should be zeros and raise an error -> therefore it should yield error = 0
         error = 1
     except BaseException:
         error = 0
@@ -124,7 +146,7 @@ def test_check_zero_counts():
     sc.pp.filter_genes(adata_nonzero, min_counts=1)
     sc.pp.neighbors(adata_nonzero)
 
-    tk.tl.triku(adata)
+    tk.tl.triku(adata_nonzero)
 
 
 @pytest.mark.exception_check
