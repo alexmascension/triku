@@ -1,3 +1,6 @@
+# 2.1.1
+- Fixed error in knn_array calculation for "conn"
+
 # 2.1.0
 - Fixed convolution from knn to knn - 1 times.
 - Implemented distances and connectivities to create knn_array (temporary). 

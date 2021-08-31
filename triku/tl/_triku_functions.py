@@ -62,14 +62,21 @@ def return_knn_array(object_triku, dist_conn, knn):
                     start_counts:end_counts
                 ]
 
-                try:  # bottleneck works much faster, but it requires that the number of connected features be >= knn.
+                if (
+                    len(data_row) >= knn
+                ):  # bottleneck works much faster, but it requires that the number of connected features be >= knn.
                     # If not (because there are some), it fails. Then, it goes to the classical argsort, which is slower but effective.
                     argidx = bottleneck.argpartition(-data_row, knn - 1)
                     idx_pos = idx_row[
                         argidx[: knn - 1]
                     ]  # knn - 1 because the own index is not within the best
-                except ValueError:
-                    idx_pos = idx_row[np.argsort(data_row)[::-1]][: knn - 1]
+                else:  # Sometimes the number of neighbors, based on connectivities, is smaller, and it fails. We fallback to distances in that case. The number of
+                    # cases is very small in that case.
+                    idx_pos = object_triku.obsp["distances"].indices[
+                        object_triku.obsp["distances"]
+                        .indptr[row] : object_triku.obsp["distances"]
+                        .indptr[row + 1]
+                    ]
 
                 knn_array_conn_indices[row * knn] = row
                 knn_array_conn_indices[
