@@ -28,8 +28,9 @@ def triku(
     n_windows: int = 75,
     min_knn: int = 6,
     name: Union[str, None] = None,
-    verbose: Union[None, str] = "warning",
     dist_conn: Union[str] = "dist",
+    distance_correction: Union[str] = "median",
+    verbose: Union[None, str] = "warning",
 ) -> dict:  # type:ignore
     """
     This function calls the triku method using python directly. This function expects an
@@ -68,6 +69,8 @@ def triku(
     dist_conn: str
         Uses adata.obsp["distances"] or adata.obsp["connectivities"] for knn array construction. From empirical analysis,
         "conn" shows slightly better results, but is slower.
+    distance_correction: str
+        When correcting distances, uses median or mean of the distances for each bin. By default is "median".
     verbose : str ['debug', 'triku', 'info', 'warning', 'error', 'critical']
         Logger verbosity output.
     Returns
@@ -87,6 +90,8 @@ def triku(
         assert (var is None) | (
             isinstance(var, int)
         ), f"The variable value {var} must be an integer!"
+
+    assert distance_correction in ["median", "mean"]
 
     if name is None:
         name_str = ""
@@ -142,7 +147,10 @@ def triku(
     mean_counts = arr_counts.mean(0).A[0]
 
     array_emd_subt_median = subtract_median(
-        x=mean_counts, y=array_emd, n_windows=n_windows
+        x=mean_counts,
+        y=array_emd,
+        n_windows=n_windows,
+        distance_correction=distance_correction,
     )
 
     # Selection of best genes, either by the curve method or as the N highest ones.

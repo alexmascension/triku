@@ -1,3 +1,7 @@
+# 2.1.2
+- Fixed nan or inf distances for spurious zero-count genes.
+- Added option to correct distances using mean or median (by default is median).
+
 # 2.1.1
 - Fixed error in knn_array calculation for "conn"
 

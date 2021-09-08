@@ -377,10 +377,16 @@ def emd_calculation(
         for idx_gene in range(n_genes)
     ]
 
-    return np.array(list_emd)
+    array_emd = np.array(list_emd)
+
+    # In some cases, when knn_counts or counts is 0, emd is inf or nan. This should not happen because those genes are filtered, but
+    # in some cases the filter migh not work. To not yield errors, we add this.
+    array_emd[np.isnan(array_emd) | np.isinf(array_emd)] = 0
+
+    return array_emd
 
 
-def subtract_median(x, y, n_windows):
+def subtract_median(x, y, n_windows, distance_correction):
     """When working with EMD, we want to find genes with more deviation on emd compared with other genes with similar
     mean expression. With higher expressions EMD tends to increase. To reduce that basal level we will subtract the
     median EMD to the genes using a number of windows. The approach is quite reliable between 15 and 80 windows.
@@ -396,7 +402,10 @@ def subtract_median(x, y, n_windows):
     y_median_array = np.zeros(len(y))
     for i in range(n_windows):
         mask = (x >= linspace[i]) & (x <= linspace[i + 1])
-        y_median_array[mask] = np.median(y[mask])
+        if distance_correction == "median":
+            y_median_array[mask] = np.median(y[mask])
+        elif distance_correction == "mean":
+            y_median_array[mask] = np.mean(y[mask])
 
     y_adjust -= y_median_array
 
