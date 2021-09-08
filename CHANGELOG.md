@@ -1,3 +1,6 @@
+# 2.1.3
+- Minor fix in convolution. probability array is applied np.close instear of array of convolution.
+
 # 2.1.2
 - Fixed nan or inf distances for spurious zero-count genes.
 - Added option to correct distances using mean or median (by default is median).

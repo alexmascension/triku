@@ -237,12 +237,12 @@ def compute_conv_idx(
     for _ in range(knn - 1):
         arr_convolve = func(arr_convolve, y_probs,)
 
-    # Important because some convolutions yield negative close-to-zero values that break emd
-    arr_convolve[np.isclose(arr_convolve, 0)] = 0
-
     arr_prob = (
         arr_convolve / arr_convolve.sum()
     )  # This is just in case the sum is bigger than 1
+
+    # Important because some convolutions yield negative close-to-zero values that break emd
+    arr_prob[np.isclose(arr_prob, 0, atol=1e-10)] = 0
 
     x_conv, y_conv = np.arange(len(arr_prob)), arr_prob
 
