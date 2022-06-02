@@ -61,7 +61,7 @@ If you are using scanpy, you **must** run triku before running ``sc.pp.pca`` and
    sc.pp.pca(adata)
    sc.pp.neighbors(adata, metric='cosine', n_neighbors=int(0.5 * len(adata) ** 0.5))
 
-After you have run triku, you **need to rerun** neighbors using the set of selected features. This doesn't take much time, though.
+After you have run triku, you **need to rerun** neighbors using the set of selected features. This doesn't take much time, though.::
 
    sc.pp.pca(adata)
    sc.pp.neighbors(adata, metric='cosine', n_neighbors=int(0.5 * len(adata) ** 0.5))
@@ -71,7 +71,7 @@ After you have run triku, you **need to rerun** neighbors using the set of selec
    sc.pp.neighbors(adata, metric='cosine', n_neighbors=int(0.5 * len(adata) ** 0.5), use_rep="X_triku")
 
 
-In some cases (a high number of features is selected or the dataset is too large) you may need to run PCA first and then neighbors.
+In some cases (a high number of features is selected or the dataset is too large) you may need to run PCA first and then neighbors.::
    
    sc.pp.pca(adata)
    sc.pp.neighbors(adata, metric='cosine', n_neighbors=int(0.5 * len(adata) ** 0.5))
