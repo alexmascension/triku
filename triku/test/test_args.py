@@ -112,6 +112,9 @@ def test_names(getpbmc3k):
         == adata.var["triku_distance_uncorrected_sample"]
     )
 
+    assert "X_triku" in adata.obsm
+    assert "X_triku_sample" in adata.obsm
+
 
 @pytest.mark.output_check
 def test_dist_conn(getpbmc3k):

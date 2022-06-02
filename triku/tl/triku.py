@@ -193,3 +193,7 @@ def triku(
         "dist_conn": dist_conn,
         "knn_array": knn_array,
     }
+
+    object_triku.obsm[f"X_triku{name_str}"] = object_triku.X[  # type:ignore
+        :, hvg
+    ]
