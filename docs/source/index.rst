@@ -5,7 +5,7 @@
 
 
 
-Triku - Feature selection for Single Cell Analysis
+Triku - a feature selection method based on nearest neighbors for single-cell data
 ==================================================
 .. image:: https://badge.fury.io/py/triku.svg
     :target: https://badge.fury.io/py/triku
@@ -18,8 +18,8 @@ Triku - Feature selection for Single Cell Analysis
     :scale: 100%
     :target: https://triku.readthedocs.io/en/latest/?badge=latest
 
-.. image:: https://codecov.io/gh/alexmascension/triku/branch/dev/graph/badge.svg
-  :target: https://codecov.io/gh/alexmascension/triku/branch/dev
+.. image:: https://codecov.io/gh/alexmascension/triku/branch/master/graph/badge.svg?token=XV50UHB80N
+   :target: https://codecov.io/gh/alexmascension/triku
 
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/psf/black
@@ -63,6 +63,14 @@ If you are using scanpy, you **must** run triku before running ``sc.pp.pca`` and
 
 You can run triku with raw or log-transformed count matrices. Scores tend to be better
 in log-transformed matrices, although the results depend on the dataset.
+
+
+Cite us!
+~~~~~~~~~
+If you want to learn more about how triku works, you can read `our paper <https://doi.org/10.1093/gigascience/giac017>`_ [1]_. Don't forget to cite it if you find triku useful!
+
+.. [1] Alex M Ascensión, Olga Ibáñez-Solé, Iñaki Inza, Ander Izeta, Marcos J Araúzo-Bravo, Triku: a feature selection method based on nearest neighbors for single-cell data, GigaScience, Volume 11, 2022, giac017, https://doi.org/10.1093/gigascience/giac017
+
 
 .. toctree::
    :maxdepth: 1

@@ -1,3 +1,6 @@
+# 2.1.4
+Added doc fixes and corrected standard pipeline.
+
 # 2.1.3
 - Minor fix in convolution. probability array is applied np.close instear of array of convolution.
 

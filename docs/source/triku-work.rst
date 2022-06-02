@@ -80,4 +80,6 @@ Wasserstein distance are selected.
 More!
 ~~~~~~~~~
 This is the core on how triku works. If you want to learn more about how triku
-works, you can read our `bioRxiv preprint <https://www.biorxiv.org/content/10.1101/2021.02.12.430764v1>`_!
+works, you can read `our paper <https://doi.org/10.1093/gigascience/giac017>`_. Don't forget to cite it if you find triku useful!
+
+> Alex M Ascensión, Olga Ibáñez-Solé, Iñaki Inza, Ander Izeta, Marcos J Araúzo-Bravo, Triku: a feature selection method based on nearest neighbors for single-cell data, GigaScience, Volume 11, 2022, giac017, https://doi.org/10.1093/gigascience/giac017
