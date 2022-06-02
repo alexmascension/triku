@@ -49,7 +49,7 @@ import it and run it in one line::
 
    tk.tl.triku(adata)
 
-After that, you can find which features are selected ``adata.var['highly_variable']``.
+After that, you can find which features are selected with ``adata.var['highly_variable']``.
 The scores for each gene are located in ``adata.var['triku_distance']``.
 The higher the score, the better.
 
@@ -60,6 +60,33 @@ If you are using scanpy, you **must** run triku before running ``sc.pp.pca`` and
 
    sc.pp.pca(adata)
    sc.pp.neighbors(adata, metric='cosine', n_neighbors=int(0.5 * len(adata) ** 0.5))
+
+After you have run triku, you **need to rerun** neighbors using the set of selected features. This doesn't take much time, though.
+
+   sc.pp.pca(adata)
+   sc.pp.neighbors(adata, metric='cosine', n_neighbors=int(0.5 * len(adata) ** 0.5))
+
+   tk.tl.triku(adata)
+
+   sc.pp.neighbors(adata, metric='cosine', n_neighbors=int(0.5 * len(adata) ** 0.5), use_rep="X_triku")
+
+
+In some cases (a high number of features is selected or the dataset is too large) you may need to run PCA first and then neighbors.
+   
+   sc.pp.pca(adata)
+   sc.pp.neighbors(adata, metric='cosine', n_neighbors=int(0.5 * len(adata) ** 0.5))
+
+   tk.tl.triku(adata)
+
+   sc.pp.pca(adata)
+   sc.pp.neighbors(adata, metric='cosine', n_neighbors=int(0.5 * len(adata) ** 0.5))
+
+
+This may seem repetitive 🙃, but consider that the first PCA/kNN run is to set the ground for triku to work. Then, with the correct selection of features, 
+PCA/neighbors yield the results with the *best* features. 
+
+**Note that** for the PCA/neighbors combination you don't need to specify ``use_rep="X_triku"`` because PCA already chooses the selected features from ``adata.var['highly_variable']``. 
+If you run ``neighbors`` alone, you must specify ``use_rep="X_triku"`` because otherwise it will select ``adata.X['X_pca']`` from the first run! 
 
 You can run triku with raw or log-transformed count matrices. Scores tend to be better
 in log-transformed matrices, although the results depend on the dataset.

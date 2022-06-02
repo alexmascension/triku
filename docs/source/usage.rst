@@ -26,7 +26,8 @@ This is a basic preprocessing of a dataset. You can run triku either after or be
 ``sc.pp.log1p``. It usually works better after log transformation.
 
 After running triku, results are stored in ``adata.var`` (``triku_distance``, ``highly_variable``), and 
-in ``adata.uns['triku_params'][None]``.
+in ``adata.uns['triku_params'][None]``. Also, ``adata.obsm['X_triku']`` contains the matrix with the selected features.
+This is relevant to calculate the new round of neighbors or to do PCA again with that data.
 
 
 Advanced usage

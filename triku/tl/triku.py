@@ -28,8 +28,8 @@ def triku(
     n_windows: int = 75,
     min_knn: int = 6,
     name: Union[str, None] = None,
-    dist_conn: Union[str] = "dist",
-    distance_correction: Union[str] = "median",
+    dist_conn: str = "dist",
+    distance_correction: str = "median",
     verbose: Union[None, str] = "warning",
 ) -> dict:  # type:ignore
     """
