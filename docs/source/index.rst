@@ -33,7 +33,14 @@ Triku - a feature selection method based on nearest neighbors for single-cell da
 .. image:: https://pepy.tech/badge/triku
    :target: https://pepy.tech/project/triku
 
+
 |
+|
+.. image:: imgs/all.*
+
+|
+|
+
 Triku (hedgehog in euskera) is a feature selection method prepared for Single Cell Analysis.
 Triku has been prepared to work with `scanpy <https://scanpy.readthedocs.io/en/stable/>`_
 ``annData`` objects directly.
