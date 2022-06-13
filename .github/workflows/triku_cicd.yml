@@ -21,7 +21,7 @@ jobs:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
           restore-keys: |
-            ${{ hashFiles('requirements.txt') }}-
+            ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
       - name: Install dependencies
         if: steps.cache-pip.outputs.cache-hit != 'true'
         run: |
