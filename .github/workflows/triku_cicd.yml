@@ -16,7 +16,7 @@ jobs:
           python-version: "3.8"
       - name: Cache pip
         id: cache-pip
-        uses: actions/cache@v2
+        uses: actions/cache@v1
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
@@ -48,7 +48,7 @@ jobs:
         with:
           python-version: "3.8"
       - name: Load cache
-        uses: actions/cache@v2
+        uses: actions/cache@v1
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
@@ -71,7 +71,7 @@ jobs:
         with:
           python-version: "3.8"
       - name: Load cache
-        uses: actions/cache@v2
+        uses: actions/cache@v1
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
@@ -94,7 +94,7 @@ jobs:
         with:
           python-version: "3.8"
       - name: Load cache
-        uses: actions/cache@v2
+        uses: actions/cache@v1
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
@@ -117,7 +117,7 @@ jobs:
         with:
           python-version: "3.8"
       - name: Load cache
-        uses: actions/cache@v2
+        uses: actions/cache@v1
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
@@ -140,7 +140,7 @@ jobs:
         with:
           python-version: "3.8"
       - name: Load cache
-        uses: actions/cache@v2
+        uses: actions/cache@v1
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
@@ -171,7 +171,7 @@ jobs:
         with:
           python-version: "3.8"
       - name: Load cache
-        uses: actions/cache@v2
+        uses: actions/cache@v1
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
