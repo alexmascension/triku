@@ -27,7 +27,7 @@ def triku(
     s: Union[int, float] = -0.01,
     n_windows: int = 75,
     min_knn: int = 6,
-    name: str = "",
+    name: str = "None",
     dist_conn: str = "dist",
     distance_correction: str = "median",
     verbose: Union[None, str] = "warning",
@@ -93,7 +93,7 @@ def triku(
 
     assert distance_correction in ["median", "mean"]
 
-    if name == "":
+    if name == "None":
         name_str = ""
     else:
         name_str = f"_{name}"
