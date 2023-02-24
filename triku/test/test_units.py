@@ -66,13 +66,13 @@ def test_triku_dense_sparse_matrices(getpbmc3k):
 
     for key in ["knn", "n_features", "s", "n_windows", "min_knn", "dist_conn"]:
         assert (
-            adata_sparse.uns["triku_params"][None][key]
-            == adata_dense.uns["triku_params"][None][key]
+            adata_sparse.uns["triku_params"][""][key]
+            == adata_dense.uns["triku_params"][""][key]
         )
 
     assert (
-        adata_sparse.uns["triku_params"][None]["knn_array"]
-        != adata_dense.uns["triku_params"][None]["knn_array"]
+        adata_sparse.uns["triku_params"][""]["knn_array"]
+        != adata_dense.uns["triku_params"][""]["knn_array"]
     ).nnz == 0
 
     assert np.all(
@@ -96,13 +96,13 @@ def test_triku_dense_sparse_matrices_raw(getpbmc3k):
 
     for key in ["knn", "n_features", "s", "n_windows", "min_knn", "dist_conn"]:
         assert (
-            adata_sparse.uns["triku_params"][None][key]
-            == adata_dense.uns["triku_params"][None][key]
+            adata_sparse.uns["triku_params"][""][key]
+            == adata_dense.uns["triku_params"][""][key]
         )
 
     assert (
-        adata_sparse.uns["triku_params"][None]["knn_array"]
-        != adata_dense.uns["triku_params"][None]["knn_array"]
+        adata_sparse.uns["triku_params"][""]["knn_array"]
+        != adata_dense.uns["triku_params"][""]["knn_array"]
     ).nnz == 0
 
     assert np.all(

@@ -64,15 +64,15 @@ def test_n_divisions_check(getpbmc3k):
 
     adata.X = adata.X.astype(int)
     tk.tl.triku(adata)
-    assert adata.uns["triku_params"][None]["n_divisions"] == 1
+    assert adata.uns["triku_params"][""]["n_divisions"] == 1
 
     adata.X = adata.X.astype(float)
     tk.tl.triku(adata)
-    assert adata.uns["triku_params"][None]["n_divisions"] == 1
+    assert adata.uns["triku_params"][""]["n_divisions"] == 1
 
     sc.pp.log1p(adata)
     tk.tl.triku(adata)
-    assert adata.uns["triku_params"][None]["n_divisions"] > 1
+    assert adata.uns["triku_params"][""]["n_divisions"] > 1
 
 
 @pytest.mark.var_check
@@ -90,17 +90,17 @@ def test_names(getpbmc3k):
     ]:
         assert var in adata.var
 
-    assert None in adata.uns["triku_params"]
+    assert "" in adata.uns["triku_params"]
     assert "sample" in adata.uns["triku_params"]
 
     for key in ["knn", "n_features", "s", "n_windows", "min_knn", "dist_conn"]:
         assert (
-            adata.uns["triku_params"][None][key]
+            adata.uns["triku_params"][""][key]
             == adata.uns["triku_params"]["sample"][key]
         )
 
     assert (
-        adata.uns["triku_params"][None]["knn_array"]
+        adata.uns["triku_params"][""]["knn_array"]
         != adata.uns["triku_params"]["sample"]["knn_array"]
     ).nnz == 0
 

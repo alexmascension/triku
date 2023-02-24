@@ -1,5 +1,8 @@
+# 2.1.5
+- Change adata.uns['triku'] standard from None to "" for compatibility purposes with anndata h5 savng.
+
 # 2.1.4
-Added doc fixes and corrected standard pipeline.
+- Added doc fixes and corrected standard pipeline.
 
 # 2.1.3
 - Minor fix in convolution. probability array is applied np.close instear of array of convolution.
