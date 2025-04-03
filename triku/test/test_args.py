@@ -12,8 +12,6 @@ def getpbmc3k():
     sc.pp.filter_cells(adata, min_genes=10)
     sc.pp.neighbors(adata)
 
-    # tk.tl.triku(adata)
-
     return adata
 
 

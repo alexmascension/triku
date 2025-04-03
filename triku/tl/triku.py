@@ -1,4 +1,3 @@
-# import logging
 import warnings
 from typing import Union
 
@@ -82,14 +81,10 @@ def triku(
     # Basic checks of variables and assertions!!!
     set_level_logger(verbose)
 
-    for var in [
-        n_features,
-        n_windows,
-        n_divisions,
-    ]:
-        assert (var is None) | (
-            isinstance(var, int)
-        ), f"The variable value {var} must be an integer!"
+    for var in [n_features, n_windows, n_divisions]:
+        assert (var is None) | (isinstance(var, int)), (
+            f"The variable value {var} must be an integer!"
+        )
 
     assert distance_correction in ["median", "mean"]
 

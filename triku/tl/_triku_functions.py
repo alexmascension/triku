@@ -4,15 +4,12 @@ from typing import Tuple
 import bottleneck
 import numpy as np
 import scipy.sparse as spr
+from scipy.sparse import csr_matrix, csc_matrix
 import scipy.stats as sts
 from scipy.signal import fftconvolve
 
 from triku.logg import TRIKU_LEVEL
 from triku.logg import triku_logger
-
-# import logging
-# from tqdm import tqdm
-# from triku.genutils import TqdmToLogger
 
 
 def return_knn_array(object_triku, dist_conn, knn):
@@ -29,9 +26,7 @@ def return_knn_array(object_triku, dist_conn, knn):
                     "distances"
                 ]
                 > 0
-            ) + spr.identity(len(object_triku)).astype(
-                bool
-            )  # Saves memory
+            ) + spr.identity(len(object_triku)).astype(bool)  # Saves memory
 
         elif dist_conn == "conn":
             # Connectivities adds an extra layer of neighbours that I don't know how it happens. https://github.com/theislab/scanpy/issues/1984
@@ -73,17 +68,17 @@ def return_knn_array(object_triku, dist_conn, knn):
                 else:  # Sometimes the number of neighbors, based on connectivities, is smaller, and it fails. We fallback to distances in that case. The number of
                     # cases is very small in that case.
                     idx_pos = object_triku.obsp["distances"].indices[
-                        object_triku.obsp["distances"]
-                        .indptr[row] : object_triku.obsp["distances"]
-                        .indptr[row + 1]
+                        object_triku.obsp["distances"].indptr[
+                            row
+                        ] : object_triku.obsp["distances"].indptr[row + 1]
                     ]
 
                 knn_array_conn_indices[row * knn] = row
-                knn_array_conn_indices[
-                    row * knn + 1 : (row + 1) * knn
-                ] = idx_pos
+                knn_array_conn_indices[row * knn + 1 : (row + 1) * knn] = (
+                    idx_pos
+                )
 
-            knn_array = spr.csr.csr_matrix(
+            knn_array = csr_matrix(
                 (
                     knn_array_conn_data,
                     knn_array_conn_indices,
@@ -105,18 +100,14 @@ def return_knn_array(object_triku, dist_conn, knn):
         knn_array = (
             object_triku.uns[  # type:ignore
                 "neighbors"
-            ][
-                "connectivities"
-            ]
+            ]["connectivities"]
             > 0
-        ) + spr.identity(len(object_triku)).astype(
-            bool
-        )  # Saves memory
+        ) + spr.identity(len(object_triku)).astype(bool)  # Saves memory
 
     return knn_array
 
 
-def get_n_divisions(arr_counts: spr.csr.csr_matrix) -> int:
+def get_n_divisions(arr_counts: csr_matrix) -> int:
     diff = np.abs(
         (arr_counts - arr_counts.floor()).sum()
     )  # Faster .floor() than X.astype(int) (up to x2 for large arrays)
@@ -134,8 +125,8 @@ def get_n_divisions(arr_counts: spr.csr.csr_matrix) -> int:
 
 
 def return_knn_expression(
-    arr_expression: spr.csr.csr_matrix, knn_indices: spr.csr.csr_matrix
-) -> spr.csr.csr_matrix:
+    arr_expression: csr_matrix, knn_indices: csr_matrix
+) -> csr_matrix:
     """
     This function returns an array with the knn expression per gene and cell. To calculate the expression per gene
     we are going to apply the dot product of the neighbor indices and the expression.
@@ -169,7 +160,7 @@ def return_knn_expression(
 
 
 def compute_conv_idx(
-    counts_gene: np.ndarray, knn: int, p_zeros: float,
+    counts_gene: np.ndarray, knn: int, p_zeros: float
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Given a GENE x CELL matrix, and an index to select from, calculates the convolution of reads for that gene index.
@@ -235,7 +226,7 @@ def compute_conv_idx(
     )  # First iteration always with itself
 
     for _ in range(knn - 1):
-        arr_convolve = func(arr_convolve, y_probs,)
+        arr_convolve = func(arr_convolve, y_probs)
 
     arr_prob = (
         arr_convolve / arr_convolve.sum()
@@ -279,8 +270,8 @@ def calculate_emd(
 
 
 def compute_convolution_and_emd(
-    array_counts_csc: spr.csc.csc_matrix,
-    array_knn_counts_csc: spr.csc.csc_matrix,
+    array_counts_csc: csc_matrix,
+    array_knn_counts_csc: csc_matrix,
     idx: int,
     knn: int,
     min_knn: int,
@@ -316,7 +307,7 @@ def compute_convolution_and_emd(
     indices_counts = array_counts_csc.indices[start_counts:end_counts]
     indices_counts_knn = array_knn_counts_csc.indices[start_knn:end_knn]
     # because indices_counts_knn array has the indices from indices_counts + extra, this line extracts the overlapping indices.
-    bool_mask = np.in1d(indices_counts_knn, indices_counts, assume_unique=True)
+    bool_mask = np.isin(indices_counts_knn, indices_counts, assume_unique=True)
 
     counts_gene = array_counts_csc.data[start_counts:end_counts]
     knn_counts = array_knn_counts_csc.data[start_knn:end_knn][bool_mask]
@@ -342,8 +333,8 @@ def compute_convolution_and_emd(
 
 
 def emd_calculation(
-    array_counts_csc: spr.csr.csr_matrix,
-    array_knn_counts_csc: spr.csr.csr_matrix,
+    array_counts_csc: csr_matrix,
+    array_knn_counts_csc: csr_matrix,
     knn: int,
     min_knn: int,
     n_divisions: int,
@@ -393,19 +384,19 @@ def subtract_median(x, y, n_windows, distance_correction):
 
     Too many windows can over-normalize, and lose genes that have high emd but are alone in that window."""
 
+    # TODO: This can be vectorized with binned_statistic frim SciPy.
+
     # We have to take the distance in logarithm to account for the wide expression ranges
     linspace = 10 ** np.linspace(
         np.min(np.log10(x)), np.max(np.log10(x)), n_windows + 1
     )
     y_adjust = y.copy()
+    stat_func = np.median if distance_correction == "median" else np.mean
 
     y_median_array = np.zeros(len(y))
     for i in range(n_windows):
         mask = (x >= linspace[i]) & (x <= linspace[i + 1])
-        if distance_correction == "median":
-            y_median_array[mask] = np.median(y[mask])
-        elif distance_correction == "mean":
-            y_median_array[mask] = np.mean(y[mask])
+        y_median_array[mask] = stat_func(y[mask])
 
     y_adjust -= y_median_array
 
@@ -414,38 +405,31 @@ def subtract_median(x, y, n_windows, distance_correction):
 
 def get_cutoff_curve(y, s) -> float:
     """
-    Plots a curve, and finds the best point by joining the extremes of the curve with a line, and selecting
-    the point from the curve with the greatest distance.
-    The distance between a point in a curve, and the straight line is set by the following equation
-    if u,v is the point in the curve, and y = mx + b is the line, then
-    x_opt = (u - mb + mv) / (1 + m^2)
+    Returns a cutoff value from y by selecting the point on its sorted curve with the greatest
+    perpendicular distance from the line joining its min and max values.
 
-    Here y attribute refers to the emd distances (after median subtraction preferably). Those distances are sorted,
-    and ordered, and the curve is extracted from there.
+    Parameters:
+      y (array-like): Input values.
+      s (float): Correction factor. If s >= 0, returns the rightmost candidate above threshold;
+                 if s < 0, returns the leftmost.
+
+    Returns:
+      float: The cutoff value.
     """
+    sorted_y = np.sort(y)
+    n = len(sorted_y)
+    min_y, max_y = sorted_y[0], sorted_y[-1]
+    m = (max_y - min_y) / n
+    b = min_y
 
-    min_y, max_y = np.min(y), np.max(y)
-    m, b = (max_y - min_y) / len(y), min_y
+    u = np.arange(n)
+    denom = 1 + m**2
+    x_opt = (u - m * b + m * sorted_y) / denom
+    y_opt = m * x_opt + b
+    d = (x_opt - u) ** 2 + (y_opt - sorted_y) ** 2
 
-    list_d = []
+    dist_s = (1 - np.abs(s)) * np.max(d)
+    s_idx = np.where(d >= dist_s)[0]
+    idx = np.max(s_idx) if s >= 0 else np.min(s_idx)
 
-    for u, v in enumerate(np.sort(y)):
-        x_opt = (u - m * b + m * v) / (1 + m ** 2)
-        y_opt = x_opt * m + b
-        d = (x_opt - u) ** 2 + (y_opt - v) ** 2
-
-        list_d.append(d)
-
-    # S is a corrector factor. It leverages the best value in the curve, and selects a more or less stringent
-    # value in the curve. the maximum distance is multiplied by (1 - S), and the leftmost or rightmost index
-    # is selected
-
-    dist_s = (1 - np.abs(s)) * np.max(list_d)
-    s_idx = np.argwhere(list_d >= dist_s)
-
-    if s >= 0:
-        max_d_idx = np.max(s_idx)
-    else:
-        max_d_idx = np.min(s_idx)
-
-    return np.sort(y)[max_d_idx]
+    return sorted_y[idx]

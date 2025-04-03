@@ -1,11 +1,12 @@
 import numpy as np
 import scipy.sparse as spr
+from scipy.sparse import csr_matrix
 
 from triku.logg import TRIKU_LEVEL
 from triku.logg import triku_logger
 
 
-def check_count_mat(mat: spr.csr.csr_matrix):
+def check_count_mat(mat: csr_matrix):
     """
     This function outputs a warning if we suspect the matrix is in logarithm value
     """
@@ -57,7 +58,7 @@ def return_arr_counts(object_triku, get_from_raw=None):
         triku_logger.warning(
             "X is dense. We will set the matrix to sparse format (csr_matrix)."
         )
-        arr_counts = spr.csr_matrix(
+        arr_counts = csr_matrix(
             arr_counts
         )  # We will require the array of counts to be sparse
 
@@ -69,7 +70,7 @@ def return_arr_counts(object_triku, get_from_raw=None):
             object_triku.X = arr_counts
 
     triku_logger.log(
-        TRIKU_LEVEL, "Array of counts\n{arr_counts}, shape:{arr_counts.shape}",
+        TRIKU_LEVEL, "Array of counts\n{arr_counts}, shape:{arr_counts.shape}"
     )
     triku_logger.log(TRIKU_LEVEL, "Array of genes\n{arr_genes}")
     return arr_counts
