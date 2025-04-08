@@ -7,7 +7,6 @@ from scipy.sparse import csr_matrix
 
 import triku as tk
 
-
 selected_markers = [
     "CD79A",
     "CD14",
