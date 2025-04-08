@@ -1,1 +1,1 @@
-from .triku import triku  # noqa
+from triku.tl.triku import triku  # noqa

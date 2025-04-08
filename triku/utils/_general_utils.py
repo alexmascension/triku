@@ -1,7 +1,6 @@
 import logging
 
-from ..logg import TRIKU_LEVEL
-from ..logg import triku_logger
+from triku.logg import TRIKU_LEVEL, triku_logger
 
 
 def set_level_logger(level):

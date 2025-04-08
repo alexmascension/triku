@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 import scanpy as sc
 from scipy.sparse import csr_matrix
+
 import triku as tk
 
 

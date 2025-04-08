@@ -4,12 +4,11 @@ from typing import Tuple
 import bottleneck
 import numpy as np
 import scipy.sparse as spr
-from scipy.sparse import csr_matrix, csc_matrix
 import scipy.stats as sts
 from scipy.signal import fftconvolve
+from scipy.sparse import csc_matrix, csr_matrix
 
-from triku.logg import TRIKU_LEVEL
-from triku.logg import triku_logger
+from triku.logg import TRIKU_LEVEL, triku_logger
 
 
 def return_knn_array(object_triku, dist_conn, knn):

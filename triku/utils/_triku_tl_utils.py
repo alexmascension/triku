@@ -2,8 +2,7 @@ import numpy as np
 import scipy.sparse as spr
 from scipy.sparse import csr_matrix
 
-from triku.logg import TRIKU_LEVEL
-from triku.logg import triku_logger
+from triku.logg import TRIKU_LEVEL, triku_logger
 
 
 def check_count_mat(mat: csr_matrix):
