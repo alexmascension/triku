@@ -33,18 +33,18 @@ jobs:
         run: |
           pytest -s -m "import_triku"  --cov=./triku/  --cov-append
           echo $(ls -a)
-          mv .coverage .coverage.imports
+          mkdir cov_outputs
+          mv .coverage cov_outputs/.coverage.imports
           echo "move completed"
-          ls -la .coverage.imports  # <--- Añadir para debug
       - name: Debug current working directory
         run: |
           pwd
-          ls -la
+          ls -la cov_outputs
       - name: Upload test_imports
         uses: actions/upload-artifact@v4
         with:
           name: coverage-imports
-          path: ${{ github.workspace }}
+          path: ${{ github.workspace }}/cov_outputs
           if-no-files-found: warn
 
   test_general:
@@ -64,12 +64,12 @@ jobs:
         run: |
           conda list
           pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
-          mv .coverage .coverage.general
+          mv .coverage cov_outputs/.coverage.general
       - name: Upload test_general
         uses: actions/upload-artifact@v4
         with:
           name: coverage-general
-          path:  ${{ github.workspace }}
+          path:  ${{ github.workspace }}/cov_outputs
 
   test_output_check:
     runs-on: ubuntu-latest
@@ -87,12 +87,12 @@ jobs:
       - name: Run test_output_check
         run: |
           pytest -s -n 4 -m "output_check" --cov=./triku/  --cov-append
-          mv .coverage .coverage.ouput_check
+          mv .coverage cov_outputs/.coverage.ouput_check
       - name: Upload test_output_check
         uses: actions/upload-artifact@v4
         with:
           name: coverage-ouput_check
-          path:  ${{ github.workspace }}
+          path:  ${{ github.workspace }}/cov_outputs
 
   test_args_var_check:
     runs-on: ubuntu-latest
@@ -110,12 +110,12 @@ jobs:
       - name: Run test_args_var_check
         run: |
           pytest -s -n 4 -m "var_check" --cov=./triku/  --cov-append
-          mv .coverage .coverage.var_check
+          mv .coverage cov_outputs/.coverage.var_check
       - name: Upload test_args_var_check
         uses: actions/upload-artifact@v4
         with:
           name: coverage-var_check
-          path:  ${{ github.workspace }}
+          path:  ${{ github.workspace }}/cov_outputs
 
   test_args_calc_check:
     runs-on: ubuntu-latest
@@ -133,12 +133,12 @@ jobs:
       - name: Run test_args_calc_check
         run: |
           pytest -s -n 4 -m "calc_check" --cov=./triku/  --cov-append
-          mv .coverage .coverage.calc_check
+          mv .coverage cov_outputs/.coverage.calc_check
       - name: Upload test_args_calc_check
         uses: actions/upload-artifact@v4
         with:
           name: coverage-calc_check
-          path:  ${{ github.workspace }}
+          path:  ${{ github.workspace }}/cov_outputs
 
   test_unit_exception_checks:
     runs-on: ubuntu-latest
@@ -156,12 +156,12 @@ jobs:
       - name: Run test_unit_exception_checks
         run: |
           pytest -s -n 4 -m "exception_check" --cov=./triku/  --cov-append
-          mv .coverage .coverage.exception_check
+          mv .coverage cov_outputs/.coverage.exception_check
       - name: Upload test_unit_exception_checks
         uses: actions/upload-artifact@v4
         with:
           name: coverage-exception_check
-          path:  ${{ github.workspace }}
+          path:  ${{ github.workspace }}/cov_outputs
 
   codecov_out:
     runs-on: ubuntu-latest
@@ -186,9 +186,9 @@ jobs:
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
       - name: Download artifacts
         uses: actions/download-artifact@v4
-      - name: Merge and upload codecov
+      - name: Merge and upload codecov            
         run: |
           ls -la ${{ github.workspace }}
-          coverage combine ${{ github.workspace }}/coverage.*
-          pytest -s -n 1 -m "end" --cov=./triku/ --cov-append --cov-report=html
+          coverage combine ${{ github.workspace }}/cov_outputs
+          pytest -s -n 1 -m "end" --cov=./triku/cov_outputs --cov-append --cov-report=html
           codecov --token=fb6873c7-fc57-44b0-808a-b346bc1ced78
