@@ -212,12 +212,12 @@ jobs:
 
           ls -la ${{ github.workspace }}/coverage-exception_check
 
-          cp coverage-exception_checkx .coverage.exception_check
-          cp coverage-generalx .coverage.general
-          cp coverage-importsx .coverage.imports
-          cp coverage-ouput_checkx .coverage.ouput_check
-          cp coverage-var_checkx .coverage.var_check
-          cp coverage-calc_checkx .coverage.calc_check
+          cp coverage-exception_check/coverage-exception_checkx .coverage.exception_check
+          cp coverage-general/coverage-generalx .coverage.general
+          cp coverage-imports/coverage-importsx .coverage.imports
+          cp coverage-ouput_check/coverage-ouput_checkx .coverage.ouput_check
+          cp coverage-var_check/coverage-var_checkx .coverage.var_check
+          cp coverage-calc_check/coverage-calc_checkx .coverage.calc_check
 
           ls -la ${{ github.workspace }}
           echo "This is available at the workspace"
