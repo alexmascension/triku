@@ -6,10 +6,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "triku"
-version = "2.1.6"
+version = "2.2.0"
 description = "Feature selection method for Single Cell data."
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 license = { text = "BSD" }
 
 authors = [{ name = "Alex M. Ascensión", email = "alexmascension@gmail.com" }]

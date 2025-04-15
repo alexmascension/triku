@@ -1,3 +1,6 @@
+# 2.2.0
+- Improved compatibility with scipye.
+
 # 2.1.6
 - Change adata.uns['triku'] standard from """ to "None" for compatibility purposes with anndata h5 savng.
 
