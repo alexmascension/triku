@@ -219,6 +219,9 @@ jobs:
           cp coverage-var_check/coverage-var_checkx .coverage.var_check
           cp coverage-calc_check/coverage-calc_checkx .coverage.calc_check
 
+          rm coverage-exception_check coverage-general coverage-imports coverage-ouput_check coverage-var_check coverage-calc_check
+      
+
           ls -la ${{ github.workspace }}
           echo "This is available at the workspace"
 
