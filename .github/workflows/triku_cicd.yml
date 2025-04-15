@@ -210,6 +210,8 @@ jobs:
           ls -la ${{ github.workspace }}
           echo "This is available at the workspace"
 
+          ls -la ${{ github.workspace }}/coverage-exception_check
+
           cp coverage-exception_checkx .coverage.exception_check
           cp coverage-generalx .coverage.general
           cp coverage-importsx .coverage.imports
