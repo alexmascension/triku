@@ -36,8 +36,8 @@ jobs:
           mv .coverage coverage-imports
       - name: Debug current working directory
         run: |
-          pwd
-          ls -la
+          ls -la ${{ github.workspace }}
+          echo "This is available at the workspace"
       - name: Upload test_imports
         uses: actions/upload-artifact@v4
         with:
@@ -63,6 +63,10 @@ jobs:
           conda list
           pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
           mv .coverage coverage-general
+
+          ls -la ${{ github.workspace }}
+          echo "This is available at the workspace"
+
       - name: Upload test_general
         uses: actions/upload-artifact@v4
         with:
@@ -86,6 +90,10 @@ jobs:
         run: |
           pytest -s -n 4 -m "output_check" --cov=./triku/  --cov-append
           mv .coverage coverage-ouput_check
+
+          ls -la ${{ github.workspace }}
+          echo "This is available at the workspace"
+
       - name: Upload test_output_check
         uses: actions/upload-artifact@v4
         with:
@@ -109,6 +117,10 @@ jobs:
         run: |
           pytest -s -n 4 -m "var_check" --cov=./triku/  --cov-append
           mv .coverage coverage-var_check
+
+          ls -la ${{ github.workspace }}
+          echo "This is available at the workspace"
+
       - name: Upload test_args_var_check
         uses: actions/upload-artifact@v4
         with:
@@ -132,6 +144,10 @@ jobs:
         run: |
           pytest -s -n 4 -m "calc_check" --cov=./triku/  --cov-append
           mv .coverage coverage-calc_check
+
+          ls -la ${{ github.workspace }}
+          echo "This is available at the workspace"
+
       - name: Upload test_args_calc_check
         uses: actions/upload-artifact@v4
         with:
@@ -155,6 +171,10 @@ jobs:
         run: |
           pytest -s -n 4 -m "exception_check" --cov=./triku/  --cov-append
           mv .coverage coverage-exception_check
+
+          ls -la ${{ github.workspace }}
+          echo "This is available at the workspace"
+
       - name: Upload test_unit_exception_checks
         uses: actions/upload-artifact@v4
         with:
@@ -187,12 +207,15 @@ jobs:
       - name: Merge and upload codecov
         run: |
           
-          mv coverage-exception_check .coverage.exception_check
-          mv coverage-general .coverage.general
-          mv coverage-imports .coverage.imports
-          mv coverage-ouput_check .coverage.ouput_check
-          mv coverage-var_check .coverage.var_check
-          mv coverage-calc_check .coverage.calc_check
+          ls -la ${{ github.workspace }}
+          echo "This is available at the workspace"
+
+          cp coverage-exception_check .coverage.exception_check
+          cp coverage-general .coverage.general
+          cp coverage-imports .coverage.imports
+          cp coverage-ouput_check .coverage.ouput_check
+          cp coverage-var_check .coverage.var_check
+          cp coverage-calc_check .coverage.calc_check
 
           ls -la ${{ github.workspace }}
           echo "This is available at the workspace"
