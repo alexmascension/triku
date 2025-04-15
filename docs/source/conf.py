@@ -24,7 +24,7 @@ copyright = "2020, Alex M. Ascension"
 author = "Alex M. Ascension"
 
 # The full version, including alpha/beta/rc tags
-release = "2.1.6"
+release = "2.2.0"
 
 
 # -- General configuration ---------------------------------------------------

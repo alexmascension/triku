@@ -26,11 +26,12 @@ def test_n_features(getpbmc3k):
 @pytest.mark.output_check
 def test_use_raw(getpbmc3k):
     adata = getpbmc3k
+    adata.raw = adata
+    sc.pp.log1p(adata)
+
     tk.tl.triku(adata, use_raw=False)
     emd_not_raw = adata.var["triku_distance"]
 
-    adata.raw = adata
-    sc.pp.log1p(adata)
     tk.tl.triku(adata, use_raw=True)
     emd_raw = adata.var["triku_distance"]
 

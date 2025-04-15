@@ -2,9 +2,9 @@ name: triku
 
 on:
   push:
-    branches: [dev, master, "hotfix-*"]
+    branches: [dev, master, "hotfix-*", "compatibility_fix"]
   pull_request:
-    branches: [dev, master, "hotfix-*"]
+    branches: [dev, master, "hotfix-*", "compatibility_fix"]
 
 jobs:
   build_system:
