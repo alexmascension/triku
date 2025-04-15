@@ -10,13 +10,13 @@ jobs:
   build_system:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.8"
       - name: Cache pip
         id: cache-pip
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
@@ -34,7 +34,7 @@ jobs:
           pytest -s -m "import_triku"  --cov=./triku/  --cov-append
           mv .coverage .coverage.imports
       - name: Upload test_imports
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-imports
           path: .coverage.imports
@@ -43,12 +43,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_system]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.8"
       - name: Load cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
@@ -58,7 +58,7 @@ jobs:
           pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
           mv .coverage .coverage.general
       - name: Upload test_general
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-general
           path: .coverage.general
@@ -67,12 +67,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_system]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.8"
       - name: Load cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
@@ -81,7 +81,7 @@ jobs:
           pytest -s -n 4 -m "output_check" --cov=./triku/  --cov-append
           mv .coverage .coverage.ouput_check
       - name: Upload test_output_check
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-ouput_check
           path: .coverage.ouput_check
@@ -90,12 +90,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_system]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.8"
       - name: Load cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
@@ -104,7 +104,7 @@ jobs:
           pytest -s -n 4 -m "var_check" --cov=./triku/  --cov-append
           mv .coverage .coverage.var_check
       - name: Upload test_args_var_check
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-var_check
           path: .coverage.var_check
@@ -113,12 +113,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_system]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.8"
       - name: Load cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
@@ -127,7 +127,7 @@ jobs:
           pytest -s -n 4 -m "calc_check" --cov=./triku/  --cov-append
           mv .coverage .coverage.calc_check
       - name: Upload test_args_calc_check
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-calc_check
           path: .coverage.calc_check
@@ -136,12 +136,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_system]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.8"
       - name: Load cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
@@ -150,7 +150,7 @@ jobs:
           pytest -s -n 4 -m "exception_check" --cov=./triku/  --cov-append
           mv .coverage .coverage.exception_check
       - name: Upload test_unit_exception_checks
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-exception_check
           path: .coverage.exception_check
@@ -167,17 +167,17 @@ jobs:
       ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+        uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.8"
       - name: Load cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: /opt/hostedtoolcache/Python
           key: ${{ hashFiles('requirements.txt') }}-${{ hashFiles('.github/workflows/triku_cicd.yml') }}
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
       - name: Merge and upload codecov
         run: |
           coverage combine /home/runner/work/triku/triku/cov*
