@@ -33,7 +33,7 @@ jobs:
         run: |
           pytest -s -m "import_triku"  --cov=./triku/  --cov-append
           echo $(ls -a)
-          mv .coverage coverage-imports
+          mv .coverage coverage-importsx
       - name: Debug current working directory
         run: |
           ls -la ${{ github.workspace }}
@@ -62,7 +62,7 @@ jobs:
         run: |
           conda list
           pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
-          mv .coverage coverage-general
+          mv .coverage coverage-generalx
 
           ls -la ${{ github.workspace }}
           echo "This is available at the workspace"
@@ -89,7 +89,7 @@ jobs:
       - name: Run test_output_check
         run: |
           pytest -s -n 4 -m "output_check" --cov=./triku/  --cov-append
-          mv .coverage coverage-ouput_check
+          mv .coverage coverage-ouput_checkx
 
           ls -la ${{ github.workspace }}
           echo "This is available at the workspace"
@@ -116,7 +116,7 @@ jobs:
       - name: Run test_args_var_check
         run: |
           pytest -s -n 4 -m "var_check" --cov=./triku/  --cov-append
-          mv .coverage coverage-var_check
+          mv .coverage coverage-var_checkx
 
           ls -la ${{ github.workspace }}
           echo "This is available at the workspace"
@@ -143,7 +143,7 @@ jobs:
       - name: Run test_args_calc_check
         run: |
           pytest -s -n 4 -m "calc_check" --cov=./triku/  --cov-append
-          mv .coverage coverage-calc_check
+          mv .coverage coverage-calc_checkx
 
           ls -la ${{ github.workspace }}
           echo "This is available at the workspace"
@@ -170,7 +170,7 @@ jobs:
       - name: Run test_unit_exception_checks
         run: |
           pytest -s -n 4 -m "exception_check" --cov=./triku/  --cov-append
-          mv .coverage coverage-exception_check
+          mv .coverage coverage-exception_checkx
 
           ls -la ${{ github.workspace }}
           echo "This is available at the workspace"
@@ -210,12 +210,12 @@ jobs:
           ls -la ${{ github.workspace }}
           echo "This is available at the workspace"
 
-          cp coverage-exception_check .coverage.exception_check
-          cp coverage-general .coverage.general
-          cp coverage-imports .coverage.imports
-          cp coverage-ouput_check .coverage.ouput_check
-          cp coverage-var_check .coverage.var_check
-          cp coverage-calc_check .coverage.calc_check
+          cp coverage-exception_checkx .coverage.exception_check
+          cp coverage-generalx .coverage.general
+          cp coverage-importsx .coverage.imports
+          cp coverage-ouput_checkx .coverage.ouput_check
+          cp coverage-var_checkx .coverage.var_check
+          cp coverage-calc_checkx .coverage.calc_check
 
           ls -la ${{ github.workspace }}
           echo "This is available at the workspace"
