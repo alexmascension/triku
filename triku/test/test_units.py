@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 import scanpy as sc
-import scipy.sparse as spr
+from scipy.sparse import csr_matrix
 
 import triku as tk
 
@@ -12,8 +12,6 @@ def getpbmc3k():
     sc.pp.filter_genes(adata, min_cells=10)
     sc.pp.filter_cells(adata, min_genes=10)
     sc.pp.neighbors(adata)
-
-    # tk.tl.triku(adata)
 
     return adata
 
@@ -59,7 +57,7 @@ def test_triku_dense_sparse_matrices(getpbmc3k):
     adata_sparse = getpbmc3k.copy()
 
     adata_dense.X = adata_dense.X.toarray()
-    adata_sparse.X = spr.csr.csr_matrix(adata_sparse.X)
+    adata_sparse.X = csr_matrix(adata_sparse.X)
 
     tk.tl.triku(adata_sparse)
     tk.tl.triku(adata_dense)
@@ -86,7 +84,7 @@ def test_triku_dense_sparse_matrices_raw(getpbmc3k):
     adata_sparse = getpbmc3k.copy()
 
     adata_dense.X = adata_dense.X.toarray()
-    adata_sparse.X = spr.csr.csr_matrix(adata_sparse.X)
+    adata_sparse.X = csr_matrix(adata_sparse.X)
 
     adata_dense.raw = adata_dense
     adata_sparse.raw = adata_sparse

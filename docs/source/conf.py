@@ -32,11 +32,7 @@ release = "2.1.6"
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = [
-    "sphinx_rtd_theme",
-    "sphinx.ext.napoleon",
-    "autoapi.extension",
-]
+extensions = ["sphinx_rtd_theme", "sphinx.ext.napoleon", "autoapi.extension"]
 
 # AUTOAPI
 autoapi_type = "python"
@@ -66,7 +62,7 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 
 html_theme_options = {
-    "logo_only": True,
+    "logo_only": True
     # ...
 }
 html_logo = "imgs/triku.svg"

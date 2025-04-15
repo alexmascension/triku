@@ -1,2 +1,2 @@
-from . import tl  # noqa
-from . import utils  # noqa
+from triku import tl  # noqa
+from triku import utils  # noqa

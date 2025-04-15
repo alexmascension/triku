@@ -1,20 +1,20 @@
-# import logging
 import warnings
 from typing import Union
 
 import numpy as np
 import scanpy as sc
 
-from ..logg import TRIKU_LEVEL
-from ..logg import triku_logger
-from ..utils._general_utils import set_level_logger
-from ..utils._triku_tl_utils import get_arr_counts
-from ._triku_functions import emd_calculation
-from ._triku_functions import get_cutoff_curve
-from ._triku_functions import get_n_divisions
-from ._triku_functions import return_knn_array
-from ._triku_functions import return_knn_expression
-from ._triku_functions import subtract_median
+from triku.logg import TRIKU_LEVEL, triku_logger
+from triku.tl._triku_functions import (
+    emd_calculation,
+    get_cutoff_curve,
+    get_n_divisions,
+    return_knn_array,
+    return_knn_expression,
+    subtract_median,
+)
+from triku.utils._general_utils import set_level_logger
+from triku.utils._triku_tl_utils import get_arr_counts
 
 warnings.filterwarnings("ignore")  # To ignore Numba warnings
 
@@ -82,14 +82,10 @@ def triku(
     # Basic checks of variables and assertions!!!
     set_level_logger(verbose)
 
-    for var in [
-        n_features,
-        n_windows,
-        n_divisions,
-    ]:
-        assert (var is None) | (
-            isinstance(var, int)
-        ), f"The variable value {var} must be an integer!"
+    for var in [n_features, n_windows, n_divisions]:
+        assert (var is None) | (isinstance(var, int)), (
+            f"The variable value {var} must be an integer!"
+        )
 
     assert distance_correction in ["median", "mean"]
 
