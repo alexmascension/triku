@@ -190,6 +190,11 @@ jobs:
         run: |
           ls -la ${{ github.workspace }}
           echo "This is available at the workspace"
-          coverage combine ${{ github.workspace }}/coverage.*
+          mv coverage-exception_check .coverage-exception_check
+          mv coverage-general .coverage-general
+          mv coverage-imports .coverage-imports
+          mv coverage-ouput_check .coverage-ouput_check
+          mv coverage-var_check .coverage-var_check
+          coverage combine ${{ github.workspace }}/.coverage.*
           pytest -s -n 1 -m "end" --cov=./triku/ --cov-append --cov-report=html
           codecov --token=fb6873c7-fc57-44b0-808a-b346bc1ced78
