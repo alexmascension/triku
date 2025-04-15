@@ -34,7 +34,7 @@ jobs:
           pytest -s -m "import_triku"  --cov=./triku/  --cov-append
           echo $(ls -a)
           mv .coverage .coverage.imports
-          echoo "move completed"
+          echo "move completed"
           echo $(ls -a)
       - name: Upload test_imports
         uses: actions/upload-artifact@v4
