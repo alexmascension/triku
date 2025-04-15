@@ -40,7 +40,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-imports
-          path: .coverage.imports
+          path: /home/runner/work/triku/triku/.coverage.imports
 
   test_general:
     runs-on: ubuntu-latest
