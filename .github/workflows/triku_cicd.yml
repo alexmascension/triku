@@ -36,11 +36,16 @@ jobs:
           mv .coverage .coverage.imports
           echo "move completed"
           ls -la .coverage.imports  # <--- Añadir para debug
+      - name: Debug current working directory
+        run: |
+          pwd
+          ls -la
       - name: Upload test_imports
         uses: actions/upload-artifact@v4
         with:
           name: coverage-imports
-          path: /home/runner/work/triku/triku/.coverage.imports
+          path: ${{ github.workspace }}/.coverage.imports
+          if-no-files-found: warn
 
   test_general:
     runs-on: ubuntu-latest
