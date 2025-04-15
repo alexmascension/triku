@@ -32,6 +32,7 @@ jobs:
       - name: Check cache test
         run: |
           pytest -s -m "import_triku"  --cov=./triku/  --cov-append
+          echo $(ls -a)
           mv .coverage .coverage.imports
       - name: Upload test_imports
         uses: actions/upload-artifact@v4
