@@ -35,7 +35,7 @@ jobs:
           echo $(ls -a)
           mv .coverage .coverage.imports
           echo "move completed"
-          echo $(ls -a)
+          ls -la .coverage.imports  # <--- Añadir para debug
       - name: Upload test_imports
         uses: actions/upload-artifact@v4
         with:
