@@ -44,7 +44,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-imports
-          path: ${{ github.workspace }}/cov_outputs
+          path: ${{ github.workspace }}
           if-no-files-found: warn
 
   test_general:
@@ -69,7 +69,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-general
-          path:  ${{ github.workspace }}/cov_outputs
+          path:  ${{ github.workspace }}
 
   test_output_check:
     runs-on: ubuntu-latest
@@ -92,7 +92,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-ouput_check
-          path:  ${{ github.workspace }}/cov_outputs
+          path:  ${{ github.workspace }}
 
   test_args_var_check:
     runs-on: ubuntu-latest
@@ -115,7 +115,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-var_check
-          path:  ${{ github.workspace }}/cov_outputs
+          path:  ${{ github.workspace }}
 
   test_args_calc_check:
     runs-on: ubuntu-latest
@@ -138,7 +138,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-calc_check
-          path:  ${{ github.workspace }}/cov_outputs
+          path:  ${{ github.workspace }}
 
   test_unit_exception_checks:
     runs-on: ubuntu-latest
@@ -161,7 +161,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-exception_check
-          path:  ${{ github.workspace }}/cov_outputs
+          path:  ${{ github.workspace }}
 
   codecov_out:
     runs-on: ubuntu-latest
@@ -189,6 +189,6 @@ jobs:
       - name: Merge and upload codecov            
         run: |
           ls -la ${{ github.workspace }}
-          coverage combine ${{ github.workspace }}/cov_outputs
-          pytest -s -n 1 -m "end" --cov=./triku/cov_outputs --cov-append --cov-report=html
+          coverage combine ${{ github.workspace }}
+          pytest -s -n 1 -m "end" --cov=./triku --cov-append --cov-report=html
           codecov --token=fb6873c7-fc57-44b0-808a-b346bc1ced78
