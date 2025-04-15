@@ -33,9 +33,7 @@ jobs:
         run: |
           pytest -s -m "import_triku"  --cov=./triku/  --cov-append
           echo $(ls -a)
-          mv .coverage .coverage.imports
-          echo "move completed"
-          ls -la .coverage.imports  # <--- Añadir para debug
+          mv .coverage coverage-imports
       - name: Debug current working directory
         run: |
           pwd
@@ -64,7 +62,7 @@ jobs:
         run: |
           conda list
           pytest -s -n 4 -m "general" --cov=./triku/  --cov-append
-          mv .coverage .coverage.general
+          mv .coverage coverage-general
       - name: Upload test_general
         uses: actions/upload-artifact@v4
         with:
@@ -87,7 +85,7 @@ jobs:
       - name: Run test_output_check
         run: |
           pytest -s -n 4 -m "output_check" --cov=./triku/  --cov-append
-          mv .coverage .coverage.ouput_check
+          mv .coverage coverage-ouput_check
       - name: Upload test_output_check
         uses: actions/upload-artifact@v4
         with:
@@ -110,7 +108,7 @@ jobs:
       - name: Run test_args_var_check
         run: |
           pytest -s -n 4 -m "var_check" --cov=./triku/  --cov-append
-          mv .coverage .coverage.var_check
+          mv .coverage coverage-var_check
       - name: Upload test_args_var_check
         uses: actions/upload-artifact@v4
         with:
@@ -133,7 +131,7 @@ jobs:
       - name: Run test_args_calc_check
         run: |
           pytest -s -n 4 -m "calc_check" --cov=./triku/  --cov-append
-          mv .coverage .coverage.calc_check
+          mv .coverage coverage-calc_check
       - name: Upload test_args_calc_check
         uses: actions/upload-artifact@v4
         with:
@@ -156,7 +154,7 @@ jobs:
       - name: Run test_unit_exception_checks
         run: |
           pytest -s -n 4 -m "exception_check" --cov=./triku/  --cov-append
-          mv .coverage .coverage.exception_check
+          mv .coverage coverage-exception_check
       - name: Upload test_unit_exception_checks
         uses: actions/upload-artifact@v4
         with:
@@ -194,6 +192,7 @@ jobs:
           mv coverage-imports .coverage.imports
           mv coverage-ouput_check .coverage.ouput_check
           mv coverage-var_check .coverage.var_check
+          mv coverage-calc_check .coverage.calc_check
 
           ls -la ${{ github.workspace }}
           echo "This is available at the workspace"
