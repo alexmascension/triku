@@ -189,6 +189,6 @@ jobs:
       - name: Merge and upload codecov
         run: |
           ls -la ${{ github.workspace }}
-          coverage combine ${{ github.workspace }}/.coverage.*
+          coverage combine ${{ github.workspace }}/coverage.*
           pytest -s -n 1 -m "end" --cov=./triku/ --cov-append --cov-report=html
           codecov --token=fb6873c7-fc57-44b0-808a-b346bc1ced78
