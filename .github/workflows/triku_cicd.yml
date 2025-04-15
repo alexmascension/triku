@@ -188,13 +188,16 @@ jobs:
         uses: actions/download-artifact@v4
       - name: Merge and upload codecov
         run: |
+          
+          mv coverage-exception_check .coverage.exception_check
+          mv coverage-general .coverage.general
+          mv coverage-imports .coverage.imports
+          mv coverage-ouput_check .coverage.ouput_check
+          mv coverage-var_check .coverage.var_check
+
           ls -la ${{ github.workspace }}
           echo "This is available at the workspace"
-          mv coverage-exception_check .coverage-exception_check
-          mv coverage-general .coverage-general
-          mv coverage-imports .coverage-imports
-          mv coverage-ouput_check .coverage-ouput_check
-          mv coverage-var_check .coverage-var_check
+
           coverage combine ${{ github.workspace }}
           pytest -s -n 1 -m "end" --cov=./triku/ --cov-append --cov-report=html
           codecov --token=fb6873c7-fc57-44b0-808a-b346bc1ced78
