@@ -9,11 +9,6 @@
 [![Downloads](https://pepy.tech/badge/triku)](https://pepy.tech/project/triku)
 
 
-
- ## **THIS PROJECT IS ARCHIVED** You can see it at our [**Github repo**](https://github.com/alexmascension/triku)
-
-
-
 Triku (hedgehog in euskera) is a feature selection method prepared for scRNA-seq.
 
 Look at [the docs](https://triku.readthedocs.io/en/latest/) to learn more about triku!
